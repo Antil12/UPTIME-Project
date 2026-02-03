@@ -1,14 +1,11 @@
   import axios from "axios";
   import { useEffect, useState } from "react";
-  import StatCard from "./components/StatCard";
   import SettingsMenu from "./components/SettingsMenu";
   import EditModal from "./components/EditModal";
   import { isValidUrl } from "./utils/validators";
   import CrystalButton from "./components/CrystalButton";
-  //import { ThemeProvider } from "./context/ThemeContext";
-  import CrystalPopup from "./components/CrystalPopup";
-  import UrlTable from "./components/UrlTable";
-
+  import Dashboard from "./pages/Dashboard";
+  import AddUrl from "./pages/AddUrl";
   import {
     BarChart,
     Bar,
@@ -202,184 +199,38 @@
 
         {/* ================= MAIN ================= */}
         <main className="p-6 max-w-6xl mx-auto">
-          <p className="mb-4 text-green-600">{message}</p>
-
-          {/* DASHBOARD */}
-          {activePage === "dashboard" && (
-            <>
-     <div className="mb-4 flex justify-end w-full">
-  <div
-    className={`
-      flex items-center w-full max-w-sm border rounded overflow-hidden
-      ${theme === "dark"
-        ? "bg-gray-700 border-gray-600"
-        : "bg-white border-gray-300"
-      }
-    `}
-  >
-    <span className={theme === "dark" ? "px-2 text-gray-300" : "px-2 text-gray-500"}>
-      🔍
-    </span>
-    <input
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-      placeholder="Search domain or URL"
-      className={`
-        w-full p-1 outline-none text-sm
-        ${theme === "dark" ? "bg-transparent text-white placeholder-gray-300" : "bg-transparent text-black placeholder-gray-500"}
-      `}
-    />
-  </div>
-</div>
-        
-
-                {/* ================= STAT POPUP ================= */}
-      {statPopup && (
-        <StatPopup
-          type={statPopup}
-          urls={urls}
-          upCount={upCount}
-          downCount={downCount}
-          onClose={() => setStatPopup(null)}
-          theme={theme}
-        />
-      )}
- {/* STAT CARDS */}
-<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
- <StatCard
-  title="Total Websites"
-  value={urls.length}
-  icon="🌐"
-  theme={theme}
-  onClick={() =>
-    setPopupData({
-      title: "Total Websites",
-      type: "total", // ✅ add this
-    })
-  }
-/>
-
-  <StatCard
-    title="UP Websites"
-    value={upSites.length}
-    icon="🟢"
-    theme={theme}
-    onClick={() =>
-      setPopupData({
-        title: "UP Websites",
-        data: upSites,
-        type:"up"
-      })
-    }
-  />
-
-  <StatCard
-    title="DOWN Websites"
-    value={downSites.length}
-    icon="🔴"
-    theme={theme}
-    onClick={() =>
-      setPopupData({
-        title: "DOWN Websites",
-        data: downSites,
-        type:"down"
-      })
-    }
-  />
-
-  {/* Uptime % card showing overall stats in popup */}
-  <StatCard
-    title="Uptime %"
-    value={urls.length === 0 ? "0%" : `${Math.round((upSites.length / urls.length) * 100)}%`}
-    icon="📊 "
-    theme={theme}
-    onClick={() =>
-      setPopupData({
-        title: "Uptime Overview",
-        data: [], // no individual domain list needed here
-        showUptimeSummary: true, // custom flag to indicate we want overall stats
-      })
-    }
-  />
-</div>
-
-
-  {popupData && (
-  <CrystalPopup
-    popupData={popupData}
-    onClose={() => setPopupData(null)}
+          <p className="mb-4 text-green-600">{message}</p>         
+{activePage === "dashboard" && (
+  <Dashboard
     urls={urls}
+    theme={theme}
+    search={search}
+    setSearch={setSearch}
+    filteredUrls={filteredUrls}
     upSites={upSites}
     downSites={downSites}
+    onPin={handlePin}
+    onDelete={handleDelete}
+    onEdit={handleEditClick}
+    popupData={popupData}
+    setPopupData={setPopupData}
+  />
+)}
+
+          
+{activePage === "add" && (
+  <AddUrl
+    theme={theme}
+    domain={domain}
+    url={url}
+    setDomain={setDomain}
+    setUrl={setUrl}
+    urlError={urlError}
+    onSave={handleAddUrl} // use your existing handler
   />
 )}
 
 
-   
-      
-  <UrlTable
-  urls={filteredUrls}
-  theme={theme}
-  onPin={handlePin}
-  onDelete={handleDelete}
-  onEdit={handleEditClick}
-/>
-
-
-            </>
-          )}
-        
-          
-
-          {/* ADD PAGE */}
-         {activePage === "add" && (
-  <div
-    className={`max-w-md mx-auto p-6 rounded shadow
-      ${theme === "dark" ? "bg-gray-800 text-gray-200" : "bg-white text-gray-800"}`}
-  >
-    {/* Domain Input */}
-    <input
-      value={domain}
-      onChange={(e) => setDomain(e.target.value)}
-      placeholder="Domain"
-      className={`w-full p-2 mb-3 rounded border
-        ${theme === "dark"
-          ? "bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400"
-          : "bg-white border-gray-300 text-gray-800 placeholder-gray-500"
-        }`}
-    />
-
-    {/* URL Input */}
-    <input
-      value={url}
-      onChange={(e) => setUrl(e.target.value)}
-      placeholder="https://example.com"
-      className={`w-full p-2 mb-2 rounded border
-        ${theme === "dark"
-          ? "bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400"
-          : "bg-white border-gray-300 text-gray-800 placeholder-gray-500"
-        }`}
-    />
-
-    {/* Error Message */}
-    {urlError && (
-      <p className="text-red-500 text-sm mb-2">{urlError}</p>
-    )}
-
-    {/* Save Button */}
-    <button
-      onClick={handleAddUrl}
-      className={`w-full py-2 rounded
-        ${theme === "dark" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-900 text-white hover:bg-slate-800"}`
-      }
-    >
-      Save URL
-    </button>
-  </div>
-)}
-
-          {/* REPORTS */}
-          {/* ================= REPORTS ================= */}
 {/* ================= REPORTS ================= */}
 {activePage === "reports" && (
   <div className="mb-4">

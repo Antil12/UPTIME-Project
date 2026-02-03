@@ -1,77 +1,116 @@
-import React, { useEffect, useState } from "react";
-import AddUrl from "./AddUrl";
+import React from "react";
 import UrlTable from "../components/UrlTable";
 import StatCard from "../components/StatCard";
-import axios from "axios";
+import CrystalPopup from "../components/CrystalPopup";
 
-const Dashboard = () => {
-  const [websites, setWebsites] = useState([]);
-  const [lastCheck, setLastCheck] = useState(null);
-
-  useEffect(() => {
-    const fetchWebsites = async () => {
-      try {
-        const res = await axios.get("http://localhost:5000/api/urls");
-        setWebsites(res.data);
-        setLastCheck(new Date());
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    fetchWebsites();
-    // Optionally, refresh every 5 minutes
-    const interval = setInterval(fetchWebsites, 300000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const upWebsites = websites.filter((w) => w.status === "up");
-  const downWebsites = websites.filter((w) => w.status === "down");
-  const uptimePercent = ((upWebsites.length / websites.length) * 100).toFixed(1);
+const Dashboard = ({
+  urls,
+  theme,
+  search,
+  setSearch,
+  filteredUrls,
+  upSites,
+  downSites,
+  onPin,
+  onDelete,
+  onEdit,
+  popupData,
+  setPopupData,
+}) => {
+  const uptimePercent =
+    urls.length === 0
+      ? "0%"
+      : `${Math.round((upSites.length / urls.length) * 100)}%`;
 
   return (
     <main className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* ===== TOP STAT CARDS ===== */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Websites UP" value={upWebsites.length} color="green" icon="✅" />
-        <StatCard title="Websites DOWN" value={downWebsites.length} color="red" icon="❌" />
-        <StatCard title="Avg Response" value="432 ms" color="yellow" icon="⏱️" />
-        <StatCard title="Uptime (7 Days)" value={`${uptimePercent}%`} color="blue" icon="📊" />
-      </section>
 
-      {/* ===== UP / DOWN Website Lists ===== */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gray-800 p-4 rounded-md">
-          <h2 className="text-green-400 font-bold mb-2">✅ Websites UP</h2>
-          <ul className="space-y-1">
-            {upWebsites.map((w) => (
-              <li key={w._id} className="bg-green-700 p-2 rounded-md">{w.domain}</li>
-            ))}
-            {upWebsites.length === 0 && <li>No websites are UP.</li>}
-          </ul>
+      {/* ===== SEARCH ===== */}
+      <div className="flex justify-end">
+        <div
+          className={`flex items-center w-full max-w-sm border rounded overflow-hidden
+            ${theme === "dark"
+              ? "bg-gray-700 border-gray-600"
+              : "bg-white border-gray-300"
+            }`}
+        >
+          <span className="px-2">🔍</span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search domain or URL"
+            className="w-full p-1 outline-none bg-transparent text-sm"
+          />
         </div>
-        <div className="bg-gray-800 p-4 rounded-md">
-          <h2 className="text-red-400 font-bold mb-2">❌ Websites DOWN</h2>
-          <ul className="space-y-1">
-            {downWebsites.map((w) => (
-              <li key={w._id} className="bg-red-700 p-2 rounded-md">{w.domain}</li>
-            ))}
-            {downWebsites.length === 0 && <li>No websites are DOWN.</li>}
-          </ul>
-        </div>
+      </div>
+
+      {/* ===== STAT CARDS ===== */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Websites"
+          value={urls.length}
+          icon="🌐"
+          theme={theme}
+          onClick={() =>
+            setPopupData({ title: "Total Websites", type: "total" })
+          }
+        />
+
+        <StatCard
+          title="UP Websites"
+          value={upSites.length}
+          icon="🟢"
+          theme={theme}
+          onClick={() =>
+            setPopupData({
+              title: "UP Websites",
+              data: upSites,
+              type: "up",
+            })
+          }
+        />
+
+        <StatCard
+          title="DOWN Websites"
+          value={downSites.length}
+          icon="🔴"
+          theme={theme}
+          onClick={() =>
+            setPopupData({
+              title: "DOWN Websites",
+              data: downSites,
+              type: "down",
+            })
+          }
+        />
+
+        <StatCard
+          title="Uptime %"
+          value={uptimePercent}
+          icon="📊"
+          theme={theme}
+        />
       </section>
 
-      {/* ===== OTHER METRICS ===== */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Sites" value={websites.length} color="gray" icon="🌐" />
-        <StatCard title="Uptime" value={`${uptimePercent}%`} color="green" icon="📈" />
-        <StatCard title="Last Check" value={lastCheck?.toLocaleTimeString()} color="blue" icon="⏰" />
-        <StatCard title="Settings" value="Configure" color="purple" icon="⚙️" />
-      </section>
+      {/* ===== POPUP ===== */}
+      {popupData && (
+        <CrystalPopup
+          popupData={popupData}
+          onClose={() => setPopupData(null)}
+          urls={urls}
+          upSites={upSites}
+          downSites={downSites}
+        />
+      )}
 
-      {/* ===== EXISTING FLOW (UNCHANGED) ===== */}
-      <AddUrl />
-      <UrlTable />
+      {/* ===== URL TABLE ===== */}
+      <UrlTable
+        urls={filteredUrls}
+        theme={theme}
+        onPin={onPin}
+        onDelete={onDelete}
+        onEdit={onEdit}
+      />
     </main>
   );
 };
