@@ -1,0 +1,9 @@
+.alert {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 8px;
+}
+.alert.critical { background: #7f1d1d; }
+.alert.warning { background: #78350f; }
