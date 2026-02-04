@@ -1,0 +1,17 @@
+import mongoose from "mongoose";
+
+const monitoredSiteSchema = new mongoose.Schema({
+  domain: { type: String, required: true },
+  url: { type: String, required: true },
+  timeoutMs: { type: Number, default: 5000 },
+  slowThresholdMs: { type: Number, default: 3000 },
+  expectedStatusCodes: { type: [Number], default: [200, 301, 302] },
+  alertEmails: { type: [String], default: [] },
+  sslMonitoringEnabled: { type: Boolean, default: false },
+  sslAlertBeforeDays: { type: Number, default: 7 },
+}, { timestamps: true });
+
+// ✅ Check if model already exists, otherwise create it
+const MonitoredSite = mongoose.models.MonitoredSite || mongoose.model("MonitoredSite", monitoredSiteSchema);
+
+export default MonitoredSite;

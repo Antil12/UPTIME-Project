@@ -1,14 +1,8 @@
 import { Pin, PinOff, Trash2 } from "lucide-react";
 
-const UrlTable = ({
-  urls,
-  theme,
-  onPin,
-  onDelete,
-  onEdit,
-}) => {
+const UrlTable = ({ urls, theme, onPin, onDelete, onEdit }) => {
   const sortedData = [...urls].sort(
-    (a, b) => b.pinned - a.pinned
+    (a, b) => (b.pinned === true) - (a.pinned === true)
   );
 
   return (
@@ -26,69 +20,100 @@ const UrlTable = ({
         }`}
       >
         <tr>
-          <th className="pl-3 pr-3 py-3 text-left">Serial No.</th>
-          <th className="pl-3 pr-3 py-3 text-left">Domain</th>
-          <th className="pl-3 pr-3 py-3 text-left">URL</th>
-          <th className="pl-3 pr-3 py-3 text-left">Status Code</th>
-          <th className="pl-3 pr-3 py-3 text-left">Code</th>
-          <th className="pl-3 pr-3 py-3 text-left">Actions</th>
+          <th className="px-3 py-3 text-left">Serial No.</th>
+          <th className="px-3 py-3 text-left">Domain</th>
+          <th className="px-3 py-3 text-left">URL</th>
+          <th className="px-3 py-3 text-center">Status</th>
+          <th className="px-3 py-3 text-center">Status Code</th>
+          <th className="px-3 py-3 text-left">Last Check</th>
+          <th className="px-3 py-3 text-center">Actions</th>
         </tr>
       </thead>
 
       <tbody>
         {sortedData.map((item, i) => (
           <tr
-            key={item.id}
+            key={item._id}
             className={`border-t transition ${
               theme === "dark"
                 ? "border-gray-700 hover:bg-gray-800"
                 : "border-slate-200 hover:bg-slate-50"
             }`}
           >
-            <td className="pl-3 pr-3 py-3">{i + 1}</td>
-            <td className="pl-3 pr-3 py-3 font-medium">
+            <td className="px-3 py-3">{i + 1}</td>
+
+            <td className="px-3 py-3 font-medium">
               {item.domain}
             </td>
 
-            <td className="pl-3 pr-3 py-3 truncate max-w-xs text-blue-500">
+            <td className="px-3 py-3 truncate max-w-xs text-blue-500">
               <a href={item.url} target="_blank" rel="noreferrer">
                 {item.url}
               </a>
             </td>
 
-            <td className="pl-3 pr-3 py-3">
+            {/* STATUS */}
+            <td className="px-3 py-3 text-center font-semibold">
               <span
-                className={`px-2 py-1 rounded text-xs font-semibold ${
+                className={
                   item.status === "UP"
-                    ? "bg-green-500/20 text-green-300"
-                    : "bg-red-500/20 text-red-300"
-                }`}
+                    ? "text-green-600"
+                    : item.status === "SLOW"
+                    ? "text-yellow-500"
+                    : item.status === "DOWN"
+                    ? "text-red-600"
+                    : "text-gray-400"
+                }
               >
-                {item.status}
+                {item.status || "CHECKING"}
               </span>
             </td>
 
-            <td className="pl-3 pr-3 py-3">
+            {/* STATUS CODE */}
+            <td className="px-3 py-3 text-center">
               {item.statusCode || "--"}
             </td>
 
-            <td className="pl-3 pr-3 py-3 flex gap-3">
-              <button onClick={() => onPin(item.id)}>
-                {item.pinned ? <PinOff size={16} /> : <Pin size={16} />}
-              </button>
-              <button onClick={() => onEdit(item)}>✏️</button>
-              <button onClick={() => onDelete(item.id)}>
-                <Trash2 size={16} />
-              </button>
+            {/* LAST CHECK */}
+            <td className="px-3 py-3 text-sm text-gray-500">
+              {item.lastCheckedAt
+                ? new Date(item.lastCheckedAt).toLocaleString()
+                : "-"}
+            </td>
+
+            {/* ACTIONS */}
+            <td className="px-3 py-3">
+              <div className="flex justify-center gap-3">
+                {/* PIN */}
+                <button onClick={() => onPin(item._id)}>
+                    {item.pinned ? <PinOff size={16} /> : <Pin size={16} />}
+                  </button>
+
+
+                {/* EDIT */}
+                <button
+                  onClick={() => onEdit(item)}
+                  title="Edit"
+                  className="text-blue-500 hover:text-blue-700"
+                >
+                  ✏️
+                </button>
+
+                {/* DELETE */}
+                <button
+                  onClick={() => onDelete(item._id)}
+                  title="Delete"
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </td>
           </tr>
         ))}
       </tbody>
     </table>
   );
- 
-
-   
 };
 
 export default UrlTable;
