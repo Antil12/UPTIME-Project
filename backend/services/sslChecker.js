@@ -23,25 +23,60 @@ export const checkSsl = async (site) => {
       else if (daysRemaining <= site.sslAlertBeforeDays) sslStatus = "EXPIRING";
 
       await SslStatus.findOneAndUpdate(
-        { siteId: site._id },
-        {
-          siteId: site._id,
-          validTo,
-          daysRemaining,
-          lastCheckedAt: new Date()
-        },
-        { upsert: true }
-      );
+      { siteId: site._id },
+       {
+         siteId: site._id,
+         sslStatus,
+         validTo,
+         daysRemaining,
+         lastCheckedAt: new Date()
+       },
+         { upsert: true }
+         );
+
 
       await handleSslAlert(site._id, sslStatus);
 
       resolve();
     });
 
-    socket.on("error", () => resolve());
+     /* 👇👇 PASTE THIS PART EXACTLY HERE 👇👇 */
+
+    socket.setTimeout(10000);
+
+    socket.on("timeout", async () => {
+      socket.destroy();
+
+      await SslStatus.findOneAndUpdate(
+        { siteId: site._id },
+        {
+          siteId: site._id,
+          sslStatus: "ERROR",
+          lastCheckedAt: new Date()
+        },
+        { upsert: true }
+      );
+
+      await handleSslAlert(site._id, "ERROR");
+      resolve();
+    });
+
+    socket.on("error", async () => {
+      await SslStatus.findOneAndUpdate(
+        { siteId: site._id },
+        {
+          siteId: site._id,
+          sslStatus: "ERROR",
+          lastCheckedAt: new Date()
+        },
+        { upsert: true }
+      );
+
+      await handleSslAlert(site._id, "ERROR");
+      resolve();
+    });
   });
 };
-
 const handleSslAlert = async (siteId, sslStatus) => {
   const state = await AlertState.findOneAndUpdate(
     { siteId },

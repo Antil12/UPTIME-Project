@@ -12,17 +12,20 @@ const UrlTable = ({ urls, theme, onPin, onDelete, onEdit }) => {
           ? "bg-gray-900 text-gray-200"
           : "bg-white text-gray-800"}`}
     >
-      <thead
-        className={`text-sm ${
-          theme === "dark"
-            ? "bg-gray-800 text-gray-200"
-            : "bg-slate-100 text-gray-700"
-        }`}
-      >
+     <thead
+  className={`text-sm sticky top-[72px] z-30
+    ${theme === "dark"
+      ? "bg-gray-800 text-gray-200"
+      : "bg-slate-100 text-gray-700"
+  }`}
+>
+
+
         <tr>
           <th className="px-3 py-3 text-left">Serial No.</th>
           <th className="px-3 py-3 text-left">Domain</th>
           <th className="px-3 py-3 text-left">URL</th>
+          <th className="px-3 py-3 text-center">SSL Status</th>
           <th className="px-3 py-3 text-center">Status</th>
           <th className="px-3 py-3 text-center">Status Code</th>
           <th className="px-3 py-3 text-left">Last Check</th>
@@ -51,6 +54,37 @@ const UrlTable = ({ urls, theme, onPin, onDelete, onEdit }) => {
                 {item.url}
               </a>
             </td>
+
+            {/* SSL STATUS */}
+<td className="px-3 py-3 text-center font-semibold">
+  {item.sslStatus ? (
+    <span
+      title={
+        item.sslValidTo
+          ? `Valid till ${new Date(item.sslValidTo).toLocaleDateString()}`
+          : ""
+      }
+      className={
+        item.sslStatus === "VALID"
+          ? "text-green-600"
+          : item.sslStatus === "EXPIRING"
+          ? "text-yellow-500"
+          : item.sslStatus === "EXPIRED"
+          ? "text-red-600"
+          : "text-gray-400"
+      }
+    >
+      {item.sslStatus === "VALID" && "Secure"}
+      {item.sslStatus === "EXPIRING" &&
+        `Expiring (${item.sslDaysRemaining}d)`}
+      {item.sslStatus === "EXPIRED" && "Expired"}
+      {item.sslStatus === "ERROR" && "Error"}
+    </span>
+  ) : (
+    <span className="text-gray-400">Checking</span>
+  )}
+</td>
+
 
             {/* STATUS */}
             <td className="px-3 py-3 text-center font-semibold">

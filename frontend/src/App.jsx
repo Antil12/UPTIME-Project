@@ -7,17 +7,9 @@ import { isValidUrl } from "./utils/validators";
 import CrystalButton from "./components/CrystalButton";
 import Dashboard from "./pages/Dashboard";
 import AddUrl from "./pages/AddUrl";
+import Report from "./pages/Report";
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+
 
 const API_BASE = "http://localhost:5000/api/monitoredsite";
 
@@ -40,6 +32,8 @@ function App() {
   const [editDomain, setEditDomain] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [popupData, setPopupData] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
 
   /* ================= EFFECTS ================= */
 
@@ -276,41 +270,31 @@ useEffect(() => {
         )}
 
         {activePage === "add" && (
-          <AddUrl
-            theme={theme}
-            domain={domain}
-            url={url}
-            setDomain={setDomain}
-            setUrl={setUrl}
-            urlError={urlError}
-            onSave={handleAddUrl}
-          />
+        <AddUrl
+  theme={theme}
+  domain={domain}
+  url={url}
+  setDomain={setDomain}
+  setUrl={setUrl}
+  urlError={urlError}
+  onSave={handleAddUrl}
+  urls={urls}  
+/>
+
         )}
+
+        
 
         {activePage === "reports" && (
-          <div className="mb-4">
-            <div className="mb-4 max-w-sm">
-              <input
-                value={reportSearch}
-                onChange={(e) => setReportSearch(e.target.value)}
-                placeholder="Search domain or URL"
-                className="w-full p-2 border rounded"
-              />
-            </div>
+  <Report
+    urls={safeUrls}
+    reportData={reportData}
+    reportSearch={reportSearch}
+    setReportSearch={setReportSearch}
+      theme={theme}
+  />
+)}
 
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={reportData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="upTime" fill="#22c55e" />
-                <Bar dataKey="downTime" fill="#ef4444" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
       </main>
 
       {editItem && (

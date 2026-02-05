@@ -1,16 +1,19 @@
 import axios from "axios";
 import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
+import SslStatus from "../models/SslStatus.js";
 
 /* =====================================================
-   GET ALL SITES WITH CURRENT STATUS
+   GET ALL SITES WITH CURRENT STATUS + SSL
 ===================================================== */
 export const getAllSites = async (req, res) => {
   try {
+    // 1️⃣ Fetch sites
     const sites = await MonitoredSite.find().sort({ createdAt: -1 });
 
     const siteIds = sites.map(site => site._id);
 
+    // 2️⃣ Fetch uptime status
     const statuses = await SiteCurrentStatus.find({
       siteId: { $in: siteIds },
     });
@@ -20,17 +23,36 @@ export const getAllSites = async (req, res) => {
       statusMap[s.siteId.toString()] = s;
     });
 
+    // 3️⃣ 🔐 Fetch SSL status
+    const sslStatuses = await SslStatus.find({
+      siteId: { $in: siteIds },
+    });
+
+    const sslMap = {};
+    sslStatuses.forEach(s => {
+      sslMap[s.siteId.toString()] = s;
+    });
+
+    // 4️⃣ Merge everything
     const data = sites.map(site => {
       const s = statusMap[site._id.toString()];
+      const ssl = sslMap[site._id.toString()];
 
       return {
         _id: site._id,
         domain: site.domain,
         url: site.url,
+
+        // uptime
         status: s?.status ?? "UNKNOWN",
         statusCode: s?.statusCode ?? null,
         responseTimeMs: s?.responseTimeMs ?? null,
         lastCheckedAt: s?.lastCheckedAt ?? null,
+
+        // ssl
+        sslStatus: ssl?.sslStatus ?? null,
+        sslDaysRemaining: ssl?.daysRemaining ?? null,
+        sslValidTo: ssl?.validTo ?? null,
       };
     });
 
@@ -128,6 +150,7 @@ export const deleteSite = async (req, res) => {
     }
 
     await SiteCurrentStatus.deleteOne({ siteId: req.params.id });
+    await SslStatus.deleteOne({ siteId: req.params.id });
 
     res.json({ success: true, message: "Site deleted successfully" });
   } catch (error) {
@@ -196,4 +219,3 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
     });
   }
 };
-

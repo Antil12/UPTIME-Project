@@ -50,7 +50,7 @@ app.use(express.json());
    ROUTES
 ====================== */
 app.get("/api/test", (req, res) => {
-  res.json({ message: "Backend connected 🚀" });
+  res.json({ message: "" });
 });
 
 app.use("/api/monitoredsite", monitoredSiteRoutes);

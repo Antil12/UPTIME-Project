@@ -104,13 +104,26 @@ const Dashboard = ({
       )}
 
       {/* ===== URL TABLE ===== */}
+    
+      {/* <div className="max-h-[calc(100vh-160px)] overflow-y-auto">
       <UrlTable
-        urls={filteredUrls}
-        theme={theme}
-        onPin={onPin}
-        onDelete={onDelete}
-        onEdit={onEdit}
+          urls={filteredUrls}
+          theme={theme}
+          onPin={onPin}
+          onDelete={onDelete}
+          onEdit={onEdit}
       />
+      </div> */}
+      {/* ===== URL TABLE ===== */}
+<UrlTable
+  urls={filteredUrls}
+  theme={theme}
+  onPin={onPin}
+  onDelete={onDelete}
+  onEdit={onEdit}
+/>
+
+
     </main>
   );
 };

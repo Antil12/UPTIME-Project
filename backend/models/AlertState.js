@@ -21,7 +21,7 @@ const alertStateSchema = new mongoose.Schema({
 
   lastSslStatus: {
     type: String,
-    enum: ["VALID", "EXPIRING", "EXPIRED"],
+    enum: ["VALID", "EXPIRING", "EXPIRED","ERROR"],
     default: null
   },
 

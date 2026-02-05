@@ -2,67 +2,95 @@ import axios from "axios";
 import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import UptimeLog from "../models/UptimeLog.js";
+import { checkSsl } from "../services/sslChecker.js";
+
+let sslRunCounter = 0; // 👈 controls SSL frequency
 
 export const startMonitoringCron = () => {
   setInterval(async () => {
     console.log("🕒 Running uptime check...");
 
-    const sites = await MonitoredSite.find();
+    let sites = [];
+    try {
+      sites = await MonitoredSite.find();
+    } catch (err) {
+      console.error("Failed to fetch sites:", err.message);
+      return;
+    }
 
-    for (const site of sites) {
-      try {
-        const start = Date.now();
-        const response = await axios.get(site.url, {
-          timeout: 10000,
-        });
+    const checkedAt = new Date();
 
-        const responseTime = Date.now() - start;
+    // 🚀 RUN ALL SITES IN PARALLEL
+    await Promise.all(
+      sites.map(async (site) => {
+        /* =========================
+           UPTIME CHECK
+        ========================= */
+        try {
+          const start = Date.now();
+          const response = await axios.get(site.url, {
+            timeout: 10000,
+            validateStatus: () => true,
+          });
 
-        const status =
-          responseTime > 3000 ? "SLOW" : "UP";
+          const responseTimeMs = Date.now() - start;
 
-        // ✅ Save CURRENT status
-        await SiteCurrentStatus.findOneAndUpdate(
-          { siteId: site._id },
-          {
+          let status = "UP";
+          if (response.status >= 400) status = "DOWN";
+          else if (responseTimeMs > 15000) status = "SLOW";
+
+          await SiteCurrentStatus.findOneAndUpdate(
+            { siteId: site._id },
+            {
+              siteId: site._id,
+              status,
+              statusCode: response.status,
+              responseTimeMs,
+              lastCheckedAt: checkedAt,
+            },
+            { upsert: true }
+          );
+
+          await UptimeLog.create({
             siteId: site._id,
             status,
             statusCode: response.status,
-             responseTimeMs: responseTime,
-            lastCheckedAt: new Date(),
-          },
-          { upsert: true }
-        );
+            responseTimeMs,
+            checkedAt,
+          });
+        } catch {
+          await SiteCurrentStatus.findOneAndUpdate(
+            { siteId: site._id },
+            {
+              siteId: site._id,
+              status: "DOWN",
+              statusCode: 0,
+              responseTimeMs: null,
+              lastCheckedAt: checkedAt,
+            },
+            { upsert: true }
+          );
 
-        // ✅ Save HISTORICAL log
-        await UptimeLog.create({
-          siteId: site._id,
-          status,
-          statusCode: response.status,
-          responseTime,
-        });
-      } catch (error) {
-        // ❌ DOWN case
-
-        await SiteCurrentStatus.findOneAndUpdate(
-          { siteId: site._id },
-          {
+          await UptimeLog.create({
             siteId: site._id,
             status: "DOWN",
-            statusCode: error.response?.status || 0,
-            responseTime: null,
-            lastChecked: new Date(),
-          },
-          { upsert: true }
-        );
+            statusCode: 0,
+            responseTimeMs: null,
+            checkedAt,
+          });
+        }
 
-        await UptimeLog.create({
-          siteId: site._id,
-          status: "DOWN",
-          statusCode: error.response?.status || 0,
-          responseTime: null,
-        });
-      }
-    }
-  }, 1* 60 *  1000); // 15 minutes
+        /* =========================
+           🔐 SSL CHECK (every 10 mins)
+        ========================= */
+        if (sslRunCounter % 10 === 0) {
+          await checkSsl(site);
+        }
+      })
+    );
+
+    sslRunCounter++;
+
+    console.log(`✅ Checked ${sites.length} sites`);
+  }, 60 * 1000); // 1 minute
 };
