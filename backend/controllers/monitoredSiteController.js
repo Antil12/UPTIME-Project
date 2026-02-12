@@ -2,66 +2,111 @@ import axios from "axios";
 import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import SslStatus from "../models/SslStatus.js";
+import { getStatusFromCode } from "../utils/statusHelper.js";
 
 /* =====================================================
-   GET ALL SITES WITH CURRENT STATUS + SSL
+   GET ALL MONITORED SITES (NO FILTERS ❗)
 ===================================================== */
-export const getAllSites = async (req, res) => {
+export const getMonitoredSites = async (req, res) => {
   try {
-    // 1️⃣ Fetch sites
-    const sites = await MonitoredSite.find().sort({ createdAt: -1 });
+    const { category } = req.query; // optional query param
 
-    const siteIds = sites.map(site => site._id);
+    const matchStage = {};
+    if (category) matchStage.category = category;
 
-    // 2️⃣ Fetch uptime status
-    const statuses = await SiteCurrentStatus.find({
-      siteId: { $in: siteIds },
+    const pipeline = [
+      { $match: matchStage }, // filter by category if provided
+      {
+        $lookup: {
+          from: "sitecurrentstatuses",
+          localField: "_id",
+          foreignField: "siteId",
+          as: "uptime",
+        },
+      },
+      {
+        $unwind: { path: "$uptime", preserveNullAndEmptyArrays: true },
+      },
+      {
+        $lookup: {
+          from: "sslstatuses",
+          localField: "_id",
+          foreignField: "siteId",
+          as: "ssl",
+        },
+      },
+      {
+        $unwind: { path: "$ssl", preserveNullAndEmptyArrays: true },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $project: {
+          _id: 1,
+          domain: 1,
+          url: 1,
+          category: 1, // include category
+          createdAt: 1,
+          status: { $ifNull: ["$uptime.status", "UNKNOWN"] },
+          statusCode: "$uptime.statusCode",
+          responseTimeMs: "$uptime.responseTimeMs",
+          lastCheckedAt: "$uptime.lastCheckedAt",
+          sslStatus: "$ssl.sslStatus",
+          sslDaysRemaining: "$ssl.daysRemaining",
+          sslValidTo: "$ssl.validTo",
+        },
+      },
+    ];
+
+    const data = await MonitoredSite.aggregate(pipeline);
+
+    res.json({
+      success: true,
+      count: data.length,
+      data,
     });
-
-    const statusMap = {};
-    statuses.forEach(s => {
-      statusMap[s.siteId.toString()] = s;
-    });
-
-    // 3️⃣ 🔐 Fetch SSL status
-    const sslStatuses = await SslStatus.find({
-      siteId: { $in: siteIds },
-    });
-
-    const sslMap = {};
-    sslStatuses.forEach(s => {
-      sslMap[s.siteId.toString()] = s;
-    });
-
-    // 4️⃣ Merge everything
-    const data = sites.map(site => {
-      const s = statusMap[site._id.toString()];
-      const ssl = sslMap[site._id.toString()];
-
-      return {
-        _id: site._id,
-        domain: site.domain,
-        url: site.url,
-
-        // uptime
-        status: s?.status ?? "UNKNOWN",
-        statusCode: s?.statusCode ?? null,
-        responseTimeMs: s?.responseTimeMs ?? null,
-        lastCheckedAt: s?.lastCheckedAt ?? null,
-
-        // ssl
-        sslStatus: ssl?.sslStatus ?? null,
-        sslDaysRemaining: ssl?.daysRemaining ?? null,
-        sslValidTo: ssl?.validTo ?? null,
-      };
-    });
-
-    res.json({ success: true, count: data.length, data });
   } catch (error) {
+    console.error("❌ getMonitoredSites error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch sites",
-      error: error.message,
+      message: "Failed to fetch monitored sites",
+    });
+  }
+};
+
+
+/* =====================================================
+   GET GLOBAL STATUS STATS (FOR STAT CARDS)
+===================================================== */
+export const getStatusStats = async (req, res) => {
+  try {
+    const stats = await SiteCurrentStatus.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const result = {
+      UP: 0,
+      DOWN: 0,
+      SLOW: 0,
+    };
+
+    stats.forEach((s) => {
+      result[s._id] = s.count;
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("❌ getStatusStats error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch status stats",
     });
   }
 };
@@ -74,25 +119,27 @@ export const getSiteById = async (req, res) => {
     const site = await MonitoredSite.findById(req.params.id);
 
     if (!site) {
-      return res.status(404).json({ success: false, message: "Site not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Site not found",
+      });
     }
 
     res.json({ success: true, data: site });
-  } catch (error) {
+  } catch {
     res.status(500).json({
       success: false,
       message: "Failed to fetch site",
-      error: error.message,
     });
   }
 };
 
 /* =====================================================
-   ADD NEW SITE
+   ADD SITE
 ===================================================== */
 export const addSite = async (req, res) => {
   try {
-    const { domain, url } = req.body;
+    const { domain, url, category } = req.body; // include category
 
     if (!url) {
       return res.status(400).json({
@@ -101,23 +148,26 @@ export const addSite = async (req, res) => {
       });
     }
 
-    const site = await MonitoredSite.create({ domain, url });
+    const site = await MonitoredSite.create({ domain, url, category });
 
     res.status(201).json({ success: true, data: site });
   } catch (error) {
+    console.error("❌ addSite error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to add site",
-      error: error.message,
     });
   }
 };
+
 
 /* =====================================================
    UPDATE SITE
 ===================================================== */
 export const updateSite = async (req, res) => {
   try {
+    const { category } = req.body; // include category
+
     const site = await MonitoredSite.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -125,39 +175,46 @@ export const updateSite = async (req, res) => {
     );
 
     if (!site) {
-      return res.status(404).json({ success: false, message: "Site not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Site not found",
+      });
     }
 
     res.json({ success: true, data: site });
-  } catch (error) {
+  } catch {
     res.status(500).json({
       success: false,
       message: "Failed to update site",
-      error: error.message,
     });
   }
 };
 
 /* =====================================================
-   DELETE SITE
+   DELETE SITE (CLEAN RELATED DATA)
 ===================================================== */
 export const deleteSite = async (req, res) => {
   try {
     const site = await MonitoredSite.findByIdAndDelete(req.params.id);
 
     if (!site) {
-      return res.status(404).json({ success: false, message: "Site not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Site not found",
+      });
     }
 
-    await SiteCurrentStatus.deleteOne({ siteId: req.params.id });
-    await SslStatus.deleteOne({ siteId: req.params.id });
+    await SiteCurrentStatus.deleteOne({ siteId: site._id });
+    await SslStatus.deleteOne({ siteId: site._id });
 
-    res.json({ success: true, message: "Site deleted successfully" });
-  } catch (error) {
+    res.json({
+      success: true,
+      message: "Site deleted successfully",
+    });
+  } catch {
     res.status(500).json({
       success: false,
       message: "Failed to delete site",
-      error: error.message,
     });
   }
 };
@@ -165,57 +222,92 @@ export const deleteSite = async (req, res) => {
 /* =====================================================
    CHECK & UPDATE SITE CURRENT STATUS
 ===================================================== */
+
 export const checkAndUpdateSiteStatus = async (req, res) => {
   const { siteId } = req.params;
 
   try {
     const site = await MonitoredSite.findById(siteId);
+
     if (!site) {
-      return res.status(404).json({ success: false, message: "Site not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Site not found",
+      });
     }
 
     const startTime = Date.now();
     let status = "DOWN";
+    let reason = "UNKNOWN_ERROR";
     let statusCode = null;
     let responseTimeMs = null;
 
     try {
       const response = await axios.get(site.url, {
-        timeout: 10000,
+        timeout: 15000,
+        maxRedirects: 5,
         validateStatus: () => true,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml",
+        },
       });
 
       responseTimeMs = Date.now() - startTime;
       statusCode = response.status;
 
-      if (statusCode >= 200 && statusCode < 400) {
-        status = responseTimeMs > 3000 ? "SLOW" : "UP";
+      // ✅ Determine status and reason using helper
+      ({ status, reason } = getStatusFromCode(statusCode, responseTimeMs));
+
+    } catch (err) {
+      responseTimeMs = null;
+      statusCode = null;
+
+      if (err.code === "ECONNABORTED") {
+        status = "SLOW";
+        reason = "TIMEOUT";
+      } else {
+        status = "DOWN";
+        reason = err.message || "REQUEST FAILED";
       }
-    } catch {
-      status = "DOWN";
     }
 
+    // Update DB
     const currentStatus = await SiteCurrentStatus.findOneAndUpdate(
       { siteId },
       {
         siteId,
         status,
         statusCode,
+         reason,
         responseTimeMs,
         lastCheckedAt: new Date(),
       },
       { upsert: true, new: true }
     );
 
-    res.json({
-      success: true,
-      data: currentStatus,
-    });
+    res.json({ success: true, data: currentStatus, reason });
+
   } catch (error) {
+    console.error("❌ checkAndUpdateSiteStatus error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to check site status",
-      error: error.message,
     });
+  }
+};
+
+/* =====================================================
+   GET ALL CATEGORIES
+===================================================== */
+export const getCategories = async (req, res) => {
+  try {
+    const categories = await MonitoredSite.distinct("category"); // get unique categories
+    const allCategories = ["ALL", ...categories.map((c) => c || "UNCATEGORIZED")];
+    res.json({ success: true, data: allCategories });
+  } catch (error) {
+    console.error("❌ getCategories error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch categories" });
   }
 };

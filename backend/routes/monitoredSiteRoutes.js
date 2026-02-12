@@ -1,24 +1,23 @@
 import express from "express";
+
 import {
-  getAllSites,
-  getSiteById,
+  getMonitoredSites,
   addSite,
   updateSite,
   deleteSite,
+  getSiteById,
+  checkAndUpdateSiteStatus,
+  getCategories, // ✅ import
 } from "../controllers/monitoredSiteController.js";
-
-//import { togglePinSite } from "../controllers/monitoredSiteController.js"; // ✅ import here
 
 const router = express.Router();
 
-// CRUD
-router.get("/", getAllSites);
+router.get("/", getMonitoredSites);
+
 router.get("/:id", getSiteById);
 router.post("/", addSite);
 router.put("/:id", updateSite);
 router.delete("/:id", deleteSite);
-
-// PATCH pin
-//router.patch("/:id/pin", togglePinSite); // ✅ route exists
+router.get("/check/:siteId", checkAndUpdateSiteStatus);
 
 export default router;

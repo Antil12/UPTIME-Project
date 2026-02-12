@@ -1,114 +1,105 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { Settings, LogOut, Moon, Sun, User } from "lucide-react";
 
-export default function SettingsMenu({ theme, toggleTheme, onLogout }) {
+const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
   const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const menuRef = useRef(null);
 
-  // Close dropdown if clicked outside
+  // Close on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
         setOpen(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    setOpen(false);
-    if (onLogout) onLogout();
-  };
+  const user = JSON.parse(localStorage.getItem("user"));
 
   return (
-    <div style={{ position: "relative" }}>
-      {/* Hamburger button */}
-      <div
-        style={{ width: "25px", cursor: "pointer" }}
-        onClick={() => setOpen(!open)}
+    <div className="relative inline-block text-left" ref={menuRef}>
+      {/* SETTINGS BUTTON */}
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition backdrop-blur-lg border border-white/20"
       >
-        <span style={styles.line}></span>
-        <span style={styles.line}></span>
-        <span style={styles.line}></span>
-      </div>
+        <Settings size={20} />
+      </button>
 
+      {/* DROPDOWN */}
       {open && (
         <div
-          ref={dropdownRef}
-          style={{
-            ...styles.dropdown,
-            background: theme === "dark" ? "#333" : "#fff",
-            color: theme === "dark" ? "#fff" : "#000",
-          }}
+          className="
+            absolute right-0 top-full mt-3
+            w-64
+            rounded-2xl
+            bg-white dark:bg-gray-900
+            shadow-2xl
+            border border-gray-200 dark:border-gray-700
+            z-[999]
+            overflow-hidden
+            animate-dropdown
+          "
         >
-          {/* Crystal Slider Theme Toggle */}
-          <div style={{ ...styles.item, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span>Theme</span>
-            <div
-              onClick={toggleTheme}
-              style={{
-                width: "50px",
-                height: "26px",
-                borderRadius: "20px",
-                background: theme === "dark"
-                  ? "linear-gradient(145deg, #FFD700, #FFA500)" // gold gradient
-                  : "linear-gradient(145deg, #3B82F6, #60A5FA)", // blue gradient
-                position: "relative",
-                cursor: "pointer",
-                boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
-                transition: "background 0.3s",
-              }}
-            >
-              <div
-                style={{
-                  width: "22px",
-                  height: "22px",
-                  borderRadius: "50%",
-                  background: theme === "dark" ? "#FFF59D" : "#BFDBFE",
-                  position: "absolute",
-                  top: "2px",
-                  left: theme === "dark" ? "26px" : "2px",
-                  transition: "left 0.3s, background 0.3s",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-                }}
-              ></div>
+          {/* USER INFO */}
+          <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+              <User size={18} />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-800 dark:text-white">
+                {user?.name || "User"}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {user?.email}
+              </p>
             </div>
           </div>
 
-          {/* Logout Option */}
-          <div
-            style={{ ...styles.item, borderBottom: "none", marginTop: "6px" }}
-            onClick={handleLogout}
-          >
-            🚪 Logout
+          {/* MENU OPTIONS */}
+          <div className="p-2">
+
+           <button
+  onClick={toggleTheme}
+  className="
+    w-full flex items-center justify-between gap-3
+    px-3 py-2 rounded-lg
+    bg-gray-50 dark:bg-gray-800
+    text-gray-700 dark:text-gray-200
+    hover:bg-gray-100 dark:hover:bg-gray-700
+    transition-all duration-200
+  "
+>
+  <div className="flex items-center gap-3">
+    {theme === "light" ? (
+      <Moon size={18} className="text-gray-600 dark:text-gray-300" />
+    ) : (
+      <Sun size={18} className="text-yellow-500" />
+    )}
+    <span>
+      {theme === "light" ? "Dark Mode" : "Light Mode"}
+    </span>
+  </div>
+</button>
+
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg
+                         text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+            >
+              <LogOut size={18} />
+              Logout
+            </button>
+
           </div>
         </div>
       )}
     </div>
   );
-}
-
-const styles = {
-  line: {
-    display: "block",
-    height: "3px",
-    background: "#333",
-    margin: "4px 0",
-    borderRadius: "2px",
-  },
-  dropdown: {
-    position: "absolute",
-    right: 0,
-    top: "30px",
-    borderRadius: "8px",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
-    width: "160px",
-    zIndex: 1000,
-    padding: "10px 0",
-  },
-  item: {
-    padding: "10px 15px",
-    cursor: "pointer",
-    borderBottom: "1px solid #eee",
-  },
 };
+
+export default SettingsMenu;

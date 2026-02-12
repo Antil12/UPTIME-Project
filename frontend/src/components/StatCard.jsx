@@ -5,7 +5,7 @@ export default function StatCard({
   value,
   icon,
   theme = "dark",
-  onClick, // 👈 added
+  onClick,
 }) {
   // Gradient colors for different stats
   const gradientColors = {
@@ -23,11 +23,13 @@ export default function StatCard({
 
   return (
     <div
-      onClick={onClick} // 👈 popup trigger
+      onClick={onClick}
       className={`
-        relative flex flex-col items-center justify-center p-6 rounded-3xl
-        shadow-2xl backdrop-blur-lg border transition-all duration-300
-        hover:scale-105 cursor-pointer
+        relative flex flex-col items-center justify-center
+        px-4 py-3 rounded-2xl
+        shadow-xl backdrop-blur-lg border
+        transition-all duration-300
+        hover:scale-[1.03] cursor-pointer
         ${theme === "dark"
           ? "bg-gray-800/70 border-gray-700 text-white"
           : "bg-white/50 border-white/30 text-black"}
@@ -36,7 +38,7 @@ export default function StatCard({
     >
       {/* Icon */}
       {icon && (
-        <span className="text-3xl mb-2 drop-shadow-lg">
+        <span className="text-xl mb-1 drop-shadow-md">
           {icon}
         </span>
       )}
@@ -44,8 +46,10 @@ export default function StatCard({
       {/* Title */}
       <h3
         className={`
-          text-lg md:text-xl font-bold mb-2 text-transparent bg-clip-text
-          bg-gradient-to-r ${selectedGradient} drop-shadow-xl
+          text-sm md:text-base font-semibold mb-1
+          text-transparent bg-clip-text
+          bg-gradient-to-r ${selectedGradient}
+          drop-shadow
         `}
       >
         {title}
@@ -54,9 +58,10 @@ export default function StatCard({
       {/* Value */}
       <p
         className={`
-          text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text
+          text-lg md:text-xl font-bold
+          text-transparent bg-clip-text
           bg-gradient-to-r ${selectedGradient}
-          drop-shadow-xl animate-pulse
+          drop-shadow animate-pulse
         `}
       >
         {value}
@@ -66,13 +71,12 @@ export default function StatCard({
       <span
         className="
           absolute inset-0 bg-gradient-to-r
-          from-white/30 via-white/10 to-white/30
-          opacity-0 hover:opacity-30 rounded-3xl
-          pointer-events-none transition-opacity duration-300
+          from-white/20 via-white/5 to-white/20
+          opacity-0 hover:opacity-25
+          rounded-2xl pointer-events-none
+          transition-opacity duration-300
         "
       />
-      
     </div>
   );
 }
-

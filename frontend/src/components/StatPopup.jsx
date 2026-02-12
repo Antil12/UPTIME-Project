@@ -1,5 +1,5 @@
 export default function StatPopup({ type, urls, upCount, downCount, onClose, theme }) {
-  // Gradient titles for different popup types
+  
   const titleGradient = {
     total: "from-purple-400 via-pink-400 to-red-400",
     up: "from-green-400 via-green-300 to-green-200",

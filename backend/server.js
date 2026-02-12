@@ -1,13 +1,14 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-
 import connectDB from "./config/db.js";
 import monitoredSiteRoutes from "./routes/monitoredSiteRoutes.js";
 import { startMonitoringCron } from "./cron/monitorCron.js";
 import checkUrlRoutes from "./routes/checkUrlRoutes.js";
 import siteCurrentStatusRoutes from "./routes/siteCurrentStatus.routes.js";
 import uptimeLogRoutes from "./routes/uptimeLog.routes.js";
+import authRoutes from "./routes/authRoutes.js";
+
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.get("/api/test", (req, res) => {
   res.json({ message: "" });
 });
 
+app.use("/api/auth", authRoutes);
 app.use("/api/monitoredsite", monitoredSiteRoutes);
 app.use("/api/site-current-status", siteCurrentStatusRoutes);
 app.use("/api/uptime-logs", uptimeLogRoutes);

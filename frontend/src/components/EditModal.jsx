@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+
 export default function EditModal({
   item,
   theme,
@@ -8,11 +10,23 @@ export default function EditModal({
   urlError,
   onClose,
   onSave,
+  initialCategory,     
 }) {
   if (!item) return null;
 
+  // Local state for category
+  const [category, setCategory] = useState(item.category || "");
+
+  // If parent passes category, sync it
+  useEffect(() => {
+    if (initialCategory !== undefined) setCategory(initialCategory);
+  }, [initialCategory]);
+
   // Dynamic classes based on theme
-  const bgClass = theme === "dark" ? "bg-gray-800 text-white border-gray-700" : "bg-white text-black border-gray-300";
+  const bgClass =
+    theme === "dark"
+      ? "bg-gray-800 text-white border-gray-700"
+      : "bg-white text-black border-gray-300";
   const inputClass =
     theme === "dark"
       ? "w-full p-2 mb-3 rounded border border-gray-600 bg-gray-700 text-white placeholder-gray-400"
@@ -46,13 +60,23 @@ export default function EditModal({
           className={inputClass}
         />
 
+        <input
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          placeholder="Category (optional)"
+          className={inputClass}
+        />
+
         {urlError && <p className={errorClass}>{urlError}</p>}
 
         <div className="flex justify-end gap-3">
           <button onClick={onClose} className={cancelBtnClass}>
             Cancel
           </button>
-          <button onClick={onSave} className={saveBtnClass}>
+          <button
+            onClick={() => onSave(category)}
+            className={saveBtnClass}
+          >
             Update
           </button>
         </div>

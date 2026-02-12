@@ -8,11 +8,12 @@ const AddUrl = ({
   setUrl,
   urlError,
   onSave,
-  urls = [], // 👈 existing sites
+  urls = [],
 }) => {
+  const [category, setCategory] = useState("");
   const [localError, setLocalError] = useState("");
 
-  const normalize = (value) =>
+  const normalize = (value = "") =>
     value.trim().toLowerCase().replace(/\/$/, "");
 
   const handleSubmit = (e) => {
@@ -22,12 +23,13 @@ const AddUrl = ({
     const normalizedDomain = normalize(domain);
     const normalizedUrl = normalize(url);
 
+    if (!normalizedDomain || !normalizedUrl) {
+      setLocalError("❌ Domain and URL are required");
+      return;
+    }
+
     const duplicateDomain = urls.some(
       (u) => normalize(u.domain) === normalizedDomain
-    );
-
-    const duplicateUrl = urls.some(
-      (u) => normalize(u.url) === normalizedUrl
     );
 
     if (duplicateDomain) {
@@ -35,15 +37,24 @@ const AddUrl = ({
       return;
     }
 
+    const duplicateUrl = urls.some(
+      (u) => normalize(u.url) === normalizedUrl
+    );
+
     if (duplicateUrl) {
       setLocalError("❌ URL already exists");
       return;
     }
 
-    onSave(); // ✅ safe to save
+  
+    onSave({
+      domain: domain.trim(),
+      url: url.trim(),
+      category: category.trim() || null,
+    });
+    setCategory("");
   };
 
-  // Theme classes
   const containerClass =
     theme === "dark"
       ? "bg-gray-800 text-white border border-gray-700"
@@ -77,6 +88,14 @@ const AddUrl = ({
           placeholder="https://example.com"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
+          className={inputClass}
+        />
+
+        <input
+          type="text"
+          placeholder="Category (optional)"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
           className={inputClass}
         />
 

@@ -6,6 +6,8 @@ import { checkSsl } from "../services/sslChecker.js";
 
 let sslRunCounter = 0; // 👈 controls SSL frequency
 
+
+
 export const startMonitoringCron = () => {
   setInterval(async () => {
     console.log("🕒 Running uptime check...");
@@ -27,9 +29,10 @@ export const startMonitoringCron = () => {
            UPTIME CHECK
         ========================= */
         try {
+           const SLOW_THRESHOLD = 10000;
           const start = Date.now();
           const response = await axios.get(site.url, {
-            timeout: 10000,
+            timeout: 15000,
             validateStatus: () => true,
           });
 
@@ -37,7 +40,7 @@ export const startMonitoringCron = () => {
 
           let status = "UP";
           if (response.status >= 400) status = "DOWN";
-          else if (responseTimeMs > 15000) status = "SLOW";
+          else if (responseTimeMs > SLOW_THRESHOLD) status = "SLOW";
 
           await SiteCurrentStatus.findOneAndUpdate(
             { siteId: site._id },
@@ -81,9 +84,9 @@ export const startMonitoringCron = () => {
         }
 
         /* =========================
-           🔐 SSL CHECK (every 10 mins)
+           🔐 SSL CHECK (every 5 mins)
         ========================= */
-        if (sslRunCounter % 10 === 0) {
+        if (sslRunCounter % 1 === 0) {
           await checkSsl(site);
         }
       })
@@ -92,5 +95,5 @@ export const startMonitoringCron = () => {
     sslRunCounter++;
 
     console.log(`✅ Checked ${sites.length} sites`);
-  }, 60 * 1000); // 1 minute
+  },1 * 60 * 1000); // 1 minute
 };

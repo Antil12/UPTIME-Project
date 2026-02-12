@@ -3,6 +3,11 @@ import mongoose from "mongoose";
 const monitoredSiteSchema = new mongoose.Schema({
   domain: { type: String, required: true },
   url: { type: String, required: true },
+  category: {
+      type: String,
+      default: null,
+      trim: true,
+    },
   timeoutMs: { type: Number, default: 5000 },
   slowThresholdMs: { type: Number, default: 3000 },
   expectedStatusCodes: { type: [Number], default: [200, 301, 302] },

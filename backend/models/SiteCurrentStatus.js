@@ -32,16 +32,16 @@ const siteCurrentStatusSchema = new mongoose.Schema(
     },
 
     // 🔐 SSL monitoring
-    sslStatus: {
-      type: String,
-      enum: ["VALID", "EXPIRING", "EXPIRED"],
-      default: "VALID",
-    },
+    // sslStatus: {
+    //   type: String,
+    //   enum: ["VALID", "EXPIRING", "EXPIRED"],
+    //   default: "VALID",
+    // },
 
-    sslDaysRemaining: {
-      type: Number,
-      default: null,
-    },
+    // sslDaysRemaining: {
+    //   type: Number,
+    //   default: null,
+    // },
   },
   { timestamps: true }
 );
