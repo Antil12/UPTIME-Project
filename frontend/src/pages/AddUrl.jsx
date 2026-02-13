@@ -71,8 +71,10 @@ const AddUrl = ({
       : "w-full py-2 rounded bg-slate-900 text-white hover:bg-slate-800 transition-colors duration-200";
 
   return (
-    <div className={`p-6 rounded-xl shadow max-w-xl mx-auto ${containerClass}`}>
-      <h2 className="text-lg font-semibold mb-4">Add Website</h2>
+    <div className={`p-4 md:p-6 rounded-xl shadow max-w-xl mx-auto ${containerClass}`}>
+
+      <h2 className="text-base md:text-lg font-semibold mb-4 text-center md:text-left">
+Add Website</h2>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <input

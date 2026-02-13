@@ -11,21 +11,11 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const LOG_API = "http://localhost:5000/api/uptimelog";
+const LOG_API = "http://localhost:5000/api/uptime-logs/all";
 
-function SiteReport({ site, theme }) {
-  const [logs, setLogs] = useState([]);
-
-  useEffect(() => {
-    axios
-      .get(`${LOG_API}/${site._id}`)
-      .then((res) => setLogs(res.data.data || []))
-      .catch((err) => console.error("Log fetch failed", err));
-  }, [site._id]);
-
-  // Transform logs → chart format
+function SiteReport({ site, logs, theme }) {
   const chartData = logs.map((log) => ({
-    time: new Date(log.checkedAt || log.timestamp).toLocaleTimeString(),
+    time: new Date(log.timestamp).toLocaleTimeString(),
     UP: log.status === "UP" || log.status === "SLOW" ? 1 : 0,
     DOWN: log.status === "DOWN" ? 1 : 0,
   }));
@@ -35,7 +25,9 @@ function SiteReport({ site, theme }) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <div className="w-full h-64 md:h-80">
+  <ResponsiveContainer width="100%" height="100%">
+
       <BarChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" tick={{ fontSize: 10 }} />
@@ -46,10 +38,42 @@ function SiteReport({ site, theme }) {
         <Bar dataKey="DOWN" fill="#ef4444" />
       </BarChart>
     </ResponsiveContainer>
+    </div>
   );
 }
 
 export default function Report({ urls, reportSearch, setReportSearch, theme }) {
+  const [allLogs, setAllLogs] = useState([]);
+
+  // ✅ ONE API CALL ONLY
+  useEffect(() => {
+    const fetchAllLogs = async () => {
+      try {
+        const token = localStorage.getItem("loginToken");
+        if (!token) return;
+
+        const res = await axios.get(LOG_API, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        setAllLogs(res.data?.data || []);
+      } catch (err) {
+        console.error("Failed to fetch logs", err);
+      }
+    };
+
+    fetchAllLogs();
+  }, []);
+
+  // ✅ Group logs by siteId
+  const logsBySite = allLogs.reduce((acc, log) => {
+    if (!acc[log.siteId]) acc[log.siteId] = [];
+    acc[log.siteId].push(log);
+    return acc;
+  }, {});
+
   const filteredSites = urls.filter(
     (u) =>
       (u.domain || "").toLowerCase().includes(reportSearch.toLowerCase()) ||
@@ -58,16 +82,12 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
 
   return (
     <div className="mb-4">
-      {/* 🔍 Search */}
       <div className="mb-6 max-w-sm relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-lg">
-          🔍
-        </div>
         <input
           value={reportSearch}
           onChange={(e) => setReportSearch(e.target.value)}
           placeholder="Search domain or URL"
-          className={`w-full pl-10 p-2 border rounded ${
+          className={`w-full p-2 border rounded ${
             theme === "dark"
               ? "bg-gray-800 text-white border-gray-600"
               : "bg-white text-gray-900 border-gray-300"
@@ -75,7 +95,6 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
         />
       </div>
 
-      {/* 📊 Per-site reports */}
       {filteredSites.map((site) => (
         <div
           key={site._id}
@@ -94,7 +113,11 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
             </a>
           </h2>
 
-          <SiteReport site={site} theme={theme} />
+          <SiteReport
+            site={site}
+            logs={logsBySite[site._id] || []}
+            theme={theme}
+          />
         </div>
       ))}
 

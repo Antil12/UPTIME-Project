@@ -31,21 +31,27 @@ export default function CrystalPopup({
       <Dialog.Overlay className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md" />
 
       {/* Popup */}
-      <Dialog.Content
-        className="
-          fixed top-1/2 left-1/2 z-50
-          -translate-x-1/2 -translate-y-1/2
-          w-[400px] max-h-[500px]
-          p-6
-          rounded-3xl
-          bg-gradient-to-br from-white/10 to-white/5
-          backdrop-blur-2xl
-          border border-white/20
-          text-white
-          overflow-hidden
-          shadow-2xl
-        "
-      >
+     <Dialog.Content
+  className="
+    fixed top-1/2 left-1/2 z-50
+    -translate-x-1/2 -translate-y-1/2
+
+    w-[90%] max-w-[280px] sm:max-w-sm md:max-w-[400px]
+    max-h-[85vh]
+
+    p-4 sm:p-5 md:p-6
+    rounded-xl md:rounded-3xl
+
+    bg-gradient-to-br from-white/10 to-white/5
+    backdrop-blur-2xl
+    border border-white/20
+    text-white
+    shadow-2xl
+
+    transition-all duration-300 md:hover:scale-105
+  "
+>
+
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">
@@ -53,7 +59,7 @@ export default function CrystalPopup({
           </h2>
 
           <Dialog.Close className="text-white/70 hover:text-red-400 text-xl font-bold transition">
-            ✕
+            ✕  
           </Dialog.Close>
         </div>
 
@@ -81,7 +87,8 @@ export default function CrystalPopup({
         )}
 
         {/* Scrollable Content */}
-        <div className="max-h-[280px] overflow-y-auto pr-1">
+        <div className="max-h-[40vh] overflow-y-auto pr-1">
+
           {filteredSites.length > 0 ? (
             <div className="space-y-2">
               {filteredSites.map((site, index) => (

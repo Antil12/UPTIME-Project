@@ -9,6 +9,10 @@ import AddUrl from "./pages/AddUrl";
 import Report from "./pages/Report";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import Header from "./components/Header";
+
+
 
 const API_BASE = "http://localhost:5000/api/monitoredsite";
 
@@ -18,6 +22,7 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
   !!localStorage.getItem("loginToken")
 );
+ const navigate = useNavigate();
 
   const [authPage, setAuthPage] = useState("login"); 
 
@@ -43,41 +48,49 @@ function App() {
 
   /* ================= EFFECTS ================= */
    
-  // Theme
+  
   useEffect(() => {
-    const main = document.getElementById("main-container");
-    if (!main) return;
+  document.documentElement.classList.toggle("dark", theme === "dark");
+  localStorage.setItem("theme", theme);
+}, [theme]);
 
-    main.className =
-      theme === "dark"
-        ? "bg-gray-900 text-white min-h-screen"
-        : "bg-gradient-to-br from-slate-100 to-slate-200 min-h-screen";
-
-    localStorage.setItem("theme", theme);
-  }, [theme]);
 
   // Backend health check
   useEffect(() => {
-    axios
-      .get("http://localhost:5000/api/test")
-      .then((res) => setMessage(res.data.message))
-      .catch(() => setMessage("Backend not connected"));
-  }, []);
+  if (!isLoggedIn) return;
+
+  axios
+    .get("http://localhost:5000/api/test")
+    .then((res) => setMessage(res.data.message))
+    .catch(() => setMessage("Backend not connected"));
+}, [isLoggedIn]);
+
 
   // Fetch sites
-  const fetchSites = async (status = "ALL") => {
-    try {
-      const res = await axios.get(`${API_BASE}?status=${status}`);
-      setUrls(res.data?.data || []);
-    } catch (err) {
-      console.error("Fetch sites failed", err);
-      setUrls([]);
-    }
-  };
+ const fetchSites = async (status = "ALL") => {
+  try {
+    const token = localStorage.getItem("loginToken");
+    if (!token) return;
 
-  useEffect(() => {
-    fetchSites(selectedStatus);
-  }, [selectedStatus]);
+    const res = await axios.get(`${API_BASE}?status=${status}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    setUrls(res.data?.data || []);
+  } catch (err) {
+    console.error("Fetch sites failed", err);
+    setUrls([]);
+  }
+};
+
+
+ useEffect(() => {
+  if (!isLoggedIn) return;
+  fetchSites(selectedStatus);
+}, [selectedStatus, isLoggedIn]);
+
 
   /* ================= HANDLERS ================= */
 
@@ -242,155 +255,115 @@ const handleAddUrl = async ({ domain, url, category }) => {
       downTime: u.downTime || 0,
     }));
   
-  if (!isLoggedIn) {
-  return authPage === "login" ? (
-    <Login
-      onLogin={() => setIsLoggedIn(true)}
-      goToSignup={() => setAuthPage("signup")}
-    />
-  ) : (
-    <Signup
-      onSignup={() => setIsLoggedIn(true)}
-    />
+if (!isLoggedIn) {
+  return (
+    <Routes>
+
+      {/* LOGIN */}
+      <Route
+        path="/login"
+        element={
+          <Login
+            onLogin={() => {
+              setIsLoggedIn(true);
+            }}
+          />
+        }
+      />
+
+      {/* SIGNUP */}
+      <Route
+        path="/signup"
+        element={
+          <Signup
+            onSignup={() => {
+              setIsLoggedIn(true);
+            }}
+          />
+        }
+      />
+
+      {/* DEFAULT REDIRECT */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+
+    </Routes>
   );
 }
 
-  /* ================= UI ================= */
+
   return (
-    
-    <div id="main-container">
-     <header className="sticky top-0 z-50">
-  <div className="backdrop-blur-2xl bg-white/10 border-b border-white/10 shadow-xl">
-    <div className="w-full flex justify-between items-center px-8 py-4">
+    <div id="main-container" className="min-h-screen">
 
+      {/* HEADER */}
+      <Header
+        theme={theme}
+        setTheme={setTheme}
+        handleRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
+        handleLogout={handleLogout}
+      />
 
-      {/* LOGO */}
-      <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent tracking-wide">
-        ⏱️ Uptime Monitor
-      </h1>
-
-      {/* NAVIGATION */}
-      <div className="flex gap-4 items-center">
-
-        <div className="flex gap-2 bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-xl">
-
-          <CrystalButton
-            label="Dashboard"
-            active={activePage === "dashboard"} 
-            onClick={() => setActivePage("dashboard")}
-            theme={theme}
-          />
-
-          <CrystalButton
-            label="Add URL"
-            active={activePage === "add"}
-            onClick={() => setActivePage("add")}
-            theme={theme}
-          />
-
-          <CrystalButton
-            label="Reports"
-            active={activePage === "reports"}
-            onClick={() => setActivePage("reports")}
-            theme={theme}
-          />
-
-        </div>
-
-        {/* REFRESH BUTTON */}
-        <button
-  onClick={handleRefresh}
-  disabled={isRefreshing}
-  className={`
-    relative px-5 py-2.5
-    rounded-xl
-    font-medium
-    text-white
-    transition-all duration-300
-    ${
-      isRefreshing
-        ? "bg-gray-500 cursor-not-allowed"
-        : "bg-gradient-to-r from-emerald-500 to-green-600 hover:scale-105 hover:shadow-lg"
-    }
-  `}
->
-  {isRefreshing ? (
-    <span className="flex items-center gap-2">
-      
-      {/* Spinner */}
-      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-      
-      Refreshing...
-    </span>
-  ) : (
-    "🔄 Refresh"
-  )}
-</button>
-
-
-        {/* SETTINGS */}
-        <div className="bg-white/5 p-1 rounded-xl border border-white/10">
-          <SettingsMenu
-            theme={theme}
-            toggleTheme={() =>
-              setTheme(theme === "light" ? "dark" : "light")
-            }
-            onLogout={handleLogout}
-          />
-        </div>
-
-      </div>
-    </div>
-  </div>
-</header>
-
-
-      <main className="p-6 max-w-6xl mx-auto">
+      {/* MAIN CONTENT */}
+      <main className="p-4 md:p-6 max-w-6xl mx-auto">
         <p className="mb-4 text-green-600">{message}</p>
 
-        {activePage === "dashboard" && (
-          <Dashboard
-            urls={urls}
-            theme={theme}
-            search={search}
-            setSearch={setSearch}
-            filteredUrls={filteredUrls}
-            upSites={upSites}
-            downSites={downSites}
-            onPin={handlePin}
-            onDelete={handleDelete}
-            onEdit={handleEditClick}
-            popupData={popupData}
-            setPopupData={setPopupData}
-            selectedStatus={selectedStatus}
-            setSelectedStatus={setSelectedStatus}
+        <Routes>
+          <Route
+            path="/dashboard"
+            element={
+              <Dashboard
+                urls={urls}
+                theme={theme}
+                search={search}
+                setSearch={setSearch}
+                filteredUrls={filteredUrls}
+                upSites={upSites}
+                downSites={downSites}
+                onPin={handlePin}
+                onDelete={handleDelete}
+                onEdit={handleEditClick}
+                popupData={popupData}
+                setPopupData={setPopupData}
+                selectedStatus={selectedStatus}
+                setSelectedStatus={setSelectedStatus}
+              />
+            }
           />
-        )}
 
-        {activePage === "add" && (
-          <AddUrl
-            theme={theme}
-            domain={domain}
-            url={url}
-            setDomain={setDomain}
-            setUrl={setUrl}
-            urlError={urlError}
-            onSave={handleAddUrl}
-            urls={urls}
+          <Route
+            path="/add"
+            element={
+              <AddUrl
+                theme={theme}
+                domain={domain}
+                url={url}
+                setDomain={setDomain}
+                setUrl={setUrl}
+                urlError={urlError}
+                onSave={handleAddUrl}
+                urls={urls}
+              />
+            }
           />
-        )}
 
-        {activePage === "reports" && (
-          <Report
-            urls={safeUrls}
-            reportData={reportData}
-            reportSearch={reportSearch}
-            setReportSearch={setReportSearch}
-            theme={theme}
+          <Route
+            path="/reports"
+            element={
+              <Report
+                urls={safeUrls}
+                reportData={reportData}
+                reportSearch={reportSearch}
+                setReportSearch={setReportSearch}
+                theme={theme}
+              />
+            }
           />
-        )}
+
+          <Route path="*" element={<Navigate to="/dashboard" />} />
+        </Routes>
       </main>
 
+      {/* EDIT MODAL */}
       {editItem && (
         <EditModal
           item={editItem}
@@ -404,6 +377,7 @@ const handleAddUrl = async ({ domain, url, category }) => {
           theme={theme}
         />
       )}
+
     </div>
   );
 }

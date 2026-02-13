@@ -1,11 +1,15 @@
 import { useState } from "react";
 import axios from "axios";
 import Galaxy from "../components/Galaxy";
+import { useNavigate } from "react-router-dom";
+
 
 const Login = ({ onLogin, goToSignup }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const navigate = useNavigate();
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -95,12 +99,14 @@ const Login = ({ onLogin, goToSignup }) => {
 
         <p className="text-center text-sm mt-6">
           Don’t have an account?{" "}
-          <button
-            onClick={goToSignup}
-            className="text-blue-300 underline hover:text-blue-200"
-          >
-            Signup
-          </button>
+         <button
+  type="button"
+  onClick={() => navigate("/signup")}
+  className="text-blue-300 underline hover:text-blue-200"
+>
+  Signup
+</button>
+
         </p>
       </div>
     </div>

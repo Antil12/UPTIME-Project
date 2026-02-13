@@ -39,3 +39,32 @@ export const getUptimeLogsBySite = async (req, res) => {
     });
   }
 };
+
+export const getAllUptimeLogs = async (req, res) => {
+  try {
+    const logs = await UptimeLog.find({})
+      .sort({ checkedAt: 1 })
+      .lean();
+
+    const formattedLogs = logs.map((log) => ({
+      _id: log._id,
+      siteId: log.siteId,
+      status: ["UP", "SLOW"].includes(log.status) ? log.status : "DOWN",
+      statusCode: log.StatusCode ?? null,
+      responseTimeMs: log.responseTimeMs ?? null,
+      timestamp: log.checkedAt,
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: formattedLogs.length,
+      data: formattedLogs,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch all uptime logs",
+      error: error.message,
+    });
+  }
+};

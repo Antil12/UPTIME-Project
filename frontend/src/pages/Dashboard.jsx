@@ -78,11 +78,14 @@ if (selectedStatus !== "ALL") {
   );
 
   return (
-    <main className="p-6 max-w-7xl mx-auto space-y-6">
+    <main className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+
       {/* ===============================
          STAT CARDS
       =============================== */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+     <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+
+
         <StatCard
           title="Total Websites"
           value={urls.length}
@@ -128,7 +131,8 @@ if (selectedStatus !== "ALL") {
       {/* ===============================
          SEARCH
       =============================== */}
-      <div className="flex justify-end">
+      <div className="flex justify-center md:justify-end">
+
         <div
           className={`flex items-center w-full max-w-sm border rounded overflow-hidden
             ${theme === "dark" ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"}`}

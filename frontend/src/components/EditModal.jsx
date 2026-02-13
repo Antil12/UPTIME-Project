@@ -42,8 +42,20 @@ export default function EditModal({
       : "px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-400";
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className={`w-[90%] max-w-md rounded-3xl p-6 border shadow-lg ${bgClass}`}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+
+      <div
+  className={`
+    w-full
+    max-w-sm md:max-w-md
+    rounded-2xl md:rounded-3xl
+    p-4 md:p-6
+    border
+    shadow-xl
+    ${bgClass}
+  `}
+>
+
         <h2 className="text-xl font-semibold mb-4">✏️ Edit Website</h2>
 
         <input
@@ -69,7 +81,8 @@ export default function EditModal({
 
         {urlError && <p className={errorClass}>{urlError}</p>}
 
-        <div className="flex justify-end gap-3">
+       <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
+
           <button onClick={onClose} className={cancelBtnClass}>
             Cancel
           </button>
