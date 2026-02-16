@@ -139,7 +139,15 @@ export const getSiteById = async (req, res) => {
 ===================================================== */
 export const addSite = async (req, res) => {
   try {
-    const { domain, url, category } = req.body; // include category
+    const {
+      domain,
+      url,
+      category,
+      responseThresholdMs,
+      alertChannels,
+      regions,
+      alertIfAllRegionsDown,
+    } = req.body;
 
     if (!url) {
       return res.status(400).json({
@@ -148,9 +156,21 @@ export const addSite = async (req, res) => {
       });
     }
 
-    const site = await MonitoredSite.create({ domain, url, category });
+    const site = await MonitoredSite.create({
+      domain,
+      url,
+      category,
+      responseThresholdMs: responseThresholdMs || null,
+      alertChannels: alertChannels || [],
+      regions: regions || [],
+      alertIfAllRegionsDown: alertIfAllRegionsDown || false,
+    });
 
-    res.status(201).json({ success: true, data: site });
+    res.status(201).json({
+      success: true,
+      data: site,
+    });
+
   } catch (error) {
     console.error("❌ addSite error:", error);
     res.status(500).json({
@@ -159,6 +179,7 @@ export const addSite = async (req, res) => {
     });
   }
 };
+
 
 
 /* =====================================================

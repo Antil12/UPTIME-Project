@@ -107,11 +107,17 @@ const handleAddUrl = async ({ domain, url, category }) => {
   }
 
   try {
-    await axios.post(API_BASE, {
-      domain,
-      url,
-      category, 
-    });
+   const token = localStorage.getItem("loginToken");
+
+await axios.post(
+  API_BASE,
+  { domain, url, category },
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
 
     setDomain("");
     setUrl("");
@@ -131,7 +137,14 @@ const handleAddUrl = async ({ domain, url, category }) => {
 
     try {
     
-      await axios.delete(`${API_BASE}/${id}`);
+      const token = localStorage.getItem("loginToken");
+
+await axios.delete(`${API_BASE}/${id}`, {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
+
       fetchSites();
     } catch (err) {
       console.error(err);
@@ -175,11 +188,21 @@ const handleAddUrl = async ({ domain, url, category }) => {
   }
 
   try {
-    await axios.put(`${API_BASE}/${editItem._id}`, {
-      domain: editDomain.trim(),
-      url: editUrl.trim(),
-      category: category?.trim() || null, 
-    });
+    const token = localStorage.getItem("loginToken");
+
+await axios.put(
+  `${API_BASE}/${editItem._id}`,
+  {
+    domain: editDomain.trim(),
+    url: editUrl.trim(),
+    category: category?.trim() || null,
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
 
     setEditItem(null);
     setUrlError("");

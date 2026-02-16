@@ -3,13 +3,14 @@ import axios from "axios";
 import UrlTable from "../components/UrlTable";
 import StatCard from "../components/StatCard";
 import CrystalPopup from "../components/CrystalPopup";
+import UptimePopup from "../components/UptimePopup"; 
 
 const Dashboard = ({
   urls,
   theme,
   search,
   setSearch,
-  filteredUrls, 
+  filteredUrls,
   upSites,
   downSites,
   onPin,
@@ -29,45 +30,82 @@ const Dashboard = ({
       : `${Math.round((upSites.length / urls.length) * 100)}%`;
 
   /* ===============================
+     NEW: UPTIME POPUP STATE
+  =============================== */
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [filter, setFilter] = useState("24h");
+
+  // Example report data (you can replace with API data)
+  const reportData = urls;
+
+  /* ===============================
      FILTER STATES
   =============================== */
   const [selectedCategory, setSelectedCategory] = useState("ALL");
-  const [categories, setCategories] = useState(["ALL"]); 
-
-  /* ===============================
-     FETCH CATEGORIES FROM API
-  =============================== */
+  const [categories, setCategories] = useState(["ALL"]);
+  const [uptimeData, setUptimeData] = useState(null);
  useEffect(() => {
-  const uniqueCategories = ["ALL", ...Array.from(
-    new Set(urls.map(u => u.category || "UNCATEGORIZED"))
-  )];
-  setCategories(uniqueCategories);
-}, [urls]);
+  if (!popupOpen) return;
+
+  const fetchUptimeAnalytics = async () => {
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/uptime-logs/analytics?range=${filter}`
+      );
+
+      console.log("Analytics Response:", res.data);
+
+      if (res.data.success) {
+        setUptimeData(res.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch uptime analytics", error);
+    }
+  };
+
+  fetchUptimeAnalytics();
+}, [filter, popupOpen]);
+
+  
 
   /* ===============================
-     STATUS LIST (dynamic)
+     FETCH CATEGORIES
   =============================== */
-  const statuses = ["ALL", ...new Set(urls.map((u) => u.status).filter(Boolean))];
+  useEffect(() => {
+    const uniqueCategories = [
+      "ALL",
+      ...Array.from(
+        new Set(urls.map((u) => u.category || "UNCATEGORIZED"))
+      ),
+    ];
+    setCategories(uniqueCategories);
+  }, [urls]);
 
   /* ===============================
-     FINAL FILTERING PIPELINE
-     search → category → status
+     STATUS LIST
   =============================== */
-let finalUrls = filteredUrls;
-
-if (selectedCategory !== "ALL") {
-  finalUrls = finalUrls.filter(
-    (u) => (u.category || "UNCATEGORIZED") === selectedCategory
-  );
-}
-
-if (selectedStatus !== "ALL") {
-  finalUrls = finalUrls.filter((u) => u.status === selectedStatus);
-}
-
+  const statuses = [
+    "ALL",
+    ...new Set(urls.map((u) => u.status).filter(Boolean)),
+  ];
 
   /* ===============================
-   GLOBAL (UNFILTERED) DATA
+     FINAL FILTER PIPELINE
+  =============================== */
+  let finalUrls = filteredUrls;
+
+  if (selectedCategory !== "ALL") {
+    finalUrls = finalUrls.filter(
+      (u) => (u.category || "UNCATEGORIZED") === selectedCategory
+    );
+  }
+
+  if (selectedStatus !== "ALL") {
+    finalUrls = finalUrls.filter((u) => u.status === selectedStatus);
+  }
+
+  /* ===============================
+     GLOBAL DATA
   =============================== */
   const globalUpSites = urls.filter(
     (u) => u.status === "UP" || u.status === "SLOW"
@@ -83,8 +121,7 @@ if (selectedStatus !== "ALL") {
       {/* ===============================
          STAT CARDS
       =============================== */}
-     <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-
+      <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
 
         <StatCard
           title="Total Websites"
@@ -125,17 +162,33 @@ if (selectedStatus !== "ALL") {
           }
         />
 
-        <StatCard title="Uptime %" value={uptimePercent} icon="📊" theme={theme} />
+        {/* ✅ UPDATED UPTIME CARD WITH CLICKABLE % */}
+        <StatCard
+          title="Uptime %"
+          value={
+            <span
+              onClick={() => setPopupOpen(true)}
+              className="cursor-pointer text-blue-600 underline"
+            >
+              {uptimePercent}
+            </span>
+          }
+          icon="📊"
+          theme={theme}
+        />
       </section>
 
       {/* ===============================
          SEARCH
       =============================== */}
       <div className="flex justify-center md:justify-end">
-
         <div
           className={`flex items-center w-full max-w-sm border rounded overflow-hidden
-            ${theme === "dark" ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"}`}
+          ${
+            theme === "dark"
+              ? "bg-gray-700 border-gray-600"
+              : "bg-white border-gray-300"
+          }`}
         >
           <span className="px-2">🔍</span>
           <input
@@ -147,8 +200,9 @@ if (selectedStatus !== "ALL") {
         </div>
       </div>
 
-      {/* ===========
-         URL TABLE*/}
+      {/* ===============================
+         URL TABLE
+      =============================== */}
       <UrlTable
         urls={finalUrls}
         theme={theme}
@@ -163,12 +217,24 @@ if (selectedStatus !== "ALL") {
       />
 
       {/* ===============================
-         POPUP
+         EXISTING POPUP
       =============================== */}
       {popupData && (
         <CrystalPopup
           popupData={popupData}
           onClose={() => setPopupData(null)}
+        />
+      )}
+
+      {/* ===============================
+         NEW UPTIME POPUP
+      =============================== */}
+      {popupOpen && (
+        <UptimePopup
+          data={uptimeData}
+          filter={filter}
+          setFilter={setFilter}
+          onClose={() => setPopupOpen(false)}
         />
       )}
     </main>

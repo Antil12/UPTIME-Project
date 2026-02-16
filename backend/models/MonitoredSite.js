@@ -14,6 +14,26 @@ const monitoredSiteSchema = new mongoose.Schema({
   alertEmails: { type: [String], default: [] },
   sslMonitoringEnabled: { type: Boolean, default: false },
   sslAlertBeforeDays: { type: Number, default: 7 },
+  responseThresholdMs: {
+  type: Number,
+  default: null,
+},
+
+alertChannels: {
+  type: [String], // ["email", "sms", "whatsapp"]
+  default: [],
+},
+
+regions: {
+  type: [String], // ["India", "USA"]
+  default: [],
+},
+
+alertIfAllRegionsDown: {
+  type: Boolean,
+  default: false,
+}
+
 }, { timestamps: true });
 
 // ✅ Check if model already exists, otherwise create it
