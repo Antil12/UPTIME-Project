@@ -1,37 +1,68 @@
 import axios from "axios";
 
-// base URL for API
+// ================= BASE CONFIG =================
 axios.defaults.baseURL = "http://localhost:5000/api";
+axios.defaults.withCredentials = true; // send refresh cookie
 
-// attach access token from localStorage
+// ================= REQUEST INTERCEPTOR =================
 axios.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("loginToken");
+
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // send cookies (for refresh token) by default
-    config.withCredentials = true;
+
     return config;
   },
   (err) => Promise.reject(err)
 );
 
-// on 401 -> clear auth and redirect to login
+// ================= RESPONSE INTERCEPTOR =================
 axios.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem("loginToken");
-      localStorage.removeItem("user");
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If access token expired
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url.includes("/auth/refresh")
+    ) {
+      originalRequest._retry = true;
+
       try {
-        // best-effort: call backend logout to clear refresh cookie
-        axios.post("/auth/logout", {}, { withCredentials: true }).catch(() => {});
-      } catch (e) {}
-      window.location.href = "/login";
+        // Call refresh endpoint
+        const res = await axios.post("/auth/refresh");
+
+        const newAccessToken = res.data.accessToken;
+
+        // Store new access token
+        localStorage.setItem("loginToken", newAccessToken);
+
+        // Attach new token to failed request
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+        // Retry original request
+        return axios(originalRequest);
+
+      } catch (refreshError) {
+        // Refresh failed → logout
+        localStorage.removeItem("loginToken");
+        localStorage.removeItem("user");
+
+        try {
+          await axios.post("/auth/logout");
+        } catch (e) {}
+
+        window.location.href = "/login";
+        return Promise.reject(refreshError);
+      }
     }
-    return Promise.reject(err);
+
+    return Promise.reject(error);
   }
 );
 

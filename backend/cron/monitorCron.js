@@ -6,6 +6,9 @@ import { checkSsl } from "../services/sslChecker.js";
 import { checkRegions } from "../services/regionChecker.js";
 import { handleStatusAlert } from "../services/alertService.js";
 
+import fs from "fs";
+import path from "path";
+
 
 
 let sslRunCounter = 0; // 👈 controls SSL frequency
@@ -25,6 +28,7 @@ export const startMonitoringCron = () => {
     }
 
     const checkedAt = new Date();
+    const slowSitesTemp = [];
 
   
      // 🚀 RUN ALL SITES IN PARALLEL
@@ -50,8 +54,22 @@ await Promise.all(
       responseTimeMs = Date.now() - start;
       statusCode = response.status;
 
-      if (response.status >= 400) status = "DOWN";
-      else if (responseTimeMs > SLOW_THRESHOLD) status = "SLOW";
+     if (response.status >= 400) {
+  status = "DOWN";
+} 
+else if (responseTimeMs > SLOW_THRESHOLD) {
+  status = "SLOW";
+
+  // 🔥 Store in temporary list
+  slowSitesTemp.push({
+    domain: site.domain,
+    url: site.url,
+    responseTimeMs,
+    threshold: SLOW_THRESHOLD,
+    checkedAt,
+  });
+}
+
 
     } catch {
       status = "DOWN";
@@ -128,7 +146,36 @@ await Promise.all(
     );
 
     sslRunCounter++;
+    if (slowSitesTemp.length > 0) {
+  await generateCSV(slowSitesTemp);
+}
+
 
     console.log(`✅ Checked ${sites.length} sites`);
   },1 * 60 * 1000); // 1 minute
+};
+
+
+//----------------------------------------------------------------------------------------------
+
+const generateCSV = async (slowSites) => {
+  const fileName = `slow-sites-${Date.now()}.csv`;
+  const filePath = path.join("reports", fileName);
+
+  // Make sure folder exists
+  if (!fs.existsSync("reports")) {
+    fs.mkdirSync("reports");
+  }
+
+  // CSV header
+  let csvContent = "Domain,URL,ResponseTime(ms),Threshold(ms),CheckedAt\n";
+
+  // Add rows
+  slowSites.forEach((site) => {
+    csvContent += `${site.domain},${site.url},${site.responseTimeMs},${site.threshold},${site.checkedAt}\n`;
+  });
+
+  fs.writeFileSync(filePath, csvContent);
+
+  console.log(`📁 CSV Generated: ${fileName}`);
 };
