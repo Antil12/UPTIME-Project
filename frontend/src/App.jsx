@@ -1,5 +1,5 @@
 import axios from "axios"; 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import SettingsMenu from "./components/SettingsMenu";
 import EditModal from "./components/EditModal";
 import { isValidUrl } from "./utils/validators";
@@ -95,7 +95,20 @@ function App() {
   /* ================= HANDLERS ================= */
 
   // ADD SITE
-const handleAddUrl = async ({ domain, url, category }) => {
+const handleAddUrl = async (data) => {
+  const {
+    domain,
+    url,
+    category,
+    responseThresholdMs,
+    alertChannels,
+    regions,
+    alertIfAllRegionsDown,
+    emailContact,
+    phoneContact,
+      priority, 
+  } = data;
+
   if (!domain || !url) {
     setUrlError("Domain and URL are required");
     return;
@@ -107,17 +120,28 @@ const handleAddUrl = async ({ domain, url, category }) => {
   }
 
   try {
-   const token = localStorage.getItem("loginToken");
+    const token = localStorage.getItem("loginToken");
 
-await axios.post(
-  API_BASE,
-  { domain, url, category },
-  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  }
-);
+    await axios.post(
+      API_BASE,
+      {
+        domain,
+        url,
+        category,
+        responseThresholdMs,
+        alertChannels,
+        regions,
+        alertIfAllRegionsDown,
+        emailContact,
+        phoneContact,
+        priority,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
     setDomain("");
     setUrl("");
@@ -129,7 +153,6 @@ await axios.post(
     setUrlError(err.response?.data?.message || "Failed to add site");
   }
 };
-
 
   // DELETE SITE
   const handleDelete = async (id) => {
@@ -230,12 +253,58 @@ await axios.put(
 };
 
  const handleLogout = () => {
-  localStorage.removeItem("loginToken");
-  localStorage.removeItem("user");
-  setIsLoggedIn(false);
-  setUrls([]);
-  setActivePage("dashboard");
+  try {
+    axios.post("http://localhost:5000/api/auth/logout", {}, { withCredentials: true }).catch(() => {});
+  } finally {
+    if (logoutTimerRef.current) {
+      clearTimeout(logoutTimerRef.current);
+      logoutTimerRef.current = null;
+    }
+    localStorage.removeItem("loginToken");
+    localStorage.removeItem("user");
+    setIsLoggedIn(false);
+    setUrls([]);
+    setActivePage("dashboard");
+  }
 };
+
+// auto logout timer ref
+const logoutTimerRef = useRef(null);
+
+// schedule auto-logout when token expires
+useEffect(() => {
+  const token = localStorage.getItem("loginToken");
+  if (!token) return;
+
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (!payload.exp) return;
+    const expMs = payload.exp * 1000;
+    const delay = expMs - Date.now();
+    if (delay <= 0) {
+      handleLogout();
+      return;
+    }
+
+    // clear existing timer
+    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+
+    logoutTimerRef.current = setTimeout(() => {
+      handleLogout();
+    }, delay);
+  } catch (err) {
+    // malformed token — ignore
+  }
+
+  return () => {
+    if (logoutTimerRef.current) {
+      clearTimeout(logoutTimerRef.current);
+      logoutTimerRef.current = null;
+    }
+  };
+}, [isLoggedIn]);
 
 
 

@@ -55,11 +55,11 @@ const UrlTable = ({
       <div className="hidden lg:block">
 
         <table
-          className={`w-full rounded shadow text-sm
+          className={`table-dark w-full rounded shadow text-sm
           ${theme === "dark"
               ? "bg-gray-900 text-gray-200"
-              : "bg-white text-gray-800"}`}
-        >
+              : "bg-white text-gray-800"}`}>
+        {/* > */}
           <thead
             className={`text-sm sticky top-[80px] z-40
             ${theme === "dark"

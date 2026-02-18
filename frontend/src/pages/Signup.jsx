@@ -19,10 +19,10 @@ const Signup = ({ onSignup, goToLogin }) => {
     try {
       const res = await axios.post(
         "http://localhost:5000/api/auth/signup",
-        { name, email, password }
+        { name, email, password },
+        { withCredentials: true }
       );
-
-      localStorage.setItem("loginToken", res.data.token);
+      localStorage.setItem("loginToken", res.data.accessToken);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
       onSignup();

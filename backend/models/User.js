@@ -23,4 +23,9 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
+// Store refresh token (single token rotation)
+userSchema.add({
+  refreshToken: { type: String },
+});
+
 export default mongoose.model("User", userSchema);

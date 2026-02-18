@@ -11,7 +11,7 @@ const monitoredSiteSchema = new mongoose.Schema({
   timeoutMs: { type: Number, default: 5000 },
   slowThresholdMs: { type: Number, default: 3000 },
   expectedStatusCodes: { type: [Number], default: [200, 301, 302] },
-  alertEmails: { type: [String], default: [] },
+ // alertEmails: { type: [String], default: [] },
   sslMonitoringEnabled: { type: Boolean, default: false },
   sslAlertBeforeDays: { type: Number, default: 7 },
   responseThresholdMs: {
@@ -32,7 +32,28 @@ regions: {
 alertIfAllRegionsDown: {
   type: Boolean,
   default: false,
-}
+},
+
+
+emailContact: {
+  type: String,
+  default: null,
+  trim: true,
+},
+
+phoneContact: {
+  type: String,
+  default: null,
+  trim: true,
+},
+priority: {
+  type: Number,
+  enum: [0, 1],
+  default: 0,
+},
+
+
+
 
 }, { timestamps: true });
 

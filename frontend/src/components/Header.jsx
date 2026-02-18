@@ -13,35 +13,39 @@ const Header = ({
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-50">
-      <div className="backdrop-blur-2xl bg-white/10 border-b border-white/10 shadow-xl">
+           <header className="sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+           <div className="w-full flex items-center justify-between px-4 md:px-10 py-3">
+
+
         <div className="w-full flex items-center justify-between px-3 md:px-8 py-2 md:py-4">
 
           {/* LOGO */}
           <div className="flex items-center gap-3">
 
-            {/* MOBILE + TABLET REAL WATCH */}
-            <div className="md:hidden relative w-11 h-11 flex items-center justify-center watch-logo">
-              <div className="dial"></div>
+            
 
-              <div className="marker marker-12"></div>
-              <div className="marker marker-3"></div>
-              <div className="marker marker-6"></div>
-              <div className="marker marker-9"></div>
-
-              <div className="hand hour"></div>
-              <div className="hand minute"></div>
-              <div className="hand second"></div>
-
-              <div className="center-dot"></div>
-            </div>
-
+{/* ----------------------------------------------------------------------------------------------- */}
             {/* DESKTOP TEXT LOGO */}
-            <h1 className="hidden md:block text-2xl font-bold 
-              bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 
-              bg-clip-text text-transparent tracking-wide">
-              ⏱️ Uptime Monitor
-            </h1>
+            
+<div className="flex items-center gap-3">
+
+  {/* Icon (always visible) */}
+  <div className="w-9 h-9 flex items-center justify-center rounded-lg 
+                  bg-indigo-500/10 text-indigo-600 text-base font-semibold">
+    ⏱️
+  </div>
+
+  {/* Title (desktop only) */}
+  <div className="hidden md:flex flex-col leading-tight">
+    <span className="text-base font-semibold text-gray-900 dark:text-white">
+      Uptime Monitor
+    </span>
+    <span className="text-xs text-gray-500 dark:text-gray-400">
+      Real-time Monitoring
+    </span>
+  </div>
+
+</div>
 
             {/* INTERNAL CSS */}
             <style>{`
@@ -123,7 +127,8 @@ const Header = ({
           {/* RIGHT SIDE */}
           <div className="flex items-center gap-2 md:gap-4">
 
-            <div className="hidden md:flex gap-2 bg-white/5 p-2 rounded-2xl border border-white/10 backdrop-blur-xl">
+            <div className="hidden md:flex gap-2">
+
               <CrystalButton label="Dashboard" onClick={() => navigate("/dashboard")} theme={theme}/>
               <CrystalButton label="Add URL" onClick={() => navigate("/add")} theme={theme}/>
               <CrystalButton label="Reports" onClick={() => navigate("/reports")} theme={theme}/>

@@ -147,6 +147,9 @@ export const addSite = async (req, res) => {
       alertChannels,
       regions,
       alertIfAllRegionsDown,
+      emailContact,
+      phoneContact,
+      priority,
     } = req.body;
 
     if (!url) {
@@ -160,10 +163,21 @@ export const addSite = async (req, res) => {
       domain,
       url,
       category,
-      responseThresholdMs: responseThresholdMs || null,
+      responseThresholdMs: responseThresholdMs
+  ? Number(responseThresholdMs)
+  : null,
+
       alertChannels: alertChannels || [],
       regions: regions || [],
       alertIfAllRegionsDown: alertIfAllRegionsDown || false,
+
+       emailContact: alertChannels?.includes("email")
+      ? emailContact
+  :     null,
+       phoneContact: phoneContact || null,
+       priority: Number(priority ?? 0),
+
+
     });
 
     res.status(201).json({
@@ -280,6 +294,19 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
 
       // ✅ Determine status and reason using helper
       ({ status, reason } = getStatusFromCode(statusCode, responseTimeMs));
+
+// Base status from status code
+({ status, reason } = getStatusFromCode(statusCode, responseTimeMs));
+
+// 🔥 Apply custom threshold if set
+if (
+  site.responseThresholdMs &&
+  responseTimeMs > site.responseThresholdMs
+) {
+  status = "SLOW";
+  reason = "CUSTOM_THRESHOLD_EXCEEDED";
+}
+
 
     } catch (err) {
       responseTimeMs = null;

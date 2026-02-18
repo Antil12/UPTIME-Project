@@ -19,6 +19,7 @@ const AddUrl = ({
   const [localError, setLocalError] = useState("");
   const [emailContact, setEmailContact] = useState("");
   const [phoneContact, setPhoneContact] = useState("");
+  const [priority, setPriority] = useState(0); 
 
   const normalize = (value = "") =>
     value.trim().toLowerCase().replace(/\/$/, "");
@@ -63,6 +64,7 @@ const AddUrl = ({
       alertIfAllRegionsDown,
       emailContact,
       phoneContact,
+      priority,
     });
 
     setCategory("");
@@ -200,9 +202,32 @@ const AddUrl = ({
 
 {/* ================= CHANNEL BUTTONS ================= */}
 <div>
-  <p className="text-sm mb-4 opacity-70">
-    Notification Channels
-  </p>
+  <div className="flex items-center justify-between mb-4">
+    <p className="text-sm opacity-70">
+      Notification Channels
+    </p>
+
+    {/* 🔴 Priority Dropdown */}
+    <div className="flex items-center gap-3">
+      <span className="text-xs opacity-60">Priority</span>
+
+    {/* 🔴 Priority Checkbox */}
+<div className="flex items-center gap-3">
+  <label className="flex items-center gap-2 text-xs cursor-pointer">
+    
+    <input
+      type="checkbox"
+      checked={priority === 1}
+      onChange={(e) => setPriority(e.target.checked ? 1 : 0)}
+      className="accent-red-600 w-4 h-4"
+    />
+    High Priority
+  </label>
+</div>
+
+    </div>
+  </div>
+
 
   <div className="flex flex-wrap gap-4 mb-6">
     {["email", "sms", "whatsapp", "voice"].map((channel) => {
@@ -296,8 +321,11 @@ const AddUrl = ({
           {(urlError || localError) && (
             <div className="p-4 rounded-2xl bg-red-500/10 text-red-400 text-sm border border-red-500/20">
               {localError || urlError}
+              
             </div>
+            
           )}
+          
           {/* ================= REGIONS ================= */}
 <div>
   <p className="text-sm mb-4 opacity-70">

@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import monitoredSiteRoutes from "./routes/monitoredSiteRoutes.js";
 import { startMonitoringCron } from "./cron/monitorCron.js";
@@ -41,6 +42,9 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// parse cookies for refresh token support
+app.use(cookieParser());
 
 /* ======================
    BODY PARSER
