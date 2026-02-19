@@ -42,6 +42,10 @@ function App() {
   const [editItem, setEditItem] = useState(null);
   const [editDomain, setEditDomain] = useState("");
   const [editUrl, setEditUrl] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editPriority, setEditPriority] = useState("");
+  const [editResponseThresholdMs, setEditResponseThresholdMs] = useState("");
   const [popupData, setPopupData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
@@ -197,6 +201,14 @@ await axios.delete(`${API_BASE}/${id}`, {
     setEditItem(item);
     setEditDomain(item.domain || "");
     setEditUrl(item.url || "");
+    setEditEmail(item.emailContact || "");
+    setEditPhone(item.phoneContact || "");
+    setEditPriority(item.priority || "");
+    setEditResponseThresholdMs(
+      item.responseThresholdMs !== undefined && item.responseThresholdMs !== null
+        ? item.responseThresholdMs
+        : ""
+    );
   };
 
   const handleSaveEdit = async (category) => {
@@ -219,6 +231,13 @@ await axios.put(
     domain: editDomain.trim(),
     url: editUrl.trim(),
     category: category?.trim() || null,
+    emailContact: editEmail?.trim() || null,
+    phoneContact: editPhone?.trim() || null,
+    priority: editPriority || null,
+    responseThresholdMs:
+      editResponseThresholdMs !== "" && editResponseThresholdMs !== null
+        ? Number(editResponseThresholdMs)
+        : null,
   },
   {
     headers: {
@@ -229,6 +248,11 @@ await axios.put(
 
     setEditItem(null);
     setUrlError("");
+    // clear optional edit fields
+    setEditEmail("");
+    setEditPhone("");
+    setEditPriority("");
+    setEditResponseThresholdMs("");
     fetchSites();
   } catch (err) {
     console.error(err);
@@ -457,18 +481,30 @@ if (!isLoggedIn) {
 
       {/* EDIT MODAL */}
       {editItem && (
-        <EditModal
-          item={editItem}
-          editDomain={editDomain}
-          editUrl={editUrl}
-          setEditDomain={setEditDomain}
-          setEditUrl={setEditUrl}
-          urlError={urlError}
-          onClose={() => setEditItem(null)}
-          onSave={handleSaveEdit}
-          theme={theme}
-        />
-      )}
+  <EditModal
+    item={editItem}
+    theme={theme}
+
+    editDomain={editDomain}
+    editUrl={editUrl}
+    setEditDomain={setEditDomain}
+    setEditUrl={setEditUrl}
+
+    editEmail={editEmail}
+    editPhone={editPhone}
+    editPriority={editPriority}
+    editResponseThresholdMs={editResponseThresholdMs}
+
+    setEditEmail={setEditEmail}
+    setEditPhone={setEditPhone}
+    setEditPriority={setEditPriority}
+    setEditResponseThresholdMs={setEditResponseThresholdMs}
+
+    urlError={urlError}
+    onClose={() => setEditItem(null)}
+    onSave={handleSaveEdit}
+  />
+)}
 
     </div>
   );

@@ -45,6 +45,10 @@ export const getMonitoredSites = async (req, res) => {
           domain: 1,
           url: 1,
           category: 1, // include category
+          emailContact: 1,
+          phoneContact: 1,
+          priority: 1,
+          responseThresholdMs: 1,
           createdAt: 1,
           status: { $ifNull: ["$uptime.status", "UNKNOWN"] },
           statusCode: "$uptime.statusCode",
@@ -199,13 +203,61 @@ export const addSite = async (req, res) => {
 /* =====================================================
    UPDATE SITE
 ===================================================== */
+// export const updateSite = async (req, res) => {
+//   try {
+//     const { category } = req.body; // include category
+
+//     const site = await MonitoredSite.findByIdAndUpdate(
+//       req.params.id,
+//       req.body,
+//       { new: true }
+//     );
+
+//     if (!site) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Site not found",
+//       });
+//     }
+
+//     res.json({ success: true, data: site });
+//   } catch {
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to update site",
+//     });
+//   }
+// };
+
+
 export const updateSite = async (req, res) => {
   try {
-    const { category } = req.body; // include category
+    const {
+      domain,
+      url,
+      category,
+      emailContact,
+      phoneContact,
+      priority,
+      responseThresholdMs,
+    } = req.body;
+
+    const updatedData = {
+      domain,
+      url,
+      category,
+      emailContact: emailContact || null,
+      phoneContact: phoneContact || null,
+      priority: priority !== undefined ? Number(priority) : 0,
+      responseThresholdMs:
+        responseThresholdMs !== undefined && responseThresholdMs !== null
+          ? Number(responseThresholdMs)
+          : null,
+    };
 
     const site = await MonitoredSite.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updatedData,
       { new: true }
     );
 
@@ -216,14 +268,19 @@ export const updateSite = async (req, res) => {
       });
     }
 
-    res.json({ success: true, data: site });
-  } catch {
+    res.json({
+      success: true,
+      data: site,
+    });
+  } catch (error) {
+    console.error("❌ updateSite error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to update site",
     });
   }
 };
+
 
 /* =====================================================
    DELETE SITE (CLEAN RELATED DATA)

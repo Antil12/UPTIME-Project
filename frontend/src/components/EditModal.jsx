@@ -7,10 +7,18 @@ export default function EditModal({
   editUrl,
   setEditDomain,
   setEditUrl,
+  editEmail,
+  editPhone,
+  editPriority,
+  editResponseThresholdMs,
+  setEditEmail,
+  setEditPhone,
+  setEditPriority,
+  setEditResponseThresholdMs,
   urlError,
   onClose,
   onSave,
-  initialCategory,     
+  initialCategory,
 }) {
   if (!item) return null;
 
@@ -76,6 +84,35 @@ export default function EditModal({
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           placeholder="Category (optional)"
+          className={inputClass}
+        />
+
+        <input
+          value={editEmail}
+          onChange={(e) => setEditEmail(e.target.value)}
+          placeholder="Contact email (optional)"
+          className={inputClass}
+        />
+
+        <input
+          value={editPhone}
+          onChange={(e) => setEditPhone(e.target.value)}
+          placeholder="Contact phone (optional)"
+          className={inputClass}
+        />
+
+        <input
+          value={editPriority}
+          onChange={(e) => setEditPriority(e.target.value)}
+          placeholder="Priority (optional)"
+          className={inputClass}
+        />
+
+        <input
+          type="number"
+          value={editResponseThresholdMs}
+          onChange={(e) => setEditResponseThresholdMs(e.target.value)}
+          placeholder="Max response time (ms)"
           className={inputClass}
         />
 
