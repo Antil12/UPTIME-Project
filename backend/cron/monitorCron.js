@@ -5,6 +5,11 @@ import UptimeLog from "../models/UptimeLog.js";
 import { checkSsl } from "../services/sslChecker.js";
 import { checkRegions } from "../services/regionChecker.js";
 import { handleStatusAlert } from "../services/alertService.js";
+//import { sendSlowAlertEmail } from "../services/emailService.js";
+import { setSlowBatch } from "../services/slowBatchStore.js";
+
+
+
 
 import fs from "fs";
 import path from "path";
@@ -43,7 +48,7 @@ await Promise.all(
        UPTIME CHECK
     ========================= */
     try {
-      const SLOW_THRESHOLD = site.responseThresholdMs || 10000;
+      const SLOW_THRESHOLD = site.responseThresholdMs || 15000;
 
       const start = Date.now();
       const response = await axios.get(site.url, {
@@ -146,13 +151,27 @@ else if (responseTimeMs > SLOW_THRESHOLD) {
     );
 
     sslRunCounter++;
-    if (slowSitesTemp.length > 0) {
+  if (slowSitesTemp.length > 0) {
+  console.log("🚨 Slow batch created");
+
+  const alertPayload = {
+    batchId: Date.now(),
+    downCount: slowSitesTemp.length,
+    slowSites: slowSitesTemp,
+  };
+
+  setSlowBatch(alertPayload);
+
   await generateCSV(slowSitesTemp);
+} else {
+  // clear old batch if nothing slow this time
+  setSlowBatch(null);
 }
 
 
+
     console.log(`✅ Checked ${sites.length} sites`);
-  },5 * 60 * 1000); // 1 minute
+  },10 * 60 * 1000); // 1 minute
 };
 
 

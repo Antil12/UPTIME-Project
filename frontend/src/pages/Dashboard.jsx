@@ -16,6 +16,7 @@ const Dashboard = ({
   onPin,
   onDelete,
   onEdit,
+  onBulkDelete,
   popupData,
   setPopupData,
   selectedStatus,
@@ -34,6 +35,8 @@ const Dashboard = ({
   =============================== */
   const [popupOpen, setPopupOpen] = useState(false);
   const [filter, setFilter] = useState("24h");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   // Example report data (you can replace with API data)
   const reportData = urls;
@@ -179,24 +182,82 @@ const Dashboard = ({
       </section>
 
       {/* ===============================
-         SEARCH
+         SELECT + SEARCH
       =============================== */}
-      <div className="flex justify-center md:justify-end">
-        <div
-          className={`flex items-center w-full max-w-sm border rounded overflow-hidden
-          ${
-            theme === "dark"
-              ? "bg-gray-700 border-gray-600"
-              : "bg-white border-gray-300"
-          }`}
-        >
-          <span className="px-2">🔍</span>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search domain or URL"
-            className="w-full p-1 outline-none bg-transparent text-sm"
-          />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setSelectionMode((v) => !v);
+              // clear selection when turning off
+              if (selectionMode) setSelectedIds([]);
+            }}
+            className={`px-3 py-2 rounded text-sm border
+            ${theme === "dark" ? "bg-gray-800 border-gray-700 text-gray-200" : "bg-white border-gray-300 text-gray-800"}`}
+          >
+            {selectionMode ? "Cancel Select" : "Select"}
+          </button>
+
+          {selectionMode && (
+            <>
+              <button
+                onClick={() => {
+                  const allIds = finalUrls.map((u) => u._id);
+                  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
+                  if (allSelected) setSelectedIds([]);
+                  else setSelectedIds(allIds);
+                }}
+                className={`px-3 py-2 rounded text-sm border
+                  ${theme === "dark"
+                    ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700"
+                    : "bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200"
+                  }`}
+              >
+                {finalUrls.length > 0 && finalUrls.every((u) => selectedIds.includes(u._id)) ? "Deselect All" : "Select All"}
+              </button>
+
+              <button
+                onClick={async () => {
+                  if (selectedIds.length === 0) return alert("No websites selected");
+                  // call provided onDelete (bulk delete handled by parent via onBulkDelete)
+                  if (typeof onBulkDelete === "function") {
+                    await onBulkDelete(selectedIds);
+                  } else if (typeof onDelete === "function") {
+                    for (const id of selectedIds) {
+                      try {
+                        await onDelete(id);
+                      } catch (err) {
+                        console.error('Failed to delete', id, err);
+                      }
+                    }
+                  }
+                  setSelectedIds([]);
+                }}
+                className="px-3 py-2 rounded bg-red-500 text-white text-sm hover:bg-red-600"
+              >
+                Delete Selected ({selectedIds.length})
+              </button>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-center sm:justify-end w-full max-w-sm">
+          <div
+            className={`flex items-center w-full border rounded overflow-hidden
+            ${
+              theme === "dark"
+                ? "bg-gray-700 border-gray-600"
+                : "bg-white border-gray-300"
+            }`}
+          >
+            <span className="px-2">🔍</span>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search domain or URL"
+              className="w-full p-1 outline-none bg-transparent text-sm"
+            />
+          </div>
         </div>
       </div>
 
@@ -214,6 +275,9 @@ const Dashboard = ({
         onPin={onPin}
         onDelete={onDelete}
         onEdit={onEdit}
+        selectionMode={selectionMode}
+        selectedIds={selectedIds}
+        setSelectedIds={setSelectedIds}
       />
 
       {/* ===============================

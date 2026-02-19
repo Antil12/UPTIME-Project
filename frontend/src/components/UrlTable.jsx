@@ -7,6 +7,9 @@ const UrlTable = ({
   onPin,
   onDelete,
   onEdit,
+  selectionMode = false,
+  selectedIds = [],
+  setSelectedIds = () => {},
   categories = [],
   selectedCategory,
   setSelectedCategory,
@@ -68,6 +71,7 @@ const UrlTable = ({
               }`}
           >
             <tr>
+                {selectionMode && <th className="px-3 py-3 text-left"> </th>}
               <th className="px-3 py-3 text-left">Serial No.</th>
 
               {/* DOMAIN FILTER */}
@@ -183,6 +187,21 @@ const UrlTable = ({
                     : "border-slate-200 hover:bg-slate-50"
                   }`}
               >
+                {selectionMode && (
+                  <td className="px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(item._id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds((prev) => [...prev, item._id]);
+                        } else {
+                          setSelectedIds((prev) => prev.filter((id) => id !== item._id));
+                        }
+                      }}
+                    />
+                  </td>
+                )}
                 <td className="px-3 py-3">{i + 1}</td>
                 <td className="px-3 py-3 font-medium">{item.domain}</td>
 
@@ -295,6 +314,19 @@ const UrlTable = ({
 
           {/* LEFT STATUS ACCENT */}
           <div className={`absolute left-0 top-0 h-full w-1 rounded-l-2xl ${statusColor}`} />
+
+          {selectionMode && (
+            <div className="absolute right-4 top-4">
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(item._id)}
+                onChange={(e) => {
+                  if (e.target.checked) setSelectedIds((p) => [...p, item._id]);
+                  else setSelectedIds((p) => p.filter((id) => id !== item._id));
+                }}
+              />
+            </div>
+          )}
 
           {/* DOMAIN + STATUS */}
           <div className="flex justify-between items-center mb-5">

@@ -11,6 +11,9 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Header from "./components/Header";
+import { startSlowAlertListener } from "./api/alertApi";
+
+
 
 
 
@@ -49,10 +52,24 @@ function App() {
   const [popupData, setPopupData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
+  
 
   /* ================= EFFECTS ================= */
    
   
+useEffect(() => {
+  let interval;
+
+  if (isLoggedIn) {
+    interval = startSlowAlertListener();
+  }
+
+  return () => {
+    if (interval) clearInterval(interval);
+  };
+}, [isLoggedIn]);
+
+
   useEffect(() => {
   document.documentElement.classList.toggle("dark", theme === "dark");
   localStorage.setItem("theme", theme);
@@ -176,6 +193,27 @@ await axios.delete(`${API_BASE}/${id}`, {
     } catch (err) {
       console.error(err);
       alert("Failed to delete site");
+    }
+  };
+
+  // BULK DELETE SITES
+  const handleBulkDelete = async (ids = []) => {
+    if (!Array.isArray(ids) || ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} selected website(s)?`)) return;
+
+    try {
+      const token = localStorage.getItem("loginToken");
+      await Promise.all(
+        ids.map((id) =>
+          axios.delete(`${API_BASE}/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      );
+      fetchSites();
+    } catch (err) {
+      console.error("Bulk delete failed", err);
+      alert("Failed to delete selected sites");
     }
   };
 
@@ -438,6 +476,7 @@ if (!isLoggedIn) {
                 onPin={handlePin}
                 onDelete={handleDelete}
                 onEdit={handleEditClick}
+                onBulkDelete={handleBulkDelete}
                 popupData={popupData}
                 setPopupData={setPopupData}
                 selectedStatus={selectedStatus}

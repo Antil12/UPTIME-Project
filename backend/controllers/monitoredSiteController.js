@@ -3,7 +3,7 @@ import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import SslStatus from "../models/SslStatus.js";
 import { getStatusFromCode } from "../utils/statusHelper.js";
-
+import { getSlowBatch, clearSlowBatch } from "../services/slowBatchStore.js";
 /* =====================================================
    GET ALL MONITORED SITES (NO FILTERS ❗)
 ===================================================== */
@@ -420,4 +420,22 @@ export const getCategories = async (req, res) => {
     console.error("❌ getCategories error:", error);
     res.status(500).json({ success: false, message: "Failed to fetch categories" });
   }
+};
+
+
+
+export const getSlowAlertBatch = (req, res) => {
+  const batch = getSlowBatch();
+
+  if (!batch) {
+    return res.json({ success: true, data: null });
+  }
+
+  // Clear after sending once
+  clearSlowBatch();
+
+  res.json({
+    success: true,
+    data: batch,
+  });
 };
