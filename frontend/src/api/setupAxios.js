@@ -2,7 +2,7 @@ import axios from "axios";
 
 // ================= BASE CONFIG =================
 axios.defaults.baseURL = "http://localhost:5000/api";
-axios.defaults.withCredentials = true; // send refresh cookie
+axios.defaults.withCredentials = true;
 
 // ================= REQUEST INTERCEPTOR =================
 axios.interceptors.request.use(
@@ -25,31 +25,26 @@ axios.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // If access token expired
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url.includes("/auth/refresh")
+      !originalRequest.url.includes("/auth/refresh-token")
     ) {
       originalRequest._retry = true;
 
       try {
-        // Call refresh endpoint
-        const res = await axios.post("/auth/refresh");
+        const res = await axios.post("/auth/refresh-token");
 
         const newAccessToken = res.data.accessToken;
 
-        // Store new access token
         localStorage.setItem("loginToken", newAccessToken);
 
-        // Attach new token to failed request
+        originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
-        // Retry original request
         return axios(originalRequest);
 
       } catch (refreshError) {
-        // Refresh failed → logout
         localStorage.removeItem("loginToken");
         localStorage.removeItem("user");
 

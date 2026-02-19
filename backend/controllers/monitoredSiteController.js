@@ -314,13 +314,11 @@ export const deleteSite = async (req, res) => {
 /* =====================================================
    CHECK & UPDATE SITE CURRENT STATUS
 ===================================================== */
-
 export const checkAndUpdateSiteStatus = async (req, res) => {
   const { siteId } = req.params;
 
   try {
     const site = await MonitoredSite.findById(siteId);
-
     if (!site) {
       return res.status(404).json({
         success: false,
@@ -328,42 +326,45 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
       });
     }
 
-    const startTime = Date.now();
-    let status = "DOWN";
-    let reason = "UNKNOWN_ERROR";
+    let status = "UNKNOWN";
     let statusCode = null;
     let responseTimeMs = null;
+    let reason = null;
+
+    const startTime = Date.now();
 
     try {
-      const response = await axios.get(site.url, {
-        timeout: 15000,
-        maxRedirects: 5,
-        validateStatus: () => true,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-          Accept: "text/html,application/xhtml+xml",
-        },
-      });
+      // 🔹 1️⃣ Try HEAD first
+      let response;
+
+      try {
+        response = await axios.head(site.url, {
+          timeout: 10000,
+          validateStatus: () => true,
+        });
+      } catch (headError) {
+        console.log("HEAD failed → trying GET fallback");
+
+        // 🔹 2️⃣ Fallback to GET
+        response = await axios.get(site.url, {
+          timeout: 10000,
+          validateStatus: () => true,
+        });
+      }
 
       responseTimeMs = Date.now() - startTime;
       statusCode = response.status;
 
-      // ✅ Determine status and reason using helper
-      ({ status, reason } = getStatusFromCode(statusCode, responseTimeMs));
-
-// Base status from status code
-({ status, reason } = getStatusFromCode(statusCode, responseTimeMs));
-
-// 🔥 Apply custom threshold if set
-if (
-  site.responseThresholdMs &&
-  responseTimeMs > site.responseThresholdMs
-) {
-  status = "SLOW";
-  reason = "CUSTOM_THRESHOLD_EXCEEDED";
-}
-
+      // 🔹 3️⃣ Decide Status
+      if (statusCode >= 200 && statusCode < 400) {
+        status = "UP";
+      } else if (statusCode >= 400 && statusCode < 500) {
+        status = "DOWN";
+        reason = "CLIENT ERROR";
+      } else if (statusCode >= 500) {
+        status = "DOWN";
+        reason = "SERVER ERROR";
+      }
 
     } catch (err) {
       responseTimeMs = null;
@@ -378,21 +379,24 @@ if (
       }
     }
 
-    // Update DB
+    // 🔹 4️⃣ Save in DB
     const currentStatus = await SiteCurrentStatus.findOneAndUpdate(
       { siteId },
       {
         siteId,
         status,
         statusCode,
-         reason,
+        reason,
         responseTimeMs,
         lastCheckedAt: new Date(),
       },
       { upsert: true, new: true }
     );
 
-    res.json({ success: true, data: currentStatus, reason });
+    res.json({
+      success: true,
+      data: currentStatus,
+    });
 
   } catch (error) {
     console.error("❌ checkAndUpdateSiteStatus error:", error);
@@ -402,6 +406,7 @@ if (
     });
   }
 };
+
 
 /* =====================================================
    GET ALL CATEGORIES

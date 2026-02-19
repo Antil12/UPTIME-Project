@@ -137,7 +137,7 @@ else if (responseTimeMs > SLOW_THRESHOLD) {
 
 
         /* =========================
-           🔐 SSL CHECK (every 5 mins)
+           🔐 SSL CHECK (every 1 mins)
         ========================= */
         if (sslRunCounter % 1 === 0) {
           await checkSsl(site);
