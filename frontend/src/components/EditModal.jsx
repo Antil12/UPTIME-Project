@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { X } from "lucide-react";
 
 export default function EditModal({
   item,
@@ -22,104 +23,135 @@ export default function EditModal({
 }) {
   if (!item) return null;
 
-  // Local state for category
   const [category, setCategory] = useState(item.category || "");
 
-  // If parent passes category, sync it
   useEffect(() => {
     if (initialCategory !== undefined) setCategory(initialCategory);
   }, [initialCategory]);
 
-  // Dynamic classes based on theme
-  const bgClass =
-    theme === "dark"
-      ? "bg-gray-800 text-white border-gray-700"
-      : "bg-white text-black border-gray-300";
-  const inputClass =
-    theme === "dark"
-      ? "w-full p-2 mb-3 rounded border border-gray-600 bg-gray-700 text-white placeholder-gray-400"
-      : "w-full p-2 mb-3 rounded border border-gray-300 bg-white text-black placeholder-gray-500";
-  const errorClass = "text-sm text-red-500 mb-3";
-  const cancelBtnClass =
-    theme === "dark"
-      ? "px-4 py-2 rounded bg-gray-600 text-white hover:bg-gray-500"
-      : "px-4 py-2 rounded bg-gray-300 text-black hover:bg-gray-400";
+  const isDark = theme === "dark";
+
+  const modalClass = isDark
+    ? "bg-gray-900 text-gray-100 border border-gray-800"
+    : "bg-white text-gray-800 border border-gray-200";
+
+  const labelClass = "text-sm font-medium mb-1 block";
+
+  const inputClass = isDark
+    ? "w-full px-4 py-2.5 rounded-2xl border border-gray-700 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+    : "w-full px-4 py-2.5 rounded-2xl border border-gray-300 bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
+
+  const cancelBtnClass = isDark
+    ? "px-5 py-2.5 rounded-2xl bg-gray-800 hover:bg-gray-700 text-white font-medium transition"
+    : "px-5 py-2.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium transition";
+
   const saveBtnClass =
-    theme === "dark"
-      ? "px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-500"
-      : "px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-400";
+    "px-6 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md hover:shadow-lg transition";
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
       <div
-  className={`
-    w-full
-    max-w-sm md:max-w-md
-    rounded-2xl md:rounded-3xl
-    p-4 md:p-6
-    border
-    shadow-xl
-    ${bgClass}
-  `}
->
+        className={`w-full max-w-lg rounded-3xl p-7 shadow-2xl ${modalClass}`}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              Edit Website
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Update monitoring details below
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-        <h2 className="text-xl font-semibold mb-4">✏️ Edit Website</h2>
+        {/* Form */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className={labelClass}>Domain Name</label>
+            <input
+              value={editDomain}
+              onChange={(e) => setEditDomain(e.target.value)}
+              placeholder="example.com"
+              className={inputClass}
+            />
+          </div>
 
-        <input
-          value={editDomain}
-          onChange={(e) => setEditDomain(e.target.value)}
-          placeholder="Domain name"
-          className={inputClass}
-        />
+          <div className="md:col-span-2">
+            <label className={labelClass}>Website URL</label>
+            <input
+              value={editUrl}
+              onChange={(e) => setEditUrl(e.target.value)}
+              placeholder="https://example.com"
+              className={inputClass}
+            />
+          </div>
 
-        <input
-          value={editUrl}
-          onChange={(e) => setEditUrl(e.target.value)}
-          placeholder="Website URL"
-          className={inputClass}
-        />
+          <div>
+            <label className={labelClass}>Category</label>
+            <input
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="E-commerce, Blog, SaaS..."
+              className={inputClass}
+            />
+          </div>
 
-        <input
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="Category (optional)"
-          className={inputClass}
-        />
+          <div>
+            <label className={labelClass}>Priority</label>
+            <input
+              value={editPriority}
+              onChange={(e) => setEditPriority(e.target.value)}
+              placeholder="Low / Medium / High"
+              className={inputClass}
+            />
+          </div>
 
-        <input
-          value={editEmail}
-          onChange={(e) => setEditEmail(e.target.value)}
-          placeholder="Contact email (optional)"
-          className={inputClass}
-        />
+          <div>
+            <label className={labelClass}>Contact Email</label>
+            <input
+              type="email"
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
+              placeholder="admin@example.com"
+              className={inputClass}
+            />
+          </div>
 
-        <input
-          value={editPhone}
-          onChange={(e) => setEditPhone(e.target.value)}
-          placeholder="Contact phone (optional)"
-          className={inputClass}
-        />
+          <div>
+            <label className={labelClass}>Contact Phone</label>
+            <input
+              value={editPhone}
+              onChange={(e) => setEditPhone(e.target.value)}
+              placeholder="+91 9876543210"
+              className={inputClass}
+            />
+          </div>
 
-        <input
-          value={editPriority}
-          onChange={(e) => setEditPriority(e.target.value)}
-          placeholder="Priority (optional)"
-          className={inputClass}
-        />
+          <div className="md:col-span-2">
+            <label className={labelClass}>Max Response Time (ms)</label>
+            <input
+              type="number"
+              value={editResponseThresholdMs}
+              onChange={(e) => setEditResponseThresholdMs(e.target.value)}
+              placeholder="2000"
+              className={inputClass}
+            />
+          </div>
+        </div>
 
-        <input
-          type="number"
-          value={editResponseThresholdMs}
-          onChange={(e) => setEditResponseThresholdMs(e.target.value)}
-          placeholder="Max response time (ms)"
-          className={inputClass}
-        />
+        {urlError && (
+          <p className="text-sm text-red-500 mt-4">{urlError}</p>
+        )}
 
-        {urlError && <p className={errorClass}>{urlError}</p>}
-
-       <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
-
+        {/* Buttons */}
+        <div className="flex justify-end gap-3 mt-8">
           <button onClick={onClose} className={cancelBtnClass}>
             Cancel
           </button>
@@ -127,7 +159,7 @@ export default function EditModal({
             onClick={() => onSave(category)}
             className={saveBtnClass}
           >
-            Update
+            Save Changes
           </button>
         </div>
       </div>

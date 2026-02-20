@@ -171,7 +171,7 @@ else if (responseTimeMs > SLOW_THRESHOLD) {
 
 
     console.log(`✅ Checked ${sites.length} sites`);
-  },10 * 60 * 1000); // 1 minute
+  },15 * 60 * 1000); // 1 minute
 };
 
 

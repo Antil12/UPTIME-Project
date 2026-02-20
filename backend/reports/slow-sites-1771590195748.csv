@@ -1,0 +1,4 @@
+Domain,URL,ResponseTime(ms),Threshold(ms),CheckedAt
+y-combinator,https://www.ycombinator.com/,467,20,Fri Feb 20 2026 17:53:10 GMT+0530 (India Standard Time)
+IJRC-Journals,https://www.ijrc.in/,3584,5,Fri Feb 20 2026 17:53:10 GMT+0530 (India Standard Time)
+IJPP-Journal,https://www.ijiapp.com/,4468,2000,Fri Feb 20 2026 17:53:10 GMT+0530 (India Standard Time)

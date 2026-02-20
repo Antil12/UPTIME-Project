@@ -12,10 +12,10 @@
   transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 2em hsl(var(--chart-4) / 0.6));
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: drop-shadow(0 0 2em hsl(var(--chart-4) / 0.5));
 }
 
 @keyframes logo-spin {
@@ -38,16 +38,16 @@
 }
 
 .read-the-docs {
-  color: #888;
+  color: hsl(var(--foreground) / 0.6);
 }
 body.light {
-  background-color: #f5f5f5;
-  color: #000;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 body.dark {
-  background-color: #121212;
-  color: #fff;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 @keyframes crystal {
@@ -62,7 +62,7 @@ body.dark {
 .popup-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: hsl(var(--chart-5) / 0.72);
   backdrop-filter: blur(4px);
   z-index: 40;
 }
@@ -71,25 +71,25 @@ body.dark {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: #111827; /* dark card */
+  background: hsl(var(--card)); /* dark card */
   border-radius: 16px;
   padding: 24px;
   z-index: 50;
 
   /* Lighting shadow */
   box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.6),
-    0 0 60px rgba(59, 130, 246, 0.35); /* blue glow */
+    0 20px 40px hsl(0 0% 0% / 0.6),
+    0 0 60px hsl(var(--chart-4) / 0.35);
 }
 .popup {
-  background: rgba(17, 24, 39, 0.9);
+  background: hsl(var(--card) / 0.92);
   border-radius: 20px;
   padding: 24px;
 
   box-shadow:
-    0 0 30px rgba(99, 102, 241, 0.5),
-    0 0 80px rgba(99, 102, 241, 0.25),
-    0 25px 50px rgba(0, 0, 0, 0.7);
+    0 0 30px hsl(var(--chart-4) / 0.5),
+    0 0 80px hsl(var(--chart-4) / 0.25),
+    0 25px 50px hsl(0 0% 0% / 0.7);
 }
 #root {
   max-width: 1280px;

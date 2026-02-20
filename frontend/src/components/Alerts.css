@@ -5,5 +5,5 @@
   margin-top: 8px;
   border-radius: 8px;
 }
-.alert.critical { background: #7f1d1d; }
-.alert.warning { background: #78350f; }
+.alert.critical { background: hsl(var(--chart-3)); }
+.alert.warning { background: hsl(var(--chart-2)); }

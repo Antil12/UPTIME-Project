@@ -11,8 +11,8 @@ export default function UptimeChart({ data }) {
           <XAxis dataKey="time" />
           <YAxis />
           <Tooltip />
-          <Line type="monotone" dataKey="uptime" stroke="#22c55e" />
-          <Line type="monotone" dataKey="downtime" stroke="#ef4444" />
+          <Line type="monotone" dataKey="uptime" stroke="hsl(var(--chart-1))" />
+          <Line type="monotone" dataKey="downtime" stroke="hsl(var(--chart-3))" />
         </LineChart>
       </ResponsiveContainer>
     </div>

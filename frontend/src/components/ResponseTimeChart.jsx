@@ -11,7 +11,7 @@ export default function ResponseTimeChart({ data }) {
           <XAxis dataKey="time" />
           <YAxis />
           <Tooltip />
-          <Area dataKey="ms" stroke="#38bdf8" fill="#0ea5e9" />
+          <Area dataKey="ms" stroke="hsl(var(--chart-4))" fill="hsl(var(--chart-4) / 0.35)" />
         </AreaChart>
       </ResponsiveContainer>
     </div>

@@ -1,0 +1,6 @@
+Domain,URL,ResponseTime(ms),Threshold(ms),CheckedAt
+y-combinator,https://www.ycombinator.com/,417,20,Fri Feb 20 2026 17:57:10 GMT+0530 (India Standard Time)
+ANNALSOFIP-Journals,https://www.annalsofip.com/,5660,5000,Fri Feb 20 2026 17:57:10 GMT+0530 (India Standard Time)
+IJRC-Journals,https://www.ijrc.in/,5959,5,Fri Feb 20 2026 17:57:10 GMT+0530 (India Standard Time)
+IJPP-Journal,https://www.ijiapp.com/,7236,2000,Fri Feb 20 2026 17:57:10 GMT+0530 (India Standard Time)
+IJECMO-Journals,https://www.ijecmo.com/,18967,15000,Fri Feb 20 2026 17:57:10 GMT+0530 (India Standard Time)

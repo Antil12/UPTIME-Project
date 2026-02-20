@@ -32,7 +32,7 @@ const Signup = ({ onSignup, goToLogin }) => {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden" style={{ background: 'hsl(var(--background))' }}>
 
       <Galaxy
         mouseInteraction
@@ -44,29 +44,25 @@ const Signup = ({ onSignup, goToLogin }) => {
         rotationSpeed={0.18}
       />
 
-      <div className="relative z-10 w-full max-w-md p-10 rounded-3xl
-        bg-white/10 backdrop-blur-2xl border border-white/20
-        shadow-[0_0_40px_rgba(255,0,255,0.3)]
-        text-white">
+      <div className="relative z-10 w-full max-w-md p-10 rounded-3xl backdrop-blur-2xl border text-white" style={{ background: 'hsl(var(--card) / 0.08)', borderColor: 'hsl(var(--border) / 0.6)', boxShadow: '0 0 40px hsl(var(--chart-4) / 0.3)', color: 'hsl(var(--card-foreground))' }}>
 
         <h2 className="text-3xl font-bold text-center mb-8 tracking-wide">
           Create Account ✨
         </h2>
 
         {error && (
-          <div className="bg-red-500/30 text-red-100 p-3 rounded-lg mb-4 text-sm text-center">
+            <div className="p-3 rounded-lg mb-4 text-sm text-center" style={{ background: 'hsl(var(--chart-3) / 0.12)', color: 'hsl(var(--chart-3) / 0.95)' }}>
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
 
-          <input
+            <input
             type="text"
             placeholder="Full Name"
-            className="w-full px-4 py-3 rounded-xl bg-white/20 
-            placeholder-white/70 focus:outline-none 
-            focus:ring-2 focus:ring-pink-400 transition duration-300"
+              className="w-full px-4 py-3 rounded-xl transition duration-300"
+              style={{ background: 'hsl(var(--card) / 0.06)', color: 'hsl(var(--card-foreground))', outline: 'none', border: '1px solid hsl(var(--border) / 0.6)' }}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -96,10 +92,8 @@ const Signup = ({ onSignup, goToLogin }) => {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-xl font-semibold 
-            bg-gradient-to-r from-pink-500 to-purple-600
-            hover:scale-105 transition duration-300
-            shadow-lg shadow-pink-500/40"
+            className="w-full py-3 rounded-xl font-semibold hover:scale-105 transition duration-300"
+            style={{ background: 'linear-gradient(90deg, hsl(var(--chart-4)), hsl(var(--chart-5)))', color: 'hsl(0 0% 100%)', boxShadow: '0 12px 30px hsl(var(--chart-4) / 0.35)' }}
           >
             Signup
           </button>
@@ -110,7 +104,8 @@ const Signup = ({ onSignup, goToLogin }) => {
          <button
   type="button"
   onClick={() => navigate("/login")}
-  className="text-pink-300 underline hover:text-pink-200"
+  className="underline"
+  style={{ color: 'hsl(var(--chart-4))' }}
 >
   Login
 </button>

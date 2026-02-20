@@ -119,7 +119,7 @@ const Dashboard = ({
   );
 
   return (
-    <main className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+    <main className="p-3 md:p-4 max-w-7xl mx-auto space-y-5">
 
       {/* ===============================
          STAT CARDS
@@ -127,6 +127,7 @@ const Dashboard = ({
       <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
 
         <StatCard
+          compact
           title="Total Websites"
           value={urls.length}
           icon="🌐"
@@ -140,6 +141,7 @@ const Dashboard = ({
         />
 
         <StatCard
+          compact
           title="UP Websites"
           value={globalUpSites.length}
           icon="🟢"
@@ -153,6 +155,7 @@ const Dashboard = ({
         />
 
         <StatCard
+          compact
           title="DOWN Websites"
           value={globalDownSites.length}
           icon="🔴"
@@ -167,14 +170,16 @@ const Dashboard = ({
 
         {/* ✅ UPDATED UPTIME CARD WITH CLICKABLE % */}
         <StatCard
+          compact
           title="Uptime %"
           value={
-            <span
+            <button
               onClick={() => setPopupOpen(true)}
-              className="cursor-pointer text-blue-600 underline"
+              aria-label="Open uptime analytics"
+              className="cursor-pointer text-blue-600 underline bg-transparent border-0 p-0"
             >
               {uptimePercent}
-            </span>
+            </button>
           }
           icon="📊"
           theme={theme}
@@ -185,7 +190,7 @@ const Dashboard = ({
          SELECT + SEARCH
       =============================== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
           <button
             onClick={() => {
               setSelectionMode((v) => !v);
@@ -194,6 +199,8 @@ const Dashboard = ({
             }}
             className={`px-3 py-2 rounded text-sm border
             ${theme === "dark" ? "bg-gray-800 border-gray-700 text-gray-200" : "bg-white border-gray-300 text-gray-800"}`}
+            aria-pressed={selectionMode}
+            aria-label={selectionMode ? 'Cancel selection' : 'Select websites'}
           >
             {selectionMode ? "Cancel Select" : "Select"}
           </button>
@@ -234,6 +241,7 @@ const Dashboard = ({
                   setSelectedIds([]);
                 }}
                 className="px-3 py-2 rounded bg-red-500 text-white text-sm hover:bg-red-600"
+                aria-label={`Delete selected ${selectedIds.length} websites`}
               >
                 Delete Selected ({selectedIds.length})
               </button>
@@ -250,11 +258,12 @@ const Dashboard = ({
                 : "bg-white border-gray-300"
             }`}
           >
-            <span className="px-2">🔍</span>
+            <span className="px-2" aria-hidden>🔍</span>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search domain or URL"
+              aria-label="Search websites by domain or URL"
               className="w-full p-1 outline-none bg-transparent text-sm"
             />
           </div>

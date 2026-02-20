@@ -30,8 +30,7 @@ const Header = ({
 <div className="flex items-center gap-3">
 
   {/* Icon (always visible) */}
-  <div className="w-9 h-9 flex items-center justify-center rounded-lg 
-                  bg-indigo-500/10 text-indigo-600 text-base font-semibold">
+            <div className="w-9 h-9 flex items-center justify-center rounded-lg text-base font-semibold" style={{background: 'hsl(var(--chart-4) / 0.12)', color: 'hsl(var(--chart-4))'}}>
     ⏱️
   </div>
 
@@ -56,12 +55,12 @@ const Header = ({
                 width: 100%;
                 height: 100%;
                 border-radius: 50%;
-                background: white;
-                border: 2px solid #d1d5db;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                background: hsl(var(--card));
+                border: 2px solid hsl(var(--border));
+                box-shadow: 0 4px 12px hsl(0 0% 0% / 0.15);
               }
 
-              .marker { position: absolute; background: #6b7280; }
+              .marker { position: absolute; background: hsl(var(--muted)); }
 
               .marker-12 { width: 2px; height: 6px; top: 4px; left: 50%; transform: translateX(-50%); }
               .marker-3 { width: 6px; height: 2px; right: 4px; top: 50%; transform: translateY(-50%); }
@@ -80,21 +79,21 @@ const Header = ({
               .hour {
                 width: 3px;
                 height: 10px;
-                background: #111827;
+                background: hsl(var(--foreground));
                 animation: rotateHour 60s linear infinite;
               }
 
               .minute {
                 width: 2px;
                 height: 14px;
-                background: #2563eb;
+                background: hsl(var(--chart-4));
                 animation: rotateMinute 20s linear infinite;
               }
 
               .second {
                 width: 1px;
                 height: 16px;
-                background: #ef4444;
+                background: hsl(var(--chart-3));
                 animation: rotateSecond 4s linear infinite;
               }
 
@@ -102,7 +101,7 @@ const Header = ({
                 position: absolute;
                 width: 6px;
                 height: 6px;
-                background: #111827;
+                background: hsl(var(--foreground));
                 border-radius: 50%;
                 z-index: 10;
               }

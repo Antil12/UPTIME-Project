@@ -13,7 +13,7 @@ const UrlTable = ({
   categories = [],
   selectedCategory,
   setSelectedCategory,
-  selectedStatus,
+  selectedStatus, 
   setSelectedStatus,
 }) => {
   const [showFilter, setShowFilter] = useState(false);
@@ -71,11 +71,11 @@ const UrlTable = ({
               }`}
           >
             <tr>
-                {selectionMode && <th className="px-3 py-3 text-left"> </th>}
-              <th className="px-3 py-3 text-left">Serial No.</th>
+                {selectionMode && <th scope="col" className="px-2 py-2 text-left"> </th>}
+              <th scope="col" className="px-2 py-2 text-left">Serial No.</th>
 
               {/* DOMAIN FILTER */}
-              <th className="px-3 py-3 text-left relative">
+              <th scope="col" className="px-2 py-2 text-left relative">
                 <div className="flex items-center gap-2">
                   <span>Domain</span>
                   <button
@@ -83,6 +83,7 @@ const UrlTable = ({
                       setShowFilter((v) => !v);
                       setShowStatusFilter(false);
                     }}
+                    aria-label="Filter by category"
                     className={`p-1 rounded hover:bg-gray-200
                     ${selectedCategory !== "ALL"
                         ? "text-blue-600"
@@ -121,11 +122,11 @@ const UrlTable = ({
                 )}
               </th>
 
-              <th className="px-3 py-3 text-left">URL</th>
-              <th className="px-3 py-3 text-center">SSL Status</th>
+              <th scope="col" className="px-2 py-2 text-left">URL</th>
+              <th scope="col" className="px-2 py-2 text-center">SSL Status</th>
 
               {/* STATUS FILTER */}
-              <th className="px-3 py-3 text-left relative">
+              <th scope="col" className="px-2 py-2 text-left relative">
                 <div className="flex items-center gap-2">
                   <span>Status</span>
                   <button
@@ -133,6 +134,7 @@ const UrlTable = ({
                       setShowStatusFilter((v) => !v);
                       setShowFilter(false);
                     }}
+                    aria-label="Filter by status"
                     className={`p-1 rounded hover:bg-gray-200
                     ${selectedStatus !== "ALL"
                         ? "text-blue-600"
@@ -171,9 +173,9 @@ const UrlTable = ({
                 )}
               </th>
 
-              <th className="px-3 py-3 text-center">Status Code</th>
-              <th className="px-3 py-3 text-left">Last Check</th>
-              <th className="px-3 py-3 text-center">Actions</th>
+              <th scope="col" className="px-2 py-2 text-center">Status Code</th>
+              <th scope="col" className="px-2 py-2 text-left">Last Check</th>
+              <th scope="col" className="px-2 py-2 text-center">Actions</th>
             </tr>
           </thead>
 
@@ -181,14 +183,17 @@ const UrlTable = ({
             {sortedData.map((item, i) => (
               <tr
                 key={item._id}
+                role="row"
+                tabIndex={0}
                 className={`border-t transition
                 ${theme === "dark"
                     ? "border-gray-700 hover:bg-gray-800"
                     : "border-slate-200 hover:bg-slate-50"
                   }`}
+                onKeyDown={(e) => { if (e.key === 'Enter') { /* noop - row is focusable */ } }}
               >
                 {selectionMode && (
-                  <td className="px-3 py-3">
+                  <td className="px-2 py-2">
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(item._id)}
@@ -202,44 +207,43 @@ const UrlTable = ({
                     />
                   </td>
                 )}
-                <td className="px-3 py-3">{i + 1}</td>
-                <td className="px-3 py-3 font-medium">{item.domain}</td>
+                <td className="px-2 py-2">{i + 1}</td>
+                <td className="px-2 py-2 font-medium">{item.domain}</td>
 
-                <td className="px-3 py-3 truncate max-w-xs text-blue-500">
+                <td className="px-2 py-2 truncate max-w-xs text-blue-500">
                   <a href={item.url} target="_blank" rel="noreferrer">
                     {item.url}
                   </a>
                 </td>
-
-                <td className={`px-3 py-3 text-center font-semibold ${getSslColor(item.sslStatus)}`}>
+                <td className={`px-2 py-2 text-center font-semibold ${getSslColor(item.sslStatus)}`}>
                   {getSslText(item)}
                 </td>
-
-                <td className={`px-3 py-3 text-center font-semibold ${getStatusColor(item.status)}`}>
+                <td className={`px-2 py-2 text-center font-semibold ${getStatusColor(item.status)}`}>
                   {item.status || "CHECKING"}
                 </td>
 
-                <td className="px-3 py-3 text-center">
+                <td className="px-2 py-2 text-center">
                   {item.statusCode || "--"}
                 </td>
-
-                <td className="px-3 py-3 text-sm text-gray-500">
+                <td className="px-2 py-2 text-sm text-gray-500">
                   {item.lastCheckedAt
                     ? new Date(item.lastCheckedAt).toLocaleString()
                     : "-"}
                 </td>
-
-                <td className="px-3 py-3">
+                <td className="px-2 py-2">
                   <div className="flex justify-center gap-3">
-                    <button onClick={() => onPin(item._id)}>
-                      {item.pinned ? <PinOff size={16} /> : <Pin size={16} />}
+                    <button aria-label={item.pinned ? 'Unpin site' : 'Pin site'} title={item.pinned ? 'Unpin' : 'Pin'} onClick={() => onPin(item._id)}>
+                      {item.pinned ? <PinOff size={16} aria-hidden="true" /> : <Pin size={16} aria-hidden="true" />}
+                      <span className="sr-only">{item.pinned ? 'Unpin site' : 'Pin site'}</span>
                     </button>
-                    <button onClick={() => onEdit(item)}>✏️</button>
+                    <button aria-label="Edit site" title="Edit" onClick={() => onEdit(item)}>✏️ <span className="sr-only">Edit site</span></button>
                     <button
                       onClick={() => onDelete(item._id)}
                       className="text-red-500"
+                      aria-label="Delete site"
+                      title="Delete"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={16} aria-hidden="true" />
                     </button>
                   </div>
                 </td>
@@ -254,6 +258,7 @@ const UrlTable = ({
 
   {/* CATEGORY FILTER */}
   <select
+    aria-label="Filter by category"
     value={selectedCategory}
     onChange={(e) => setSelectedCategory(e.target.value)}
     className={`flex-1 p-2 rounded-lg text-sm border
@@ -271,6 +276,7 @@ const UrlTable = ({
 
   {/* STATUS FILTER */}
   <select
+    aria-label="Filter by status"
     value={selectedStatus}
     onChange={(e) => setSelectedStatus(e.target.value)}
     className={`flex-1 p-2 rounded-lg text-sm border
@@ -305,7 +311,7 @@ const UrlTable = ({
       return (
         <div
           key={item._id}
-          className={`relative rounded-2xl p-6 shadow-sm border transition-all duration-300 hover:shadow-lg hover:-translate-y-1
+          className={`relative rounded-2xl p-4 shadow-sm border transition-all duration-300 hover:shadow-lg hover:-translate-y-1
           ${theme === "dark"
               ? "bg-gray-900 border-gray-800 text-gray-200"
               : "bg-white border-gray-200 text-gray-800"
@@ -324,18 +330,19 @@ const UrlTable = ({
                   if (e.target.checked) setSelectedIds((p) => [...p, item._id]);
                   else setSelectedIds((p) => p.filter((id) => id !== item._id));
                 }}
+                aria-label={`Select ${item.domain}`}
               />
             </div>
           )}
 
           {/* DOMAIN + STATUS */}
           <div className="flex justify-between items-center mb-5">
-            <h3 className="font-semibold text-lg tracking-wide">
+            <h3 className="font-semibold text-base tracking-wide">
               {item.domain}
             </h3>
 
             <span
-              className={`text-xs px-3 py-1 rounded-full font-semibold
+              className={`text-xs px-2 py-1 rounded-full font-semibold
               ${item.status === "UP"
                 ? "bg-green-100 text-green-700"
                 : item.status === "SLOW"
@@ -350,12 +357,12 @@ const UrlTable = ({
           </div>
 
           {/* URL */}
-          <div className="text-sm text-blue-500 break-all mb-6">
+          <div className="text-sm text-blue-500 break-all mb-4">
             {item.url}
           </div>
 
           {/* INFO GRID */}
-          <div className="grid grid-cols-2 gap-y-4 text-sm mb-6">
+          <div className="grid grid-cols-2 gap-y-3 text-sm mb-4">
 
             <div className="text-gray-400">Status Code</div>
             <div className="font-semibold text-right">
@@ -380,13 +387,14 @@ const UrlTable = ({
           </div>
 
           {/* DIVIDER */}
-          <div className={`border-t mb-5 ${theme === "dark" ? "border-gray-800" : "border-gray-200"}`} />
+          <div className={`border-t mb-4 ${theme === "dark" ? "border-gray-800" : "border-gray-200"}`} />
 
           {/* EDIT BUTTON */}
           <div className="flex justify-center">
             <button
               onClick={() => onEdit(item)}
-              className="px-6 py-2 text-sm font-medium rounded-xl transition-all duration-200 bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
+              aria-label={`Edit ${item.domain}`}
+              className="px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
             >
               Edit
             </button>

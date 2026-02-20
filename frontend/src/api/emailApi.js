@@ -11,7 +11,7 @@ export const sendSlowEmail = async (alertData) => {
       (site) => `
       <tr style="border-bottom:1px solid #e5e7eb;">
         <td style="padding:12px; font-size:14px;">${site.domain}</td>
-        <td style="padding:12px; font-size:14px; color:#d97706; font-weight:bold;">SLOW</td>
+        <td style="padding:12px; font-size:14px; color:#DB2511; font-weight:bold;">SLOW</td>
         <td style="padding:12px; font-size:14px;">${site.responseTimeMs ?? "—"} ms</td>
         <td style="padding:12px; font-size:14px;">${new Date(site.checkedAt).toLocaleString()}</td>
       </tr>`
