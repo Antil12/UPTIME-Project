@@ -1,5 +1,7 @@
 import { Pin, PinOff, Trash2, Filter } from "lucide-react";
 import { useMemo, useState } from "react";
+import axios from "axios";
+import SiteReport from "./SiteReport";
 
 const UrlTable = ({
   urls,
@@ -18,6 +20,26 @@ const UrlTable = ({
 }) => {
   const [showFilter, setShowFilter] = useState(false);
   const [showStatusFilter, setShowStatusFilter] = useState(false);
+  const [expandedSite, setExpandedSite] = useState(null);
+  const [siteLogs, setSiteLogs] = useState({});
+  const LOG_API_BASE = "http://localhost:5000/api/uptime-logs";
+
+  const toggleSite = async (item) => {
+    const next = expandedSite === item._id ? null : item._id;
+    setExpandedSite(next);
+    if (next && !siteLogs[item._id]) {
+      try {
+        const token = localStorage.getItem("loginToken");
+        const res = await axios.get(`${LOG_API_BASE}/${item._id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        setSiteLogs((prev) => ({ ...prev, [item._id]: res.data?.data || [] }));
+      } catch (err) {
+        console.error("Failed to fetch site logs", err);
+        setSiteLogs((prev) => ({ ...prev, [item._id]: [] }));
+      }
+    }
+  };
 
   /* ✅ Dynamic Status Options */
   const statusOptions = useMemo(() => {
@@ -180,75 +202,108 @@ const UrlTable = ({
           </thead>
 
           <tbody>
-            {sortedData.map((item, i) => (
-              <tr
-                key={item._id}
-                role="row"
-                tabIndex={0}
-                className={`border-t transition
-                ${theme === "dark"
-                    ? "border-gray-700 hover:bg-gray-800"
-                    : "border-slate-200 hover:bg-slate-50"
-                  }`}
-                onKeyDown={(e) => { if (e.key === 'Enter') { /* noop - row is focusable */ } }}
-              >
-                {selectionMode && (
-                  <td className="px-2 py-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(item._id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIds((prev) => [...prev, item._id]);
-                        } else {
-                          setSelectedIds((prev) => prev.filter((id) => id !== item._id));
-                        }
-                      }}
-                    />
-                  </td>
-                )}
-                <td className="px-2 py-2">{i + 1}</td>
-                <td className="px-2 py-2 font-medium">{item.domain}</td>
+            {sortedData.map((item, i) => {
+              const handleToggle = async () => {
+                const next = expandedSite === item._id ? null : item._id;
+                setExpandedSite(next);
+                if (next && !siteLogs[item._id]) {
+                  try {
+                    const token = localStorage.getItem("loginToken");
+                    const res = await axios.get(`${LOG_API_BASE}/${item._id}`, {
+                      headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    });
+                    setSiteLogs((prev) => ({ ...prev, [item._id]: res.data?.data || [] }));
+                  } catch (err) {
+                    console.error("Failed to fetch site logs", err);
+                    setSiteLogs((prev) => ({ ...prev, [item._id]: [] }));
+                  }
+                }
+              };
 
-                <td className="px-2 py-2 truncate max-w-xs text-blue-500">
-                  <a href={item.url} target="_blank" rel="noreferrer">
-                    {item.url}
-                  </a>
-                </td>
-                <td className={`px-2 py-2 text-center font-semibold ${getSslColor(item.sslStatus)}`}>
-                  {getSslText(item)}
-                </td>
-                <td className={`px-2 py-2 text-center font-semibold ${getStatusColor(item.status)}`}>
-                  {item.status || "CHECKING"}
-                </td>
+              return (
+                <>
+                  <tr
+                    key={item._id}
+                    role="row"
+                    tabIndex={0}
+                    className={`border-t transition
+                    ${theme === "dark"
+                        ? "border-gray-700 hover:bg-gray-800"
+                        : "border-slate-200 hover:bg-slate-50"
+                      }`}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { /* noop - row is focusable */ } }}
+                  >
+                    {selectionMode && (
+                      <td className="px-2 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item._id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds((prev) => [...prev, item._id]);
+                            } else {
+                              setSelectedIds((prev) => prev.filter((id) => id !== item._id));
+                            }
+                          }}
+                        />
+                      </td>
+                    )}
+                    <td className="px-2 py-2">{i + 1}</td>
+                    <td className="px-2 py-2 font-medium">
+                      <button onClick={(e) => { e.preventDefault(); handleToggle(); }} className="text-left text-blue-600 hover:underline">
+                        {item.domain}
+                      </button>
+                    </td>
 
-                <td className="px-2 py-2 text-center">
-                  {item.statusCode || "--"}
-                </td>
-                <td className="px-2 py-2 text-sm text-gray-500">
-                  {item.lastCheckedAt
-                    ? new Date(item.lastCheckedAt).toLocaleString()
-                    : "-"}
-                </td>
-                <td className="px-2 py-2">
-                  <div className="flex justify-center gap-3">
-                    <button aria-label={item.pinned ? 'Unpin site' : 'Pin site'} title={item.pinned ? 'Unpin' : 'Pin'} onClick={() => onPin(item._id)}>
-                      {item.pinned ? <PinOff size={16} aria-hidden="true" /> : <Pin size={16} aria-hidden="true" />}
-                      <span className="sr-only">{item.pinned ? 'Unpin site' : 'Pin site'}</span>
-                    </button>
-                    <button aria-label="Edit site" title="Edit" onClick={() => onEdit(item)}>✏️ <span className="sr-only">Edit site</span></button>
-                    <button
-                      onClick={() => onDelete(item._id)}
-                      className="text-red-500"
-                      aria-label="Delete site"
-                      title="Delete"
-                    >
-                      <Trash2 size={16} aria-hidden="true" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    <td className="px-2 py-2 truncate max-w-xs text-blue-500">
+                      <a href={item.url} target="_blank" rel="noreferrer">
+                        {item.url}
+                      </a>
+                    </td>
+                    <td className={`px-2 py-2 text-center font-semibold ${getSslColor(item.sslStatus)}`}>
+                      {getSslText(item)}
+                    </td>
+                    <td className={`px-2 py-2 text-center font-semibold ${getStatusColor(item.status)}`}>
+                      {item.status || "CHECKING"}
+                    </td>
+
+                    <td className="px-2 py-2 text-center">
+                      {item.statusCode || "--"}
+                    </td>
+                    <td className="px-2 py-2 text-sm text-gray-500">
+                      {item.lastCheckedAt
+                        ? new Date(item.lastCheckedAt).toLocaleString()
+                        : "-"}
+                    </td>
+                    <td className="px-2 py-2">
+                      <div className="flex justify-center gap-3">
+                        <button aria-label={item.pinned ? 'Unpin site' : 'Pin site'} title={item.pinned ? 'Unpin' : 'Pin'} onClick={() => onPin(item._id)}>
+                          {item.pinned ? <PinOff size={16} aria-hidden="true" /> : <Pin size={16} aria-hidden="true" />}
+                          <span className="sr-only">{item.pinned ? 'Unpin site' : 'Pin site'}</span>
+                        </button>
+                        <button aria-label="Edit site" title="Edit" onClick={() => onEdit(item)}>✏️ <span className="sr-only">Edit site</span></button>
+                        <button
+                          onClick={() => onDelete(item._id)}
+                          className="text-red-500"
+                          aria-label="Delete site"
+                          title="Delete"
+                        >
+                          <Trash2 size={16} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {expandedSite === item._id && (
+                    <tr key={`${item._id}-report`} className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
+                      <td colSpan={selectionMode ? 9 : 8} className="p-4">
+                        <SiteReport site={item} logs={siteLogs[item._id] || []} theme={theme} />
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -338,7 +393,9 @@ const UrlTable = ({
           {/* DOMAIN + STATUS */}
           <div className="flex justify-between items-center mb-5">
             <h3 className="font-semibold text-base tracking-wide">
-              {item.domain}
+              <button onClick={() => toggleSite(item)} className="text-left text-blue-600 hover:underline">
+                {item.domain}
+              </button>
             </h3>
 
             <span
@@ -365,6 +422,12 @@ const UrlTable = ({
           <div className="grid grid-cols-2 gap-y-3 text-sm mb-4">
 
             <div className="text-gray-400">Status Code</div>
+
+            {expandedSite === item._id && (
+              <div className="mt-4">
+                <SiteReport site={item} logs={siteLogs[item._id] || []} theme={theme} />
+              </div>
+            )}
             <div className="font-semibold text-right">
               {item.statusCode || "--"}
             </div>

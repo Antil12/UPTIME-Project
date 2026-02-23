@@ -162,7 +162,7 @@ else if (responseTimeMs > SLOW_THRESHOLD) {
 
   setSlowBatch(alertPayload);
 
-  await generateCSV(slowSitesTemp);
+  //await generateCSV(slowSitesTemp);
 } else {
   // clear old batch if nothing slow this time
   setSlowBatch(null);
@@ -177,24 +177,24 @@ else if (responseTimeMs > SLOW_THRESHOLD) {
 
 //----------------------------------------------------------------------------------------------
 
-const generateCSV = async (slowSites) => {
-  const fileName = `slow-sites-${Date.now()}.csv`;
-  const filePath = path.join("reports", fileName);
+// const generateCSV = async (slowSites) => {
+//   const fileName = `slow-sites-${Date.now()}.csv`;
+//   const filePath = path.join("reports", fileName);
 
-  // Make sure folder exists
-  if (!fs.existsSync("reports")) {
-    fs.mkdirSync("reports");
-  }
+//   // Make sure folder exists
+//   if (!fs.existsSync("reports")) {
+//     fs.mkdirSync("reports");
+//   }
 
-  // CSV header
-  let csvContent = "Domain,URL,ResponseTime(ms),Threshold(ms),CheckedAt\n";
+//   // CSV header
+//   let csvContent = "Domain,URL,ResponseTime(ms),Threshold(ms),CheckedAt\n";
 
-  // Add rows
-  slowSites.forEach((site) => {
-    csvContent += `${site.domain},${site.url},${site.responseTimeMs},${site.threshold},${site.checkedAt}\n`;
-  });
+//   // Add rows
+//   slowSites.forEach((site) => {
+//     csvContent += `${site.domain},${site.url},${site.responseTimeMs},${site.threshold},${site.checkedAt}\n`;
+//   });
 
-  fs.writeFileSync(filePath, csvContent);
+//   fs.writeFileSync(filePath, csvContent);
 
-  console.log(`📁 CSV Generated: ${fileName}`);
-};
+//   console.log(`📁 CSV Generated: ${fileName}`);
+// };
