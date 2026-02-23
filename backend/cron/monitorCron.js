@@ -171,30 +171,7 @@ else if (responseTimeMs > SLOW_THRESHOLD) {
 
 
     console.log(`✅ Checked ${sites.length} sites`);
-  },15 * 60 * 1000); // 1 minute
+  },59 * 60 * 1000); // 1 minute
 };
 
 
-//----------------------------------------------------------------------------------------------
-
-// const generateCSV = async (slowSites) => {
-//   const fileName = `slow-sites-${Date.now()}.csv`;
-//   const filePath = path.join("reports", fileName);
-
-//   // Make sure folder exists
-//   if (!fs.existsSync("reports")) {
-//     fs.mkdirSync("reports");
-//   }
-
-//   // CSV header
-//   let csvContent = "Domain,URL,ResponseTime(ms),Threshold(ms),CheckedAt\n";
-
-//   // Add rows
-//   slowSites.forEach((site) => {
-//     csvContent += `${site.domain},${site.url},${site.responseTimeMs},${site.threshold},${site.checkedAt}\n`;
-//   });
-
-//   fs.writeFileSync(filePath, csvContent);
-
-//   console.log(`📁 CSV Generated: ${fileName}`);
-// };

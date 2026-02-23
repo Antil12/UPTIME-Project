@@ -12,6 +12,8 @@ import Signup from "./pages/Signup";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Header from "./components/Header";
 import { startSlowAlertListener } from "./api/alertApi";
+import SuperAdmin from "./pages/SuperAdmin";
+
 
 
 
@@ -513,6 +515,10 @@ if (!isLoggedIn) {
               />
             }
           />
+          <Route
+  path="/superadmin"
+  element={<SuperAdmin theme={theme} />}
+/>
 
           <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>

@@ -86,7 +86,7 @@ const UrlTable = ({
               : "bg-white text-gray-800"}`}>
         {/* > */}
           <thead
-            className={`text-sm sticky top-[80px] z-40
+            className={`text-sm sticky top-[90px] z-40
             ${theme === "dark"
                 ? "bg-gray-800 text-gray-200"
                 : "bg-slate-100 text-gray-700"
