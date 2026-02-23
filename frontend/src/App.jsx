@@ -24,6 +24,18 @@ const API_BASE = "http://localhost:5000/api/monitoredsite";
 function App() {
   
   /* ================= STATE ================= */
+//   const currentUser = JSON.parse(localStorage.getItem("user"));
+// const userRole = currentUser?.role;
+
+
+const [currentUser, setCurrentUser] = useState(() => {
+  const stored = localStorage.getItem("user");
+  return stored ? JSON.parse(stored) : null;
+});
+
+const userRole = currentUser?.role?.toUpperCase();
+
+
   const [isLoggedIn, setIsLoggedIn] = useState(
   !!localStorage.getItem("loginToken")
 );
@@ -327,6 +339,7 @@ await axios.put(
     localStorage.removeItem("loginToken");
     localStorage.removeItem("user");
     setIsLoggedIn(false);
+    setCurrentUser(null);
     setUrls([]);
     setActivePage("dashboard");
   }
@@ -419,12 +432,12 @@ if (!isLoggedIn) {
       <Route
         path="/login"
         element={
-          <Login
-            onLogin={() => {
-              setIsLoggedIn(true);
-            }}
-          />
-        }
+       <Login
+  onLogin={(userData) => {
+    setCurrentUser(userData);   // ✅ DIRECTLY SET USER
+    setIsLoggedIn(true);
+  }}
+/>    }
       />
 
       {/* SIGNUP */}
@@ -457,6 +470,7 @@ if (!isLoggedIn) {
         handleRefresh={handleRefresh}
         isRefreshing={isRefreshing}
         handleLogout={handleLogout}
+        currentUser={currentUser}
       />
 
       {/* MAIN CONTENT */}
@@ -515,12 +529,16 @@ if (!isLoggedIn) {
               />
             }
           />
-          <Route
+  <Route
   path="/superadmin"
-  element={<SuperAdmin theme={theme} />}
-/>
-
-          <Route path="*" element={<Navigate to="/dashboard" />} />
+  element={
+    userRole === "SUPERADMIN" ? (
+      <SuperAdmin theme={theme} />
+    ) : (
+      <Navigate to="/dashboard" replace />
+    )
+  }
+/><Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
       </main>
 

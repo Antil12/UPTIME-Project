@@ -2,7 +2,7 @@ import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 
 const createAccessToken = (user) => {
-  return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+  return jwt.sign({ id: user._id, role: user.role  }, process.env.JWT_SECRET, {
     expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m",
   });
 };
@@ -47,7 +47,7 @@ export const signup = async (req, res) => {
     sendRefreshTokenCookie(res, refreshToken);
 
     res.status(201).json({
-      user: { id: user._id, name: user.name, email: user.email },
+      user: { id: user._id, name: user.name, email: user.email,   role: user.role   },
       accessToken,
     });
   } catch (error) {
@@ -81,7 +81,7 @@ export const login = async (req, res) => {
     sendRefreshTokenCookie(res, refreshToken);
 
     res.json({
-      user: { id: user._id, name: user.name, email: user.email },
+      user: { id: user._id, name: user.name, email: user.email,role: user.role   },
       accessToken,
     });
   } catch (error) {

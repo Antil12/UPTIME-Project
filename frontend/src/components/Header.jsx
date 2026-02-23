@@ -9,6 +9,7 @@ const Header = ({
   handleRefresh,
   isRefreshing,
   handleLogout,
+   currentUser,
 }) => {
   const navigate = useNavigate();
 
@@ -131,7 +132,17 @@ const Header = ({
               <CrystalButton label="Dashboard" onClick={() => navigate("/dashboard")} theme={theme}/>
               <CrystalButton label="Add URL" onClick={() => navigate("/add")} theme={theme}/>
               <CrystalButton label="Reports" onClick={() => navigate("/reports")} theme={theme}/>
-              <CrystalButton label="Super Admin" onClick={() => navigate("/superadmin")} theme={theme}/>
+              {/* <CrystalButton label="Super Admin" onClick={() => navigate("/superadmin")} theme={theme}/> */}
+
+              {/* {JSON.parse(localStorage.getItem("user"))?.role === "SUPERADMIN" && ( */}
+{currentUser?.role?.toUpperCase() === "SUPERADMIN" && (
+  <CrystalButton
+    label="Super Admin"
+    onClick={() => navigate("/superadmin")}
+    theme={theme}
+  />
+)}
+
             </div>
 
             <div className="flex md:hidden gap-2">

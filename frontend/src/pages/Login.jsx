@@ -22,9 +22,9 @@ const Login = ({ onLogin, goToSignup }) => {
         { withCredentials: true }
       );
       localStorage.setItem("loginToken", res.data.accessToken);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      onLogin();
+onLogin(res.data.user);   // ✅ PASS USER DIRECTLY
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     }

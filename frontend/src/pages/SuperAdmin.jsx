@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 
 const SuperAdmin = ({ theme }) => {
   const isDark = theme === "dark";
@@ -23,6 +24,49 @@ const SuperAdmin = ({ theme }) => {
       : form.password.length > 0
       ? "Weak"
       : "";
+      const handleSubmit = async () => {
+  if (!form.username || !form.email || !form.password) {
+    alert("All fields are required");
+    return;
+  }
+
+  if (form.password !== form.confirmPassword) {
+    alert("Passwords do not match");
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("loginToken");
+
+    await axios.post(
+      "http://localhost:5000/api/user/create",
+      {
+        name: form.username,
+        email: form.email,
+        password: form.password,
+        role: form.role,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    alert("User created successfully ✅");
+
+    // Reset form
+    setForm({
+      username: "",
+      password: "",
+      confirmPassword: "",
+      email: "",
+      role: "USER",
+    });
+  } catch (err) {
+    alert(err.response?.data?.message || "Failed to create user");
+  }
+};
 
   return (
     <main className="min-h-screen p-6 flex justify-center items-start">
@@ -146,10 +190,11 @@ const SuperAdmin = ({ theme }) => {
           </button>
 
           <button
-            className="px-6 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:scale-105 transition-transform"
-          >
-            Create 
-          </button>
+  onClick={handleSubmit}
+  className="px-6 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:scale-105 transition-transform"
+>
+  Create
+</button>
         </div>
       </div>
     </main>

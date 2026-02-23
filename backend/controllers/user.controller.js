@@ -1,20 +1,26 @@
-import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists",
+      });
+    }
 
     const user = await User.create({
       name,
       email,
-      password: hashedPassword,
-      role: "USER",
+      password, // Will be hashed by schema pre("save")
+      role,
     });
 
-    res.json({
+    res.status(201).json({
       success: true,
       message: "User created successfully",
       user,
