@@ -44,7 +44,7 @@ const userRole = currentUser?.role?.toUpperCase();
   const [authPage, setAuthPage] = useState("login"); 
 
   const [activePage, setActivePage] = useState("dashboard");
-  const [message, setMessage] = useState("Checking backend...");
+  const [message, setMessage] = useState("");
   const [urls, setUrls] = useState([]);
 
   const [domain, setDomain] = useState("");
@@ -91,14 +91,14 @@ useEffect(() => {
 
 
   // Backend health check
-  useEffect(() => {
-  if (!isLoggedIn) return;
+//   useEffect(() => {
+//   if (!isLoggedIn) return;
 
-  axios
-    .get("http://localhost:5000/api/test")
-    .then((res) => setMessage(res.data.message))
-    .catch(() => setMessage("Backend not connected"));
-}, [isLoggedIn]);
+//   axios
+//     .get("http://localhost:5000/api/test")
+//     .then((res) => setMessage(res.data.message))
+//     .catch(() => setMessage("Backend not connected"));
+// }, [isLoggedIn]);
 
 
   // Fetch sites

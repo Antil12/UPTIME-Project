@@ -168,22 +168,15 @@ const Dashboard = ({
           }
         />
 
-        {/* ✅ UPDATED UPTIME CARD WITH CLICKABLE % */}
-        <StatCard
-          compact
-          title="Uptime %"
-          value={
-            <button
-              onClick={() => setPopupOpen(true)}
-              aria-label="Open uptime analytics"
-              className="cursor-pointer text-blue-600 underline bg-transparent border-0 p-0"
-            >
-              {uptimePercent}
-            </button>
-          }
-          icon="📊"
-          theme={theme}
-        />
+     {/* ✅ UPDATED UPTIME CARD — FULL CARD CLICKABLE */}
+<StatCard
+  compact
+  title="Uptime %"
+  value={uptimePercent}
+  icon="📊"
+  theme={theme}
+  onClick={() => setPopupOpen(true)}
+/>
       </section>
 
       {/* ===============================

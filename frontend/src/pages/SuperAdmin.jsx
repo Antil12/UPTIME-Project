@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 const SuperAdmin = ({ theme }) => {
@@ -12,6 +12,11 @@ const SuperAdmin = ({ theme }) => {
     role: "USER",
   });
 
+  const [users, setUsers] = useState([]);
+  
+  const [editUser, setEditUser] = useState(null);
+  const [newPassword, setNewPassword] = useState("");
+  
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -24,72 +29,159 @@ const SuperAdmin = ({ theme }) => {
       : form.password.length > 0
       ? "Weak"
       : "";
-      const handleSubmit = async () => {
-  if (!form.username || !form.email || !form.password) {
-    alert("All fields are required");
-    return;
-  }
 
-  if (form.password !== form.confirmPassword) {
-    alert("Passwords do not match");
+
+      const handleUpdatePassword = async () => {
+  if (!newPassword) {
+    alert("Password cannot be empty");
     return;
   }
 
   try {
     const token = localStorage.getItem("loginToken");
 
-    await axios.post(
-      "http://localhost:5000/api/user/create",
+    await axios.put(
+      `http://localhost:5000/api/user/${editUser._id}/password`,
+      { password: newPassword },
       {
-        name: form.username,
-        email: form.email,
-        password: form.password,
-        role: form.role,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
 
-    alert("User created successfully ✅");
+    alert("Password updated successfully ✅");
 
-    // Reset form
-    setForm({
-      username: "",
-      password: "",
-      confirmPassword: "",
-      email: "",
-      role: "USER",
-    });
+    setEditUser(null);
+    setNewPassword("");
   } catch (err) {
-    alert(err.response?.data?.message || "Failed to create user");
+    alert("Failed to update password");
   }
 };
 
-  return (
-    <main className="min-h-screen p-6 flex justify-center items-start">
-      <div
-        className={`w-full max-w-3xl rounded-2xl backdrop-blur-xl border shadow-xl p-8 transition-all duration-300
-        ${
-          isDark
-            ? "bg-white/5 border-white/10 text-white"
-            : "bg-white/70 border-gray-200 text-gray-800"
-        }`}
-      >
-        {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold">👑 Create  Admin and User</h2>
-          <p className="text-sm opacity-70 mt-1">
-            Add a new high-level administrator to your monitoring system.
+  // Fetch all users on load
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem("loginToken");
+
+      const res = await axios.get(
+        "http://localhost:5000/api/user/all",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setUsers(res.data.users || []);
+    } catch (err) {
+      console.error("Failed to fetch users");
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  // Create user (Instant Table Update)
+  const handleSubmit = async () => {
+    if (!form.username || !form.email || !form.password) {
+      alert("All fields are required");
+      return;
+    }
+
+    if (form.password !== form.confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("loginToken");
+
+      const res = await axios.post(
+        "http://localhost:5000/api/user/create",
+        {
+          name: form.username,
+          email: form.email,
+          password: form.password,
+          role: form.role,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const createdUser = res.data.user;
+
+      // ✅ Instantly add new user to table
+      setUsers((prev) => [createdUser, ...prev]);
+
+      alert("User created successfully ✅");
+
+      setForm({
+        username: "",
+        password: "",
+        confirmPassword: "",
+        email: "",
+        role: "USER",
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to create user");
+    }
+  };
+
+  // Delete user (Instant Remove)
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem("loginToken");
+
+      await axios.delete(
+        `http://localhost:5000/api/user/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // ✅ Remove from table instantly
+      setUsers((prev) => prev.filter((user) => user._id !== id));
+    } catch (err) {
+      alert("Failed to delete user");
+    }
+  };
+return (
+  <main className="min-h-screen px-6 py-10 flex justify-center bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-950 dark:to-gray-900 transition-all">
+
+    <div
+      className={`w-full max-w-6xl rounded-3xl shadow-2xl border p-10 backdrop-blur-xl transition-all duration-300
+      ${isDark
+        ? "bg-white/5 border-white/10 text-white"
+        : "bg-white border-gray-200 text-gray-800"
+      }`}
+    >
+
+      {/* ================= HEADER ================= */}
+      <div className="flex items-center justify-between mb-10">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Super Admin Dashboard
+          </h1>
+          <p className="text-sm opacity-60 mt-1">
+            Manage administrators and users in your monitoring system.
           </p>
         </div>
 
-        {/* Grid Layout */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-medium shadow-lg">
+          Access: SUPERADMIN
+        </div>
+      </div>
 
-          {/* Username */}
+      {/* ================= FORM CARD ================= */}
+      <div className={`rounded-2xl p-8 mb-10 shadow-lg border
+        ${isDark
+          ? "bg-gray-900/60 border-gray-800"
+          : "bg-gray-50 border-gray-200"
+        }`}
+      >
+
+        <h2 className="text-xl font-semibold mb-6">Create New User</h2>
+
+        <div className="grid md:grid-cols-2 gap-6">
           <FloatingInput
             label="Username"
             name="username"
@@ -98,7 +190,6 @@ const SuperAdmin = ({ theme }) => {
             theme={theme}
           />
 
-          {/* Email */}
           <FloatingInput
             label="Email Address"
             name="email"
@@ -108,7 +199,6 @@ const SuperAdmin = ({ theme }) => {
             theme={theme}
           />
 
-          {/* Password */}
           <div className="space-y-1">
             <FloatingInput
               label="Password"
@@ -119,21 +209,18 @@ const SuperAdmin = ({ theme }) => {
               theme={theme}
             />
             {passwordStrength && (
-              <span
-                className={`text-xs ${
-                  passwordStrength === "Strong"
-                    ? "text-green-500"
-                    : passwordStrength === "Medium"
-                    ? "text-yellow-500"
-                    : "text-red-500"
-                }`}
-              >
+              <span className={`text-xs font-medium ${
+                passwordStrength === "Strong"
+                  ? "text-green-500"
+                  : passwordStrength === "Medium"
+                  ? "text-yellow-500"
+                  : "text-red-500"
+              }`}>
                 {passwordStrength} password
               </span>
             )}
           </div>
 
-          {/* Confirm Password */}
           <FloatingInput
             label="Confirm Password"
             name="confirmPassword"
@@ -144,61 +231,165 @@ const SuperAdmin = ({ theme }) => {
           />
         </div>
 
-       {/* Role Selection */}
-<div className="mt-8">
-  <label className="block text-sm mb-2 opacity-80">
-    Select Role
-  </label>
+        {/* Role Selection */}
+        <div className="mt-6">
+          <label className="block text-sm mb-2 font-medium opacity-80">
+            Select Role
+          </label>
 
-  <select
-    name="role"
-    value={form.role}
-    onChange={handleChange}
-    className={`w-full md:w-80 px-3 py-2 rounded-lg border outline-none transition
-      ${
-        isDark
-          ? "bg-gray-900 border-gray-700 text-white focus:border-indigo-500"
-          : "bg-white border-gray-300 focus:border-indigo-500"
-      }`}
-  >
-    <option value="USER">User</option>
-    <option value="ADMIN">Admin</option>
-    <option value="SUPERADMIN">Super Admin</option>
-  </select>
+          <select
+            name="role"
+            value={form.role}
+            onChange={handleChange}
+            className={`w-full md:w-80 px-4 py-3 rounded-xl border focus:ring-2 focus:ring-indigo-500 outline-none transition
+            ${isDark
+              ? "bg-gray-800 border-gray-700 text-white"
+              : "bg-white border-gray-300"
+            }`}
+          >
+            <option value="USER">User</option>
+            <option value="ADMIN">Admin</option>
+            <option value="SUPERADMIN">Super Admin</option>
+          </select>
+        </div>
 
-  <p className="text-xs mt-2 opacity-60">
-    Define access level for this account.
-  </p>
-</div>
-
-
-
-        {/* Divider */}
-        <div className="my-8 border-t border-white/10" />
-
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-4">
+        {/* Buttons */}
+        <div className="flex justify-end gap-4 mt-8">
           <button
             onClick={() => window.history.back()}
-            className={`px-5 py-2 rounded-lg transition ${
-              isDark
-                ? "bg-gray-700 hover:bg-gray-600"
-                : "bg-gray-200 hover:bg-gray-300"
-            }`}
+            className="px-6 py-3 rounded-xl border font-medium transition hover:scale-105
+            dark:border-gray-700 border-gray-300"
           >
             Cancel
           </button>
 
           <button
-  onClick={handleSubmit}
-  className="px-6 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:scale-105 transition-transform"
->
-  Create
-</button>
+            onClick={handleSubmit}
+            className="px-8 py-3 rounded-xl font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-600 shadow-xl hover:scale-105 transition-transform"
+          >
+            Create User
+          </button>
         </div>
       </div>
-    </main>
-  );
+
+      {/* ================= USERS TABLE ================= */}
+      <div>
+        <h2 className="text-xl font-semibold mb-6">Manage Users</h2>
+
+        <div className="overflow-hidden rounded-2xl border shadow-lg">
+          <table className="w-full text-sm text-left">
+            <thead className={`${isDark ? "bg-gray-800" : "bg-gray-100"}`}>
+              <tr>
+                <th className="p-4">Name</th>
+                <th className="p-4">Email</th>
+                <th className="p-4">Role</th>
+                <th className="p-4 text-right">Actions</th>
+              </tr>
+            </thead>
+
+   {/* edit password of user */}
+
+            {editUser && (
+  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className={`w-96 p-6 rounded-2xl shadow-xl ${
+      isDark ? "bg-gray-900 text-white" : "bg-white text-gray-800"
+    }`}>
+      
+      <h3 className="text-lg font-semibold mb-4">
+        Update Password for {editUser.name}
+      </h3>
+
+      <input
+        type="password"
+        value={newPassword}
+        onChange={(e) => setNewPassword(e.target.value)}
+        placeholder="Enter new password"
+        className={`w-full px-3 py-2 rounded-lg border mb-4 ${
+          isDark
+            ? "bg-gray-800 border-gray-700 text-white"
+            : "bg-gray-100 border-gray-300"
+        }`}
+      />
+
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={() => setEditUser(null)}
+          className="px-4 py-2 rounded-lg border"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleUpdatePassword}
+          className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+        >
+          Update
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+    {/* --------------------------------------------------------------------------------------------------------        */}
+            <tbody>
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="text-center p-6 opacity-60">
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                users.map((user) => (
+                  <tr
+                    key={user._id}
+                    className={`transition hover:bg-indigo-50 dark:hover:bg-gray-800 ${
+                      isDark ? "border-b border-gray-700" : "border-b border-gray-200"
+                    }`}
+                  >
+                    <td className="p-4 font-medium">{user.name}</td>
+                    <td className="p-4 opacity-70">{user.email}</td>
+                    <td className="p-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${
+                        user.role === "SUPERADMIN"
+                          ? "bg-purple-600 text-white"
+                          : user.role === "ADMIN"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-400 text-white"
+                      }`}>
+                        {user.role}
+                      </span>
+                    </td>
+
+                    
+                    
+                    <td className="p-4 text-right space-x-2">
+  <button
+    onClick={() => {
+      setEditUser(user);
+      setNewPassword("");
+    }}
+    className="px-4 py-2 text-xs font-medium rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition"
+  >
+    Edit
+  </button>
+
+  <button
+    onClick={() => handleDelete(user._id)}
+    className="px-4 py-2 text-xs font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition"
+  >
+    Delete
+  </button>
+</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+);
 };
 
 const FloatingInput = ({
@@ -219,22 +410,19 @@ const FloatingInput = ({
         value={value}
         onChange={onChange}
         placeholder=" "
-        className={`peer w-full px-3 pt-5 pb-2 rounded-lg border outline-none transition
-        ${
+        className={`peer w-full px-3 pt-5 pb-2 rounded-lg border outline-none transition ${
           isDark
             ? "bg-gray-900 border-gray-700 text-white focus:border-indigo-500"
             : "bg-white border-gray-300 focus:border-indigo-500"
         }`}
       />
-
       <label
         className={`absolute left-3 top-2 text-xs transition-all
           peer-placeholder-shown:top-3
           peer-placeholder-shown:text-sm
           peer-placeholder-shown:opacity-60
           peer-focus:top-2
-          peer-focus:text-xs
-          ${
+          peer-focus:text-xs ${
             isDark ? "text-gray-400" : "text-gray-500"
           }`}
       >

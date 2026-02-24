@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema(
     type: String,
     enum: ["SUPERADMIN","ADMIN", "USER"],
     default: "USER",
-    unique:true,
+    
   },
   },
   
