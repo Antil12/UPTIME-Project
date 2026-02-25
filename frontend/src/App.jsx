@@ -4,6 +4,7 @@ import SettingsMenu from "./components/SettingsMenu";
 import EditModal from "./components/EditModal";
 import { isValidUrl } from "./utils/validators";
 import CrystalButton from "./components/CrystalButton";
+import PreLoginSplash from "./components/PreLoginSplash";
 import Dashboard from "./pages/Dashboard";
 import AddUrl from "./pages/AddUrl";
 import Report from "./pages/Report";
@@ -424,20 +425,24 @@ useEffect(() => {
       downTime: u.downTime || 0,
     }));
   
+
 if (!isLoggedIn) {
   return (
     <Routes>
-
+      {/* SPLASH SCREEN */}
+      <Route path="/" element={<PreLoginSplash />} />
+      
       {/* LOGIN */}
       <Route
         path="/login"
         element={
-       <Login
-  onLogin={(userData) => {
-    setCurrentUser(userData);   // ✅ DIRECTLY SET USER
-    setIsLoggedIn(true);
-  }}
-/>    }
+          <Login
+            onLogin={(userData) => {
+              setCurrentUser(userData);
+              setIsLoggedIn(true);
+            }}
+          />
+        }
       />
 
       {/* SIGNUP */}
@@ -453,8 +458,7 @@ if (!isLoggedIn) {
       />
 
       {/* DEFAULT REDIRECT */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
-
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

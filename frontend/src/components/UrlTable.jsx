@@ -354,6 +354,8 @@ const UrlTable = ({
   <div className="grid sm:grid-cols-2 gap-6">
 
     {sortedData.map((item) => {
+      const isExpanded = expandedSite === item._id;
+
       const statusColor =
         item.status === "UP"
           ? "bg-green-500"
@@ -364,104 +366,112 @@ const UrlTable = ({
           : "bg-gray-400";
 
       return (
-        <div
-          key={item._id}
-          className={`relative rounded-2xl p-4 shadow-sm border transition-all duration-300 hover:shadow-lg hover:-translate-y-1
-          ${theme === "dark"
-              ? "bg-gray-900 border-gray-800 text-gray-200"
-              : "bg-white border-gray-200 text-gray-800"
-            }`}
-        >
+        <div key={item._id}>
 
-          {/* LEFT STATUS ACCENT */}
-          <div className={`absolute left-0 top-0 h-full w-1 rounded-l-2xl ${statusColor}`} />
+          {/* CARD */}
+          <div
+            className={`relative rounded-2xl p-4 shadow-sm border transition-all duration-300 hover:shadow-lg
+            ${theme === "dark"
+                ? "bg-gray-900 border-gray-800 text-gray-200"
+                : "bg-white border-gray-200 text-gray-800"
+              }`}
+          >
 
-          {selectionMode && (
-            <div className="absolute right-4 top-4">
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(item._id)}
-                onChange={(e) => {
-                  if (e.target.checked) setSelectedIds((p) => [...p, item._id]);
-                  else setSelectedIds((p) => p.filter((id) => id !== item._id));
-                }}
-                aria-label={`Select ${item.domain}`}
+            {/* LEFT STATUS ACCENT */}
+            <div className={`absolute left-0 top-0 h-full w-1 rounded-l-2xl ${statusColor}`} />
+
+            {/* DOMAIN + STATUS */}
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="font-semibold text-base tracking-wide">
+                <button
+                  onClick={() => toggleSite(item)}
+                  className="text-left text-blue-600 hover:underline"
+                >
+                  {item.domain}
+                </button>
+              </h3>
+
+              <span
+                className={`text-xs px-2 py-1 rounded-full font-semibold
+                ${item.status === "UP"
+                  ? "bg-green-100 text-green-700"
+                  : item.status === "SLOW"
+                  ? "bg-yellow-100 text-yellow-700"
+                  : item.status === "DOWN"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-gray-100 text-gray-500"
+                }`}
+              >
+                {item.status || "CHECKING"}
+              </span>
+            </div>
+
+            {/* URL */}
+            <div className="text-sm text-blue-500 break-all mb-4">
+              {item.url}
+            </div>
+
+            {/* INFO GRID */}
+            <div className="grid grid-cols-2 gap-y-3 text-sm mb-4">
+              <div className="text-gray-400">Status Code</div>
+              <div className="font-semibold text-right">
+                {item.statusCode || "--"}
+              </div>
+
+              <div className="text-gray-400">SSL Status</div>
+              <div
+                className={`font-semibold text-right
+                  ${item.sslStatus === "VALID"
+                    ? "text-green-600"
+                    : item.sslStatus === "EXPIRING"
+                    ? "text-yellow-500"
+                    : item.sslStatus === "EXPIRED"
+                    ? "text-red-600"
+                    : "text-gray-400"
+                  }`}
+              >
+                {getSslText(item)}
+              </div>
+            </div>
+
+            {/* DIVIDER */}
+            <div className={`border-t mb-4 ${theme === "dark" ? "border-gray-800" : "border-gray-200"}`} />
+
+            {/* ACTIONS */}
+            <div className="flex justify-between items-center">
+              <button
+                onClick={() => onEdit(item)}
+                className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition"
+              >
+                Edit
+              </button>
+
+              <button
+                onClick={() => toggleSite(item)}
+                className="text-sm font-medium text-blue-600 hover:underline"
+              >
+                {isExpanded ? "Hide Report" : "View Report"}
+              </button>
+            </div>
+
+          </div>
+
+          {/* EXPANDABLE REPORT SECTION */}
+          {isExpanded && (
+            <div
+              className={`mt-3 rounded-2xl p-4 border transition-all duration-300
+              ${theme === "dark"
+                  ? "bg-gray-900 border-gray-800"
+                  : "bg-white border-gray-200"
+                }`}
+            >
+              <SiteReport
+                site={item}
+                logs={siteLogs[item._id] || []}
+                theme={theme}
               />
             </div>
           )}
-
-          {/* DOMAIN + STATUS */}
-          <div className="flex justify-between items-center mb-5">
-            <h3 className="font-semibold text-base tracking-wide">
-              <button onClick={() => toggleSite(item)} className="text-left text-blue-600 hover:underline">
-                {item.domain}
-              </button>
-            </h3>
-
-            <span
-              className={`text-xs px-2 py-1 rounded-full font-semibold
-              ${item.status === "UP"
-                ? "bg-green-100 text-green-700"
-                : item.status === "SLOW"
-                ? "bg-yellow-100 text-yellow-700"
-                : item.status === "DOWN"
-                ? "bg-red-100 text-red-700"
-                : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {item.status || "CHECKING"}
-            </span>
-          </div>
-
-          {/* URL */}
-          <div className="text-sm text-blue-500 break-all mb-4">
-            {item.url}
-          </div>
-
-          {/* INFO GRID */}
-          <div className="grid grid-cols-2 gap-y-3 text-sm mb-4">
-
-            <div className="text-gray-400">Status Code</div>
-
-            {expandedSite === item._id && (
-              <div className="mt-4">
-                <SiteReport site={item} logs={siteLogs[item._id] || []} theme={theme} />
-              </div>
-            )}
-            <div className="font-semibold text-right">
-              {item.statusCode || "--"}
-            </div>
-
-            <div className="text-gray-400">SSL Status</div>
-            <div
-              className={`font-semibold text-right
-                ${item.sslStatus === "VALID"
-                  ? "text-green-600"
-                  : item.sslStatus === "EXPIRING"
-                  ? "text-yellow-500"
-                  : item.sslStatus === "EXPIRED"
-                  ? "text-red-600"
-                  : "text-gray-400"
-                }`}
-            >
-              {getSslText(item)}
-            </div>
-
-          </div>
-
-          {/* DIVIDER */}
-          <div className={`border-t mb-4 ${theme === "dark" ? "border-gray-800" : "border-gray-200"}`} />
-
-          {/* EDIT BUTTON */}
-          <div className="flex justify-center">
-            <button
-              onClick={() => onEdit(item)}
-              aria-label={`Edit ${item.domain}`}
-              className="px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
-            >
-              Edit
-            </button>
-          </div>
 
         </div>
       );
@@ -469,8 +479,6 @@ const UrlTable = ({
 
   </div>
 </div>
-
-
 </div>
 
 

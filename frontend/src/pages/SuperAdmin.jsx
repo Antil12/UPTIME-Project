@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { Eye, EyeOff } from "lucide-react";
 
 const SuperAdmin = ({ theme }) => {
   const isDark = theme === "dark";
@@ -145,10 +146,10 @@ const SuperAdmin = ({ theme }) => {
     }
   };
 return (
-  <main className="min-h-screen px-6 py-10 flex justify-center bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-950 dark:to-gray-900 transition-all">
+  <main className="min-h-screen px-4 sm:px-6 py-6 sm:py-10 flex justify-center bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-950 dark:to-gray-900 transition-all">
 
     <div
-      className={`w-full max-w-6xl rounded-3xl shadow-2xl border p-10 backdrop-blur-xl transition-all duration-300
+      className={`w-full max-w-6xl rounded-3xl shadow-2xl border p-4 sm:p-6 md:p-10 backdrop-blur-xl transition-all duration-300
       ${isDark
         ? "bg-white/5 border-white/10 text-white"
         : "bg-white border-gray-200 text-gray-800"
@@ -156,9 +157,9 @@ return (
     >
 
       {/* ================= HEADER ================= */}
-      <div className="flex items-center justify-between mb-10">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8 md:mb-10">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Super Admin Dashboard
           </h1>
           <p className="text-sm opacity-60 mt-1">
@@ -166,22 +167,24 @@ return (
           </p>
         </div>
 
-        <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-medium shadow-lg">
+        <div className="self-start md:self-auto px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs sm:text-sm font-medium shadow-lg">
           Access: SUPERADMIN
         </div>
       </div>
 
       {/* ================= FORM CARD ================= */}
-      <div className={`rounded-2xl p-8 mb-10 shadow-lg border
+      <div
+        className={`rounded-2xl p-4 sm:p-6 md:p-8 mb-8 md:mb-10 shadow-lg border
         ${isDark
           ? "bg-gray-900/60 border-gray-800"
           : "bg-gray-50 border-gray-200"
         }`}
       >
+        <h2 className="text-lg sm:text-xl font-semibold mb-6">
+          Create New User
+        </h2>
 
-        <h2 className="text-xl font-semibold mb-6">Create New User</h2>
-
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
           <FloatingInput
             label="Username"
             name="username"
@@ -254,10 +257,10 @@ return (
         </div>
 
         {/* Buttons */}
-        <div className="flex justify-end gap-4 mt-8">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 mt-8">
           <button
             onClick={() => window.history.back()}
-            className="px-6 py-3 rounded-xl border font-medium transition hover:scale-105
+            className="w-full sm:w-auto px-6 py-3 rounded-xl border font-medium transition hover:scale-105
             dark:border-gray-700 border-gray-300"
           >
             Cancel
@@ -265,128 +268,195 @@ return (
 
           <button
             onClick={handleSubmit}
-            className="px-8 py-3 rounded-xl font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-600 shadow-xl hover:scale-105 transition-transform"
+            className="w-full sm:w-auto px-8 py-3 rounded-xl font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-600 shadow-xl hover:scale-105 transition-transform"
           >
             Create User
           </button>
         </div>
       </div>
+{/* ================= USERS TABLE ================= */}
+<div>
+  <h2 className="text-lg sm:text-xl font-semibold mb-6">
+    Manage Users
+  </h2>
 
-      {/* ================= USERS TABLE ================= */}
-      <div>
-        <h2 className="text-xl font-semibold mb-6">Manage Users</h2>
+  {/* ================= DESKTOP TABLE (lg and up) ================= */}
+  <div className="hidden lg:block overflow-x-auto rounded-2xl border shadow-lg">
+    <table className="w-full text-sm text-left">
+      <thead className={`${isDark ? "bg-gray-800" : "bg-gray-100"}`}>
+        <tr>
+          <th className="p-4">Name</th>
+          <th className="p-4">Email</th>
+          <th className="p-4">Role</th>
+          <th className="p-4 text-right">Actions</th>
+        </tr>
+      </thead>
 
-        <div className="overflow-hidden rounded-2xl border shadow-lg">
-          <table className="w-full text-sm text-left">
-            <thead className={`${isDark ? "bg-gray-800" : "bg-gray-100"}`}>
-              <tr>
-                <th className="p-4">Name</th>
-                <th className="p-4">Email</th>
-                <th className="p-4">Role</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
+      <tbody>
+        {users.length === 0 ? (
+          <tr>
+            <td colSpan="4" className="text-center p-6 opacity-60">
+              No users found
+            </td>
+          </tr>
+        ) : (
+          users.map((user) => (
+            <tr
+              key={user._id}
+              className={`transition hover:bg-indigo-50 dark:hover:bg-gray-800 ${
+                isDark
+                  ? "border-b border-gray-700"
+                  : "border-b border-gray-200"
+              }`}
+            >
+              <td className="p-4 font-medium">{user.name}</td>
+              <td className="p-4 opacity-70">{user.email}</td>
+              <td className="p-4">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  user.role === "SUPERADMIN"
+                    ? "bg-purple-600 text-white"
+                    : user.role === "ADMIN"
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-400 text-white"
+                }`}>
+                  {user.role}
+                </span>
+              </td>
+              <td className="p-4 text-right space-x-2">
+                <button
+                  onClick={() => {
+                    setEditUser(user);
+                    setNewPassword("");
+                  }}
+                  className="px-4 py-2 text-xs font-medium rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition"
+                >
+                  Edit
+                </button>
 
-   {/* edit password of user */}
-
-            {editUser && (
-  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-    <div className={`w-96 p-6 rounded-2xl shadow-xl ${
-      isDark ? "bg-gray-900 text-white" : "bg-white text-gray-800"
-    }`}>
-      
-      <h3 className="text-lg font-semibold mb-4">
-        Update Password for {editUser.name}
-      </h3>
-
-      <input
-        type="password"
-        value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-        placeholder="Enter new password"
-        className={`w-full px-3 py-2 rounded-lg border mb-4 ${
-          isDark
-            ? "bg-gray-800 border-gray-700 text-white"
-            : "bg-gray-100 border-gray-300"
-        }`}
-      />
-
-      <div className="flex justify-end gap-3">
-        <button
-          onClick={() => setEditUser(null)}
-          className="px-4 py-2 rounded-lg border"
-        >
-          Cancel
-        </button>
-
-        <button
-          onClick={handleUpdatePassword}
-          className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-        >
-          Update
-        </button>
-      </div>
-    </div>
+                <button
+                  onClick={() => handleDelete(user._id)}
+                  className="px-4 py-2 text-xs font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
   </div>
-)}
-    {/* --------------------------------------------------------------------------------------------------------        */}
-            <tbody>
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="text-center p-6 opacity-60">
-                    No users found
-                  </td>
-                </tr>
-              ) : (
-                users.map((user) => (
-                  <tr
-                    key={user._id}
-                    className={`transition hover:bg-indigo-50 dark:hover:bg-gray-800 ${
-                      isDark ? "border-b border-gray-700" : "border-b border-gray-200"
-                    }`}
-                  >
-                    <td className="p-4 font-medium">{user.name}</td>
-                    <td className="p-4 opacity-70">{user.email}</td>
-                    <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${
-                        user.role === "SUPERADMIN"
-                          ? "bg-purple-600 text-white"
-                          : user.role === "ADMIN"
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-400 text-white"
-                      }`}>
-                        {user.role}
-                      </span>
-                    </td>
 
-                    
-                    
-                    <td className="p-4 text-right space-x-2">
-  <button
-    onClick={() => {
-      setEditUser(user);
-      setNewPassword("");
-    }}
-    className="px-4 py-2 text-xs font-medium rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition"
-  >
-    Edit
-  </button>
-
-  <button
-    onClick={() => handleDelete(user._id)}
-    className="px-4 py-2 text-xs font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition"
-  >
-    Delete
-  </button>
-</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+  {/* ================= MOBILE & TABLET CARDS (below lg) ================= */}
+  <div className="lg:hidden space-y-4">
+    {users.length === 0 ? (
+      <div className="text-center py-6 opacity-60">
+        No users found
       </div>
+    ) : (
+      users.map((user) => (
+        <div
+          key={user._id}
+          className={`rounded-2xl p-5 shadow-md border transition ${
+            isDark
+              ? "bg-gray-900 border-gray-800"
+              : "bg-white border-gray-200"
+          }`}
+        >
+          {/* Name */}
+          <div className="mb-3">
+            <p className="text-xs opacity-60">Name</p>
+            <p className="font-semibold">{user.name}</p>
+          </div>
 
+          {/* Email */}
+          <div className="mb-3">
+            <p className="text-xs opacity-60">Email</p>
+            <p className="text-sm break-all">{user.email}</p>
+          </div>
+
+          {/* Role */}
+          <div className="mb-4">
+            <p className="text-xs opacity-60">Role</p>
+            <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-semibold ${
+              user.role === "SUPERADMIN"
+                ? "bg-purple-600 text-white"
+                : user.role === "ADMIN"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-400 text-white"
+            }`}>
+              {user.role}
+            </span>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setEditUser(user);
+                setNewPassword("");
+              }}
+              className="flex-1 py-2 text-xs font-medium rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition"
+            >
+              Edit
+            </button>
+
+            <button
+              onClick={() => handleDelete(user._id)}
+              className="flex-1 py-2 text-xs font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+</div>
+
+
+      {/* ================= PASSWORD MODAL ================= */}
+      {editUser && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div
+            className={`w-full max-w-md p-6 rounded-2xl shadow-xl ${
+              isDark ? "bg-gray-900 text-white" : "bg-white text-gray-800"
+            }`}
+          >
+            <h3 className="text-lg font-semibold mb-4">
+              Update Password for {editUser.name}
+            </h3>
+
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password"
+              className={`w-full px-3 py-2 rounded-lg border mb-4 ${
+                isDark
+                  ? "bg-gray-800 border-gray-700 text-white"
+                  : "bg-gray-100 border-gray-300"
+              }`}
+            />
+
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <button
+                onClick={() => setEditUser(null)}
+                className="w-full sm:w-auto px-4 py-2 rounded-lg border"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleUpdatePassword}
+                className="w-full sm:w-auto px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+              >
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   </main>
 );
@@ -401,33 +471,56 @@ const FloatingInput = ({
   theme,
 }) => {
   const isDark = theme === "dark";
+  const [showPassword, setShowPassword] = useState(false);
+
+  const isPassword = type === "password";
+  const inputType = isPassword
+    ? showPassword
+      ? "text"
+      : "password"
+    : type;
 
   return (
     <div className="relative">
       <input
-        type={type}
+        type={inputType}
         name={name}
         value={value}
         onChange={onChange}
         placeholder=" "
-        className={`peer w-full px-3 pt-5 pb-2 rounded-lg border outline-none transition ${
+        className={`peer w-full px-3 pt-5 pb-2 ${
+          isPassword ? "pr-10" : ""
+        } rounded-lg border outline-none transition
+        ${
           isDark
             ? "bg-gray-900 border-gray-700 text-white focus:border-indigo-500"
             : "bg-white border-gray-300 focus:border-indigo-500"
         }`}
       />
+
       <label
         className={`absolute left-3 top-2 text-xs transition-all
           peer-placeholder-shown:top-3
           peer-placeholder-shown:text-sm
           peer-placeholder-shown:opacity-60
           peer-focus:top-2
-          peer-focus:text-xs ${
-            isDark ? "text-gray-400" : "text-gray-500"
-          }`}
+          peer-focus:text-xs
+          ${isDark ? "text-gray-400" : "text-gray-500"}`}
       >
         {label}
       </label>
+
+      {isPassword && (
+        <button
+          type="button"
+          onClick={() => setShowPassword((prev) => !prev)}
+          className={`absolute right-3 top-1/2 -translate-y-1/2 ${
+            isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+      )}
     </div>
   );
 };

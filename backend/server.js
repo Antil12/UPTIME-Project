@@ -10,6 +10,7 @@ import siteCurrentStatusRoutes from "./routes/siteCurrentStatus.routes.js";
 import uptimeLogRoutes from "./routes/uptimeLog.routes.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/user.routes.js";
+import emailRoutes from "./routes/emailRoutes.js";
 
 
 dotenv.config();
@@ -65,6 +66,7 @@ app.use("/api/site-current-status", siteCurrentStatusRoutes);
 app.use("/api/uptime-logs", uptimeLogRoutes);
 app.use("/api", checkUrlRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/email", emailRoutes);
 
 /* ======================
    START SERVER
