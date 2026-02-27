@@ -8,171 +8,155 @@ import { handleStatusAlert } from "../services/alertService.js";
 //import { sendSlowAlertEmail } from "../services/emailService.js";
 import { setSlowBatch } from "../services/slowBatchStore.js";
 
-
-
-
 import fs from "fs";
 import path from "path";
 
-
-
 let sslRunCounter = 0; // 👈 controls SSL frequency
 
-
-
 export const startMonitoringCron = () => {
-  setInterval(async () => {
-    console.log("🕒 Running uptime check...");
+  setInterval(
+    async () => {
+      console.log("🕒 Running uptime check...");
 
-    let sites = [];
-    try {
-      sites = await MonitoredSite.find();
-    } catch (err) {
-      console.error("Failed to fetch sites:", err.message);
-      return;
-    }
+      let sites = [];
+      try {
+        sites = await MonitoredSite.find();
+      } catch (err) {
+        console.error("Failed to fetch sites:", err.message);
+        return;
+      }
 
-    const checkedAt = new Date();
-    const slowSitesTemp = [];
+      const checkedAt = new Date();
+      const slowSitesTemp = [];
 
-  
-     // 🚀 RUN ALL SITES IN PARALLEL
-await Promise.all(
-  sites.map(async (site) => {
+      // 🚀 RUN ALL SITES IN PARALLEL
+      await Promise.all(
+        sites.map(async (site) => {
+          let status = "UP";
+          let responseTimeMs = null;
+          let statusCode = 0;
 
-    let status = "UP";
-    let responseTimeMs = null;
-    let statusCode = 0;
-
-    /* =========================
+          /* =========================
        UPTIME CHECK
     ========================= */
-    try {
-      const SLOW_THRESHOLD = site.responseThresholdMs || 15000;
+          try {
+            const SLOW_THRESHOLD = site.responseThresholdMs || 15000;
 
-      const start = Date.now();
-      const response = await axios.get(site.url, {
-        timeout: 15000,
-        validateStatus: () => true,
-      });
+            const start = Date.now();
+            const response = await axios.get(site.url, {
+              timeout: 15000,
+              validateStatus: () => true,
+            });
 
-      responseTimeMs = Date.now() - start;
-      statusCode = response.status;
+            responseTimeMs = Date.now() - start;
+            statusCode = response.status;
 
-     if (response.status >= 400) {
-  status = "DOWN";
-} 
-else if (responseTimeMs > SLOW_THRESHOLD) {
-  status = "SLOW";
+            if (response.status >= 400) {
+              status = "DOWN";
+            } else if (responseTimeMs > SLOW_THRESHOLD) {
+              status = "SLOW";
 
-  // 🔥 Store in temporary list
-  slowSitesTemp.push({
-    domain: site.domain,
-    url: site.url,
-    responseTimeMs,
-    threshold: SLOW_THRESHOLD,
-    checkedAt,
-      emailContact: site.emailContact || null,
-  });
-}
+              // 🔥 Store in temporary list
+              slowSitesTemp.push({
+                domain: site.domain,
+                url: site.url,
+                responseTimeMs,
+                threshold: SLOW_THRESHOLD,
+                checkedAt,
+                emailContact: site.emailContact || null,
+              });
+            }
+          } catch {
+            status = "DOWN";
+            statusCode = 0;
+            responseTimeMs = null;
+          }
 
-
-    } catch {
-      status = "DOWN";
-      statusCode = 0;
-      responseTimeMs = null;
-    }
-
-    /* =========================
+          /* =========================
        SAVE CURRENT STATUS
     ========================= */
-    await SiteCurrentStatus.findOneAndUpdate(
-      { siteId: site._id },
-      {
-        siteId: site._id,
-        status,
-        statusCode,
-        responseTimeMs,
-        lastCheckedAt: checkedAt,
-      },
-      { upsert: true }
-    );
+          await SiteCurrentStatus.findOneAndUpdate(
+            { siteId: site._id },
+            {
+              siteId: site._id,
+              status,
+              statusCode,
+              responseTimeMs,
+              lastCheckedAt: checkedAt,
+            },
+            { upsert: true },
+          );
 
-    /* =========================
+          /* =========================
        SAVE UPTIME LOG
     ========================= */
-    await UptimeLog.create({
-      siteId: site._id,
-      status,
-      statusCode,
-      responseTimeMs,
-      checkedAt,
-    });
+          await UptimeLog.create({
+            siteId: site._id,
+            status,
+            statusCode,
+            responseTimeMs,
+            checkedAt,
+          });
 
-    /* =========================
+          /* =========================
        🚨 STATUS ALERT HANDLER
     ========================= */
-    await handleStatusAlert(site, status);
+          await handleStatusAlert(site, status);
 
-    /* =========================
+          /* =========================
        🌍 REGION CHECK
     ========================= */
-    if (site.regions && site.regions.length > 0) {
-      const regionResults = await checkRegions(site);
+          if (site.regions && site.regions.length > 0) {
+            const regionResults = await checkRegions(site);
 
-      const downCount = Object.values(regionResults).filter(
-        (r) => r === "DOWN"
-      ).length;
+            const downCount = Object.values(regionResults).filter(
+              (r) => r === "DOWN",
+            ).length;
 
-      const shouldTriggerRegionAlert =
-        (!site.alertIfAllRegionsDown && downCount > 0) ||
-        (site.alertIfAllRegionsDown &&
-          downCount === site.regions.length);
+            const shouldTriggerRegionAlert =
+              (!site.alertIfAllRegionsDown && downCount > 0) ||
+              (site.alertIfAllRegionsDown && downCount === site.regions.length);
 
-      if (shouldTriggerRegionAlert) {
-        console.log(
-          `🌍 Region-based downtime detected for ${site.domain}`
-        );
+            if (shouldTriggerRegionAlert) {
+              console.log(
+                `🌍 Region-based downtime detected for ${site.domain}`,
+              );
 
-        await handleStatusAlert(site, "DOWN");
-      }
-    }
+              await handleStatusAlert(site, "DOWN");
+            }
+          }
 
-   
-
-
-
-        /* =========================
+          /* =========================
            🔐 SSL CHECK (every 1 mins)
         ========================= */
-        if (sslRunCounter % 1 === 0) {
-          await checkSsl(site);
-        }
-      })
-    );
+          if (sslRunCounter % 1 === 0) {
+            await checkSsl(site);
+          }
+        }),
+      );
 
-    sslRunCounter++;
-  if (slowSitesTemp.length > 0) {
-  console.log("🚨 Slow batch created");
+      sslRunCounter++;
+      if (slowSitesTemp.length > 0) {
+        console.log("🚨 Slow batch created");
 
-  const alertPayload = {
-    batchId: Date.now(),
-    downCount: slowSitesTemp.length,
-    slowSites: slowSitesTemp,
-  };
+        const alertPayload = {
+          batchId: Date.now(),
+          downCount: slowSitesTemp.length,
+          slowSites: slowSitesTemp,
+        };
 
-  setSlowBatch(alertPayload);
+        setSlowBatch(alertPayload);
 
-  //await generateCSV(slowSitesTemp);
-} else {
-  // clear old batch if nothing slow this time
-  setSlowBatch(null);
-}
+        //await generateCSV(slowSitesTemp);
+      } else {
+        // clear old batch if nothing slow this time
+        setSlowBatch(null);
+      }
 
-
-
-    console.log(`✅ Checked ${sites.length} sites`);
-  },1 * 60 * 1000); // 1 minute
+      console.log(`✅ Checked ${sites.length} sites`);
+    },
+    1 * 60 * 1000,
+  ); // 1 minute
 };
 
-
+//sdfghjkl
