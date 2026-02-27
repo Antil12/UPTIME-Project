@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Settings, LogOut, Moon, Sun, User } from "lucide-react";
+import { Settings, LogOut, Moon, Sun, User, Shield } from "lucide-react";
 
 const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
   const [open, setOpen] = useState(false);
@@ -19,6 +19,7 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
   }, []);
 
   const user = JSON.parse(localStorage.getItem("user"));
+  const isAdmin = user?.role === "ADMIN";
 
   return (
     <div className="relative inline-block text-left" ref={menuRef}>
@@ -50,10 +51,27 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
             <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white">
               <User size={18} />
             </div>
+
             <div>
-              <p className="font-semibold text-gray-800 dark:text-white">
-                {user?.name || "User"}
-              </p>
+              {/* NAME + ROLE */}
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-gray-800 dark:text-white">
+                  {user?.name || "User"}
+                </p>
+
+                <span
+                  className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium
+                    ${
+                      isAdmin
+                        ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300"
+                        : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300"
+                    }`}
+                >
+                  {isAdmin && <Shield size={10} />}
+                  {user?.role || "USER"}
+                </span>
+              </div>
+
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {user?.email}
               </p>
@@ -62,29 +80,28 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
 
           {/* MENU OPTIONS */}
           <div className="p-2">
-
-           <button
-  onClick={toggleTheme}
-  className="
-    w-full flex items-center justify-between gap-3
-    px-3 py-2 rounded-lg
-    bg-gray-50 dark:bg-gray-800
-    text-gray-700 dark:text-gray-200
-    hover:bg-gray-100 dark:hover:bg-gray-700
-    transition-all duration-200
-  "
->
-  <div className="flex items-center gap-3">
-    {theme === "light" ? (
-      <Moon size={18} className="text-gray-600 dark:text-gray-300" />
-    ) : (
-      <Sun size={18} className="text-yellow-500" />
-    )}
-    <span>
-      {theme === "light" ? "Dark Mode" : "Light Mode"}
-    </span>
-  </div>
-</button>
+            <button
+              onClick={toggleTheme}
+              className="
+                w-full flex items-center justify-between gap-3
+                px-3 py-2 rounded-lg
+                bg-gray-50 dark:bg-gray-800
+                text-gray-700 dark:text-gray-200
+                hover:bg-gray-100 dark:hover:bg-gray-700
+                transition-all duration-200
+              "
+            >
+              <div className="flex items-center gap-3">
+                {theme === "light" ? (
+                  <Moon size={18} className="text-gray-600 dark:text-gray-300" />
+                ) : (
+                  <Sun size={18} className="text-yellow-500" />
+                )}
+                <span>
+                  {theme === "light" ? "Dark Mode" : "Light Mode"}
+                </span>
+              </div>
+            </button>
 
             <button
               onClick={onLogout}
@@ -94,7 +111,6 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
               <LogOut size={18} />
               Logout
             </button>
-
           </div>
         </div>
       )}

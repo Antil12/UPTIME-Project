@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import SiteReport from "../components/SiteReport";
+import ExportButtons from "../components/ExportButtons";
 
 const LOG_API = "http://localhost:5000/api/uptime-logs/all";
 
@@ -102,27 +103,33 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
   return (
     <div className="mb-6">
       {/* Top Controls */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <input
-          value={reportSearch}
-          onChange={(e) => setReportSearch(e.target.value)}
-          placeholder="Search domain or URL"
-          className={`p-2 border rounded w-full md:w-80 ${
-            theme === "dark"
-              ? "bg-gray-800 text-white border-gray-600"
-              : "bg-white text-gray-900 border-gray-300"
-          }`}
-        />
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+          <input
+            value={reportSearch}
+            onChange={(e) => setReportSearch(e.target.value)}
+            placeholder="Search domain or URL"
+            className={`p-2 border rounded w-full md:w-80 ${
+              theme === "dark"
+                ? "bg-gray-800 text-white border-gray-600"
+                : "bg-white text-gray-900 border-gray-300"
+            }`}
+          />
 
-        <select
-          value={range}
-          onChange={(e) => setRange(e.target.value)}
-          className="p-2 border rounded"
-        >
-          <option value="24h">Last 24 Hours</option>
-          <option value="7d">Last 7 Days</option>
-          <option value="30d">Last 30 Days</option>
-        </select>
+          <select
+            value={range}
+            onChange={(e) => setRange(e.target.value)}
+            className="p-2 border rounded"
+          >
+            <option value="24h">Last 24 Hours</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="30d">Last 30 Days</option>
+          </select>
+        </div>
+
+        <div className="flex items-center justify-end">
+          <ExportButtons urls={filteredSites} logsBySite={logsBySite} theme={theme} />
+        </div>
       </div>
 
       {/* Site Cards */}
@@ -169,20 +176,20 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
             {/* Metrics Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
               <div>
-                <p className="font-semibold">
+                {/* <p className="font-semibold">
                   Uptime: {stats.uptimePercent}%
-                </p>
+                </p> */}
                 <p>Total Checks: {stats.total}</p>
               </div>
 
               <div>
                 <p>Failures: {stats.down}</p>
-                <p>
+                {/* <p>
                   Last Checked:{" "}
                   {lastLog
                     ? new Date(lastLog.timestamp).toLocaleString()
                     : "N/A"}
-                </p>
+                </p> */}
               </div>
 
               <div>

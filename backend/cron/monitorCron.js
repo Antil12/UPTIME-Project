@@ -72,6 +72,7 @@ else if (responseTimeMs > SLOW_THRESHOLD) {
     responseTimeMs,
     threshold: SLOW_THRESHOLD,
     checkedAt,
+      emailContact: site.emailContact || null,
   });
 }
 
@@ -171,7 +172,7 @@ else if (responseTimeMs > SLOW_THRESHOLD) {
 
 
     console.log(`✅ Checked ${sites.length} sites`);
-  },19 * 60 * 1000); // 1 minute
+  },1 * 60 * 1000); // 1 minute
 };
 
 

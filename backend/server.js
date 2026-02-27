@@ -27,7 +27,7 @@ app.use(
       if (!origin) return callback(null, true);
 
       const allowedOrigins = [
-        "http://localhost:5173",
+        "http://localhost:5173", //PUT THIS IN ENV
         "http://localhost:5174",
         "http://localhost:3000",
       ];

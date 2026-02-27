@@ -51,6 +51,12 @@ priority: {
   enum: [0, 1],
   default: 0,
 },
+  
+  // number of consecutive DOWN checks. Incremented on DOWN, reset to 0 on UP.
+  failureCount: {
+    type: Number,
+    default: 0,
+  },
 
 
 

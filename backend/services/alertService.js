@@ -1,4 +1,5 @@
 import AlertState from "../models/AlertState.js";
+import emailService from "./emailService.js";
 
 
 /* =========================================
@@ -83,8 +84,30 @@ const triggerAlert = async (site, type) => {
 
   // 🔥 Future: integrate real notification channels here
   if (site.alertChannels && site.alertChannels.length > 0) {
-    site.alertChannels.forEach((channel) => {
+    for (const channel of site.alertChannels) {
       console.log(`Sending ${type} alert via ${channel}`);
-    });
+      if (channel === "email") {
+        // determine recipient: site-level emailContact or global fallback
+        const recipients = [];
+        if (site.emailContact) recipients.push(site.emailContact.trim());
+        else {
+          const globals = (process.env.ALERT_RECIPIENTS || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          recipients.push(...globals);
+        }
+
+        if (recipients.length > 0) {
+          const subject = message;
+          const html = `<p>${message}</p><p>Checked at: ${new Date().toISOString()}</p>`;
+          emailService
+            .sendEmail({ to: recipients, subject, html })
+            .catch((err) => console.error("Failed to send alert email:", err));
+        } else {
+          console.warn("No email recipients configured for alert");
+        }
+      }
+    }
   }
 };

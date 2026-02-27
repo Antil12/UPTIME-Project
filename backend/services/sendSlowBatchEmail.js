@@ -43,22 +43,66 @@ const renderHtml = (batch) => {
 };
 
 export const sendSlowBatchEmail = async (batch) => {
-  const html = renderHtml(batch);
-
-  const recipients = (process.env.ALERT_RECIPIENTS || "")
+  // Group slow sites by recipient: site-specific `emailContact` if present, otherwise fallback to ALERT_RECIPIENTS
+  const globalRecipients = (process.env.ALERT_RECIPIENTS || "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 
-  if (recipients.length === 0) {
-    throw new Error("No ALERT_RECIPIENTS configured");
+  const recipientMap = new Map();
+
+  (batch.slowSites || []).forEach((s) => {
+    const target = s.emailContact ? s.emailContact.trim() : null;
+    if (target) {
+      if (!recipientMap.has(target)) recipientMap.set(target, []);
+      recipientMap.get(target).push(s);
+    } else {
+      // attach to global bucket
+      const key = globalRecipients.join(",") || "__GLOBAL__";
+      if (!recipientMap.has(key)) recipientMap.set(key, []);
+      recipientMap.get(key).push(s);
+    }
+  });
+
+  // If there were no site-specific recipients and no global recipients, bail
+  if (recipientMap.size === 0) {
+    if (globalRecipients.length === 0) throw new Error("No ALERT_RECIPIENTS configured and no site emailContact provided");
   }
 
-  return emailService.sendEmail({
-    to: recipients,
-    subject: `UPTIME Alert — ${batch.downCount || 0} slow site(s)`,
-    html,
-  });
+  // Send one email per recipient (or one email to global recipients with combined sites)
+  const sendPromises = [];
+
+  for (const [key, sites] of recipientMap.entries()) {
+    let to;
+    if (key === "__GLOBAL__") {
+      to = globalRecipients;
+    } else if (key.includes(",")) {
+      to = key.split(",").map((s) => s.trim()).filter(Boolean);
+    } else {
+      to = [key];
+    }
+
+    const miniBatch = {
+      batchId: batch.batchId,
+      downCount: sites.length,
+      slowSites: sites,
+      checkedAt: batch.checkedAt,
+    };
+
+    const html = renderHtml(miniBatch);
+
+    sendPromises.push(
+      emailService.sendEmail({
+        to,
+        subject: `UPTIME Alert — ${miniBatch.downCount} slow site(s)`,
+        html,
+      }).catch((err) => {
+        console.error(`Failed to send slow-batch email to ${to}:`, err.message || err);
+      })
+    );
+  }
+
+  return Promise.all(sendPromises);
 };
 
 export default sendSlowBatchEmail;
