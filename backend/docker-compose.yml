@@ -24,6 +24,10 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       ACCESS_TOKEN_EXPIRES_IN: ${ACCESS_TOKEN_EXPIRES_IN}
       REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN}
+      # SendGrid and alert config - ensure these are set in your host environment or in a .env file
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      SENDGRID_FROM: ${SENDGRID_FROM}
+      ALERT_RECIPIENTS: ${ALERT_RECIPIENTS}
     depends_on:
       - mongodb
     networks:

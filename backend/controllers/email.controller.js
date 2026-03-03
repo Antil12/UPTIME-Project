@@ -1,4 +1,4 @@
-import emailService from "../services/emailService.js";
+import emailService, { formatToIST } from "../services/emailService.js";
 
 export const sendSlowEmail = async (req, res) => {
   try {
@@ -15,7 +15,7 @@ export const sendSlowEmail = async (req, res) => {
         <td style="padding:12px; font-size:14px;">${site.domain}</td>
         <td style="padding:12px; font-size:14px; color:#DB2511; font-weight:bold;">SLOW</td>
         <td style="padding:12px; font-size:14px;">${site.responseTimeMs ?? "—"} ms</td>
-        <td style="padding:12px; font-size:14px;">${new Date(site.checkedAt).toLocaleString()}</td>
+        <td style="padding:12px; font-size:14px;">${formatToIST(site.checkedAt)} (IST)</td>
       </tr>`
       )
       .join("");

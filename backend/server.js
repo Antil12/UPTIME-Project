@@ -1,5 +1,7 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
@@ -11,9 +13,6 @@ import uptimeLogRoutes from "./routes/uptimeLog.routes.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/user.routes.js";
 import emailRoutes from "./routes/emailRoutes.js";
-
-
-dotenv.config();
 
 const app = express();
 

@@ -17,7 +17,8 @@ const AddUrl = ({
   const [alertIfAllRegionsDown, setAlertIfAllRegionsDown] = useState(false);
   const [category, setCategory] = useState("");
   const [localError, setLocalError] = useState("");
-  const [emailContact, setEmailContact] = useState("");
+  const [emailContacts, setEmailContacts] = useState([]);
+  const [emailInput, setEmailInput] = useState("");
   const [phoneContact, setPhoneContact] = useState("");
   const [priority, setPriority] = useState(0); 
 
@@ -62,12 +63,16 @@ const AddUrl = ({
       alertChannels,
       regions,
       alertIfAllRegionsDown,
-      emailContact,
+      emailContact: emailContacts,
       phoneContact,
       priority,
     });
 
     setCategory("");
+    setEmailContacts([]);
+    setEmailInput("");
+    setPhoneContact("");
+    setAlertChannels([]);
   };
 
   const isDark = theme === "dark";
@@ -267,25 +272,70 @@ const AddUrl = ({
 
   {/* 🔹 Email Input */}
   {alertChannels.includes("email") && (
-    <div className="relative group mb-4">
-      <input
-        type="email"
-        placeholder="Enter email address for alerts"
-        value={emailContact}
-        onChange={(e) => setEmailContact(e.target.value)}
-        className={`
-          w-full px-5 py-4 rounded-2xl
-          bg-transparent border
-          transition-all duration-300 outline-none
-          ${
-            isDark
-              ? "border-white/10 focus:border-blue-500 placeholder-gray-400"
-              : "border-gray-300 focus:border-blue-600 placeholder-gray-500"
-          }
-          focus:shadow-[0_0_0_3px_rgba(59,130,246,0.25)]
-        `}
-      />
-      <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition bg-white/5 pointer-events-none" />
+    <div className="mb-4">
+      <label className="text-sm mb-2 block">Alert Emails</label>
+
+      <div className="flex gap-2 mb-3">
+        <input
+          type="email"
+          placeholder="Add email and press Enter"
+          value={emailInput}
+          onChange={(e) => setEmailInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const v = (emailInput || "").trim();
+              if (v && !emailContacts.includes(v)) {
+                setEmailContacts((p) => [...p, v]);
+                setEmailInput("");
+              }
+            }
+          }}
+          className={`
+            w-full px-5 py-3 rounded-2xl
+            bg-transparent border
+            transition-all duration-300 outline-none
+            ${
+              isDark
+                ? "border-white/10 focus:border-blue-500 placeholder-gray-400"
+                : "border-gray-300 focus:border-blue-600 placeholder-gray-500"
+            }
+            focus:shadow-[0_0_0_3px_rgba(59,130,246,0.25)]
+          `}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            const v = (emailInput || "").trim();
+            if (v && !emailContacts.includes(v)) {
+              setEmailContacts((p) => [...p, v]);
+              setEmailInput("");
+            }
+          }}
+          className="px-4 py-2 rounded-2xl bg-blue-600 text-white"
+        >
+          Add
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {emailContacts.map((e, idx) => (
+          <span
+            key={idx}
+            className={`px-3 py-1 rounded-full border bg-white/5 flex items-center gap-2`}
+          >
+            <span className="text-sm">{e}</span>
+            <button
+              type="button"
+              onClick={() => setEmailContacts((p) => p.filter((x) => x !== e))}
+              className="text-xs text-red-400"
+              aria-label={`Remove ${e}`}
+            >
+              ✕
+            </button>
+          </span>
+        ))}
+      </div>
     </div>
   )}
 

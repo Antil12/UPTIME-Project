@@ -14,6 +14,16 @@ const ensureInit = () => {
   if (!initialized) init();
 };
 
+// Format a date into IST (Asia/Kolkata) locale string
+export const formatToIST = (date) => {
+  try {
+    const d = date ? new Date(date) : new Date();
+    return d.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+  } catch (err) {
+    return date ? String(date) : new Date().toLocaleString();
+  }
+};
+
 /**
  * sendEmail options:
  * - to (string|array) required

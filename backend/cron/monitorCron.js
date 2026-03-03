@@ -5,6 +5,7 @@ import UptimeLog from "../models/UptimeLog.js";
 import { checkSsl } from "../services/sslChecker.js";
 import { checkRegions } from "../services/regionChecker.js";
 import { handleStatusAlert } from "../services/alertService.js";
+import sendSlowBatchEmail from "../services/sendSlowBatchEmail.js";
 //import { sendSlowAlertEmail } from "../services/emailService.js";
 import { setSlowBatch } from "../services/slowBatchStore.js";
 
@@ -28,6 +29,9 @@ export const startMonitoringCron = () => {
 
       const checkedAt = new Date();
       const slowSitesTemp = [];
+      const downSitesTemp = [];
+      const highPriorityTemp = [];
+      
 
       // 🚀 RUN ALL SITES IN PARALLEL
       await Promise.all(
@@ -100,8 +104,26 @@ export const startMonitoringCron = () => {
 
           /* =========================
        🚨 STATUS ALERT HANDLER
+       NOTE: Do NOT treat SLOW as DOWN for failure-count alerts here.
+       Slow notifications remain unchanged and are handled by slowSitesTemp.
     ========================= */
-          await handleStatusAlert(site, status);
+          if (status === "DOWN") {
+            const alertResult = await handleStatusAlert(site, "DOWN", checkedAt, responseTimeMs);
+            if (alertResult && alertResult.alert) {
+              const entry = {
+                domain: alertResult.site.domain,
+                url: alertResult.site.url,
+                responseTimeMs: alertResult.responseTimeMs ?? responseTimeMs ?? "—",
+                status: "DOWN",
+                threshold: alertResult.site.responseThresholdMs ?? alertResult.site.slowThresholdMs ?? "—",
+                checkedAt: alertResult.checkedAt,
+                emailContact: alertResult.site.emailContact || null,
+              };
+
+              if (alertResult.type === "HIGH_PRIORITY") highPriorityTemp.push(entry);
+              else downSitesTemp.push(entry);
+            }
+          }
 
           /* =========================
        🌍 REGION CHECK
@@ -122,7 +144,18 @@ export const startMonitoringCron = () => {
                 `🌍 Region-based downtime detected for ${site.domain}`,
               );
 
-              await handleStatusAlert(site, "DOWN");
+              const regionResult = await handleStatusAlert(site, "DOWN", checkedAt, responseTimeMs);
+              if (regionResult && regionResult.alert) {
+                downSitesTemp.push({
+                  domain: regionResult.site.domain,
+                  url: regionResult.site.url,
+                  responseTimeMs: regionResult.responseTimeMs ?? responseTimeMs ?? "—",
+                  status: "DOWN",
+                  threshold: regionResult.site.responseThresholdMs ?? regionResult.site.slowThresholdMs ?? "—",
+                  checkedAt: regionResult.checkedAt,
+                  emailContact: regionResult.site.emailContact || null,
+                });
+              }
             }
           }
 
@@ -153,10 +186,43 @@ export const startMonitoringCron = () => {
         setSlowBatch(null);
       }
 
+      // dedupe and send combined DOWN alerts for sites that reached failureCount === 3
+      if (downSitesTemp.length > 0) {
+        const uniqueDown = Array.from(new Map(downSitesTemp.map(s => [s.domain, s])).values());
+        console.log("🚨 Down-sites batch created", uniqueDown.map((s) => s.domain));
+        const payload = {
+          batchId: Date.now(),
+          downCount: uniqueDown.length,
+          slowSites: uniqueDown,
+          checkedAt,
+          alertType: "DOWN",
+        };
+
+        sendSlowBatchEmail(payload).catch((err) =>
+          console.error("❌ Failed to send down-sites batch email:", err.message || err),
+        );
+      }
+
+      // dedupe and send combined HIGH_PRIORITY alerts
+      if (highPriorityTemp.length > 0) {
+        const uniqueHigh = Array.from(new Map(highPriorityTemp.map(s => [s.domain, s])).values());
+        console.log("🚨 High-priority batch created", uniqueHigh.map((s) => s.domain));
+        const payload = {
+          batchId: Date.now(),
+          downCount: uniqueHigh.length,
+          slowSites: uniqueHigh,
+          checkedAt,
+          alertType: "HIGH_PRIORITY",
+        };
+
+        sendSlowBatchEmail(payload).catch((err) =>
+           console.error("❌ Failed to send high-priority batch email:", err.message || err),
+        );
+      }
+
       console.log(`✅ Checked ${sites.length} sites`);
     },
     1 * 60 * 1000,
-  ); // 1 minute
+  ); // 19 minute
 };
 
-//sdfghjkl

@@ -143,10 +143,10 @@ onLogin(res.data.user);   // ✅ PASS USER DIRECTLY
           }}
         >
           Login
-        </button>
+        </button> 
       </form>
 
-      <p className="text-center text-sm mt-6">
+      {/* <p className="text-center text-sm mt-6">
         Don’t have an account?{" "}
         <button
           type="button"
@@ -156,7 +156,7 @@ onLogin(res.data.user);   // ✅ PASS USER DIRECTLY
         >
           Signup
         </button>
-      </p>
+      </p> */}
     </div>
   </div>
 );

@@ -175,9 +175,13 @@ export const addSite = async (req, res) => {
       regions: regions || [],
       alertIfAllRegionsDown: alertIfAllRegionsDown || false,
 
-       emailContact: alertChannels?.includes("email")
-      ? emailContact
-  :     null,
+         emailContact: alertChannels?.includes("email")
+        ? (Array.isArray(emailContact)
+          ? emailContact
+          : emailContact
+          ? [emailContact]
+          : [])
+        : [],
        phoneContact: phoneContact || null,
        priority: Number(priority ?? 0),
 
@@ -246,7 +250,11 @@ export const updateSite = async (req, res) => {
       domain,
       url,
       category,
-      emailContact: emailContact || null,
+      emailContact: emailContact
+        ? Array.isArray(emailContact)
+          ? emailContact
+          : [emailContact]
+        : [],
       phoneContact: phoneContact || null,
       priority: priority !== undefined ? Number(priority) : 0,
       responseThresholdMs:

@@ -9,7 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import AddUrl from "./pages/AddUrl";
 import Report from "./pages/Report";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+// import Signup from "./pages/Signup";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Header from "./components/Header";
 import { startSlowAlertListener } from "./api/alertApi";
@@ -60,9 +60,9 @@ const userRole = currentUser?.role?.toUpperCase();
   const [editItem, setEditItem] = useState(null);
   const [editDomain, setEditDomain] = useState("");
   const [editUrl, setEditUrl] = useState("");
-  const [editEmail, setEditEmail] = useState("");
+  const [editEmail, setEditEmail] = useState([]);
   const [editPhone, setEditPhone] = useState("");
-  const [editPriority, setEditPriority] = useState("");
+  const [editPriority, setEditPriority] = useState(0);
   const [editResponseThresholdMs, setEditResponseThresholdMs] = useState("");
   const [popupData, setPopupData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -254,9 +254,9 @@ await axios.delete(`${API_BASE}/${id}`, {
     setEditItem(item);
     setEditDomain(item.domain || "");
     setEditUrl(item.url || "");
-    setEditEmail(item.emailContact || "");
+    setEditEmail(Array.isArray(item.emailContact) ? item.emailContact : item.emailContact ? [item.emailContact] : []);
     setEditPhone(item.phoneContact || "");
-    setEditPriority(item.priority || "");
+    setEditPriority(item.priority !== undefined && item.priority !== null ? Number(item.priority) : 0);
     setEditResponseThresholdMs(
       item.responseThresholdMs !== undefined && item.responseThresholdMs !== null
         ? item.responseThresholdMs
@@ -278,15 +278,15 @@ await axios.delete(`${API_BASE}/${id}`, {
   try {
     const token = localStorage.getItem("loginToken");
 
-await axios.put(
+    await axios.put(
   `${API_BASE}/${editItem._id}`,
   {
     domain: editDomain.trim(),
     url: editUrl.trim(),
     category: category?.trim() || null,
-    emailContact: editEmail?.trim() || null,
+    emailContact: Array.isArray(editEmail) ? editEmail : editEmail ? [editEmail] : [],
     phoneContact: editPhone?.trim() || null,
-    priority: editPriority || null,
+    priority: Number(editPriority || 0),
     responseThresholdMs:
       editResponseThresholdMs !== "" && editResponseThresholdMs !== null
         ? Number(editResponseThresholdMs)
@@ -302,9 +302,9 @@ await axios.put(
     setEditItem(null);
     setUrlError("");
     // clear optional edit fields
-    setEditEmail("");
+    setEditEmail([]);
     setEditPhone("");
-    setEditPriority("");
+    setEditPriority(0);
     setEditResponseThresholdMs("");
     fetchSites();
   } catch (err) {
@@ -445,7 +445,7 @@ if (!isLoggedIn) {
         }
       />
 
-      {/* SIGNUP */}
+      {/* SIGNUP
       <Route
         path="/signup"
         element={
@@ -455,7 +455,7 @@ if (!isLoggedIn) {
             }}
           />
         }
-      />
+      /> */}
 
       {/* DEFAULT REDIRECT */}
       <Route path="*" element={<Navigate to="/" replace />} />

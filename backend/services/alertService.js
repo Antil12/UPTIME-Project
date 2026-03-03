@@ -1,16 +1,18 @@
 import AlertState from "../models/AlertState.js";
-import emailService from "./emailService.js";
+import MonitoredSite from "../models/MonitoredSite.js";
+import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
+import emailService, { formatToIST } from "./emailService.js";
 
 
 /* =========================================
    MAIN STATUS ALERT HANDLER
 ========================================= */
-export const handleStatusAlert = async (site, newStatus) => {
+export const handleStatusAlert = async (site, newStatus, checkedAt = null, responseTimeMs = null) => {
   try {
     const siteId = site._id;
 
+    // ensure an AlertState exists
     let state = await AlertState.findOne({ siteId });
-
     if (!state) {
       state = await AlertState.create({
         siteId,
@@ -19,30 +21,72 @@ export const handleStatusAlert = async (site, newStatus) => {
       });
     }
 
-    /* ===============================
-       🚨 DOWN ALERT (Only Once)
-    =============================== */
-    if (newStatus === "DOWN" && state.lastNotifiedStatus !== "DOWN") {
-      await triggerAlert(site, "DOWN");
+    // load latest monitored site doc so we can update failureCount
+    const monitored = await MonitoredSite.findById(siteId);
+    if (!monitored) return null;
 
-      state.lastNotifiedStatus = "DOWN";
-      state.lastNotifiedAt = new Date();
+    // Priority bypass: if a site has priority===1 and it's DOWN, mark for high-priority batch
+    // without touching failureCount/state logic.
+    if (newStatus === "DOWN" && monitored.priority === 1) {
+      return {
+        alert: true,
+        type: "HIGH_PRIORITY",
+        site: monitored,
+        checkedAt: checkedAt || new Date(),
+        responseTimeMs: responseTimeMs ?? null,
+      };
     }
 
-    /* ===============================
-       ✅ RECOVERY ALERT
-    =============================== */
-    if (newStatus === "UP" && state.lastNotifiedStatus === "DOWN") {
-      await triggerAlert(site, "RECOVERY");
+    // DOWN handling uses failureCount; only send when it reaches 3
+    if (newStatus === "DOWN") {
+      monitored.failureCount = (monitored.failureCount || 0) + 1;
 
-      state.lastNotifiedStatus = "UP";
-      state.lastNotifiedAt = new Date();
+      // when 3rd consecutive DOWN -> return object for batch email
+      if (monitored.failureCount === 3) {
+        state.lastNotifiedStatus = "DOWN";
+        state.lastNotifiedAt = new Date();
+        await state.save();
+        await monitored.save();
+
+        return {
+          alert: true,
+          type: "DOWN",
+          site: monitored,
+          checkedAt: checkedAt || new Date(),
+          responseTimeMs: responseTimeMs ?? null,
+        };
+      }
+
+      // on 4th consecutive DOWN, reset to 1 per requirement
+      if (monitored.failureCount >= 4) monitored.failureCount = 1;
+
+      await monitored.save();
+      return null;
     }
 
-    await state.save();
+    // RECOVERY: reset failureCount and send recovery immediately if previously DOWN
+    if (newStatus === "UP") {
+      const wasDown = state.lastNotifiedStatus === "DOWN";
+      if ((monitored.failureCount || 0) > 0) {
+        monitored.failureCount = 0;
+        await monitored.save();
+      }
 
+      if (wasDown) {
+        // send immediate recovery alert
+        await triggerAlert(monitored, "RECOVERY");
+        state.lastNotifiedStatus = "UP";
+        state.lastNotifiedAt = new Date();
+        await state.save();
+      }
+
+      return null;
+    }
+
+    return null;
   } catch (error) {
     console.error("Alert Service Error:", error.message);
+    return null;
   }
 };
 
@@ -74,6 +118,7 @@ export const handleRegionAlert = async (site, regionResults) => {
 const triggerAlert = async (site, type) => {
   const messageMap = {
     DOWN: `🚨 ${site.domain} is DOWN`,
+    HIGH_PRIORITY: `🚨 HIGH PRIORITY: ${site.domain} is DOWN`,
     RECOVERY: `✅ ${site.domain} has RECOVERED`,
     REGION_DOWN: `🌍 ${site.domain} is DOWN in selected regions`,
   };
@@ -89,8 +134,11 @@ const triggerAlert = async (site, type) => {
       if (channel === "email") {
         // determine recipient: site-level emailContact or global fallback
         const recipients = [];
-        if (site.emailContact) recipients.push(site.emailContact.trim());
-        else {
+        if (site.emailContact && Array.isArray(site.emailContact) && site.emailContact.length > 0) {
+          recipients.push(
+            ...site.emailContact.map((s) => (s || "").trim()).filter(Boolean)
+          );
+        } else {
           const globals = (process.env.ALERT_RECIPIENTS || "")
             .split(",")
             .map((s) => s.trim())
@@ -100,7 +148,8 @@ const triggerAlert = async (site, type) => {
 
         if (recipients.length > 0) {
           const subject = message;
-          const html = `<p>${message}</p><p>Checked at: ${new Date().toISOString()}</p>`;
+          const checked = formatToIST(new Date());
+          const html = `<p>${message}</p><p>Checked at: ${checked} (IST)</p>`;
           emailService
             .sendEmail({ to: recipients, subject, html })
             .catch((err) => console.error("Failed to send alert email:", err));

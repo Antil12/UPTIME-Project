@@ -36,8 +36,8 @@ alertIfAllRegionsDown: {
 
 
 emailContact: {
-  type: String,
-  default: null,
+  type: [String],
+  default: [],
   trim: true,
 },
 

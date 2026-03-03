@@ -24,6 +24,7 @@ export default function EditModal({
   if (!item) return null;
 
   const [category, setCategory] = useState(item.category || "");
+  const [emailInput, setEmailInput] = useState("");
 
   useEffect(() => {
     if (initialCategory !== undefined) setCategory(initialCategory);
@@ -105,23 +106,70 @@ export default function EditModal({
 
           <div>
             <label className={labelClass}>Priority</label>
-            <input
-              value={editPriority}
-              onChange={(e) => setEditPriority(e.target.value)}
-              placeholder="Low / Medium / High"
-              className={inputClass}
-            />
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Number(editPriority) === 1}
+                onChange={(e) => setEditPriority(e.target.checked ? 1 : 0)}
+                className="accent-red-600 w-4 h-4"
+              />
+              <span className="text-sm">High Priority</span>
+            </label>
           </div>
 
           <div>
-            <label className={labelClass}>Contact Email</label>
-            <input
-              type="email"
-              value={editEmail}
-              onChange={(e) => setEditEmail(e.target.value)}
-              placeholder="admin@example.com"
-              className={inputClass}
-            />
+            <label className={labelClass}>Contact Emails</label>
+
+            <div className="flex gap-2 mb-2">
+              <input
+                type="email"
+                placeholder="Add email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const v = (emailInput || "").trim();
+                    if (v) {
+                      // ensure editEmail is an array
+                      const current = Array.isArray(editEmail) ? editEmail : editEmail ? [editEmail] : [];
+                      if (!current.includes(v)) setEditEmail([...current, v]);
+                      setEmailInput("");
+                    }
+                  }
+                }}
+                className={inputClass}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const v = (emailInput || "").trim();
+                  if (v) {
+                    const current = Array.isArray(editEmail) ? editEmail : editEmail ? [editEmail] : [];
+                    if (!current.includes(v)) setEditEmail([...current, v]);
+                    setEmailInput("");
+                  }
+                }}
+                className="px-4 py-2 rounded-2xl bg-blue-600 text-white"
+              >
+                Add
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {(Array.isArray(editEmail) ? editEmail : editEmail ? [editEmail] : []).map((e, i) => (
+                <span key={i} className="px-3 py-1 rounded-full border bg-white/5 flex items-center gap-2">
+                  <span className="text-sm">{e}</span>
+                  <button
+                    type="button"
+                    onClick={() => setEditEmail((p) => (Array.isArray(p) ? p.filter((x) => x !== e) : []))}
+                    className="text-xs text-red-400"
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
 
           <div>

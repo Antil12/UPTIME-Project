@@ -87,10 +87,10 @@ const SuperAdmin = ({ theme }) => {
       return;
     }
 
-    if (form.password !== form.confirmPassword) {
-      alert("Passwords do not match");
-      return;
-    }
+    // if (form.password !== form.confirmPassword) {
+    //   alert("Passwords do not match");
+    //   return;
+    // }
 
     try {
       const token = localStorage.getItem("loginToken");
@@ -118,7 +118,7 @@ const SuperAdmin = ({ theme }) => {
       setForm({
         username: "",
         password: "",
-        confirmPassword: "",
+        // confirmPassword: "",
         email: "",
         role: "USER",
       });
@@ -224,14 +224,14 @@ return (
             )}
           </div>
 
-          <FloatingInput
+          {/* <FloatingInput
             label="Confirm Password"
             name="confirmPassword"
             type="password"
             value={form.confirmPassword}
             onChange={handleChange}
             theme={theme}
-          />
+          /> */}
         </div>
 
         {/* Role Selection */}

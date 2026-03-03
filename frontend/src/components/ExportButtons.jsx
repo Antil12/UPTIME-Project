@@ -25,7 +25,7 @@ const buildRows = (urls, logsBySite) => {
     rows.push({
       Domain: site.domain || "",
       URL: site.url || "",
-      Email: site.emailContact || "",
+      Email: Array.isArray(site.emailContact) ? site.emailContact.join(", ") : site.emailContact || "",
       "Total Checks": total,
       Up: up,
       Down: down,
