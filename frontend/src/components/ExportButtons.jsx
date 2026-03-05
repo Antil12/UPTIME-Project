@@ -3,6 +3,25 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
+
+const ReportPage = () => {
+  const reportRef = useRef();
+
+  return (
+    <>
+      <div ref={reportRef}>
+        {/* EVERYTHING that shows in your analytics page */}
+        {/* Charts */}
+        {/* Cards */}
+        {/* Tables */}
+        {/* Metrics */}
+      </div>
+
+      <ExportButtons reportRef={reportRef} />
+    </>
+  );
+};
+
 const buildRows = (urls, logsBySite) => {
   const rows = [];
 
@@ -77,73 +96,130 @@ const ExportButtons = ({ urls = [], logsBySite = {}, theme = "light" }) => {
   };
 
   const onExportPDF = async () => {
-    // render hidden table and snapshot it
-    const rows = buildRows(urls, logsBySite);
-    if (!rows.length) return;
+  const rows = buildRows(urls, logsBySite);
+  if (!rows.length) return;
 
-    // create a temporary container
-    const container = document.createElement("div");
-    container.style.position = "fixed";
-    container.style.left = "-9999px";
-    container.style.top = "0";
-    container.style.background = theme === "dark" ? "#111827" : "#ffffff";
-    container.style.color = theme === "dark" ? "#fff" : "#000";
-    container.style.padding = "20px";
-    container.style.fontFamily = "Arial, Helvetica, sans-serif";
+  // Create temporary container
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.style.width = "1400px";
+  container.style.padding = "30px";
+  container.style.background = "#ffffff";
+  container.style.color = "#000000";
+  container.style.fontFamily = "Arial, Helvetica, sans-serif";
 
-    const title = document.createElement("h2");
-    title.innerText = `UPTIME Report — ${rows.length} sites`;
-    container.appendChild(title);
+  // ===== Title =====
+  const title = document.createElement("h2");
+  title.innerText = `UPTIME Report — ${rows.length} Sites`;
+  title.style.marginBottom = "20px";
+  container.appendChild(title);
 
-    const table = document.createElement("table");
-    table.style.borderCollapse = "collapse";
-    table.style.width = "100%";
+  // ===== Chart Section =====
+  const chartTitle = document.createElement("h3");
+  chartTitle.innerText = "Average Response Time (ms)";
+  chartTitle.style.margin = "10px 0";
+  container.appendChild(chartTitle);
 
-    const headerRow = document.createElement("tr");
-    const headerKeys = Object.keys(rows[0]);
+  const canvasChart = document.createElement("canvas");
+  canvasChart.width = 1200;
+  canvasChart.height = 300;
+  container.appendChild(canvasChart);
+
+  const ctx = canvasChart.getContext("2d");
+
+  // Prepare chart data
+  const labels = rows.map(r => r.Domain);
+  const values = rows.map(r => Number(r["Avg Response (ms)"]));
+
+  // Simple bar chart (manual draw for lightweight)
+  const maxValue = Math.max(...values, 100);
+  const barWidth = 50;
+  const gap = 40;
+
+  values.forEach((val, i) => {
+    const barHeight = (val / maxValue) * 200;
+    const x = 80 + i * (barWidth + gap);
+    const y = 250 - barHeight;
+
+    ctx.fillStyle = "#6366f1";
+    ctx.fillRect(x, y, barWidth, barHeight);
+
+    ctx.fillStyle = "#000";
+    ctx.font = "12px Arial";
+    ctx.fillText(labels[i], x, 270);
+    ctx.fillText(val + "ms", x, y - 5);
+  });
+
+  // ===== Table Section =====
+  const tableTitle = document.createElement("h3");
+  tableTitle.innerText = "Detailed Report";
+  tableTitle.style.margin = "30px 0 10px 0";
+  container.appendChild(tableTitle);
+
+  const table = document.createElement("table");
+  table.style.borderCollapse = "collapse";
+  table.style.width = "100%";
+  table.style.background = "#ffffff";
+
+  const headerRow = document.createElement("tr");
+  const headerKeys = Object.keys(rows[0]);
+
+  headerKeys.forEach((h) => {
+    const th = document.createElement("th");
+    th.innerText = h;
+    th.style.border = "1px solid #d1d5db";
+    th.style.padding = "8px";
+    th.style.fontSize = "12px";
+    th.style.textAlign = "left";
+    th.style.background = "#f3f4f6";
+    headerRow.appendChild(th);
+  });
+
+  table.appendChild(headerRow);
+
+  rows.forEach((r) => {
+    const tr = document.createElement("tr");
     headerKeys.forEach((h) => {
-      const th = document.createElement("th");
-      th.innerText = h;
-      th.style.border = "1px solid #ddd";
-      th.style.padding = "6px";
-      th.style.fontSize = "12px";
-      th.style.textAlign = "left";
-      headerRow.appendChild(th);
+      const td = document.createElement("td");
+      td.innerText = r[h];
+      td.style.border = "1px solid #e5e7eb";
+      td.style.padding = "6px";
+      td.style.fontSize = "11px";
+      tr.appendChild(td);
     });
-    table.appendChild(headerRow);
+    table.appendChild(tr);
+  });
 
-    rows.forEach((r) => {
-      const tr = document.createElement("tr");
-      headerKeys.forEach((h) => {
-        const td = document.createElement("td");
-        td.innerText = r[h];
-        td.style.border = "1px solid #eee";
-        td.style.padding = "6px";
-        td.style.fontSize = "11px";
-        tr.appendChild(td);
-      });
-      table.appendChild(tr);
+  container.appendChild(table);
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      backgroundColor: "#ffffff"
     });
 
-    container.appendChild(table);
-    document.body.appendChild(container);
+    const imgData = canvas.toDataURL("image/png");
 
-    try {
-      const canvas = await html2canvas(container, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "landscape" });
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`uptime-report-${Date.now()}.pdf`);
-    } catch (err) {
-      console.error("PDF export failed:", err);
-    } finally {
-      container.remove();
-    }
-  };
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "pt",
+      format: "a4"
+    });
 
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`uptime-report-${Date.now()}.pdf`);
+  } catch (err) {
+    console.error("PDF export failed:", err);
+  } finally {
+    container.remove();
+  }
+};
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
 

@@ -47,6 +47,7 @@ const Dashboard = ({
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [categories, setCategories] = useState(["ALL"]);
   const [uptimeData, setUptimeData] = useState(null);
+  const [selectedSslStatus, setSelectedSslStatus] = useState("ALL");
  useEffect(() => {
   if (!popupOpen) return;
 
@@ -106,6 +107,11 @@ const Dashboard = ({
   if (selectedStatus !== "ALL") {
     finalUrls = finalUrls.filter((u) => u.status === selectedStatus);
   }
+  if (selectedSslStatus !== "ALL") {
+  finalUrls = finalUrls.filter(
+    (u) => u.sslStatus === selectedSslStatus
+  );
+}
 
   /* ===============================
      GLOBAL DATA
@@ -274,6 +280,8 @@ const Dashboard = ({
         setSelectedCategory={setSelectedCategory}
         selectedStatus={selectedStatus}
         setSelectedStatus={setSelectedStatus}
+         selectedSslStatus={selectedSslStatus}
+        setSelectedSslStatus={setSelectedSslStatus}
         onPin={onPin}
         onDelete={onDelete}
         onEdit={onEdit}

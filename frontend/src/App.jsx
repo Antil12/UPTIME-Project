@@ -47,6 +47,8 @@ const userRole = currentUser?.role?.toUpperCase();
   const [activePage, setActivePage] = useState("dashboard");
   const [message, setMessage] = useState("");
   const [urls, setUrls] = useState([]);
+  const [tableUrls, setTableUrls] = useState([]); // FILTERED DATA
+  
 
   const [domain, setDomain] = useState("");
   const [url, setUrl] = useState("");
@@ -67,6 +69,8 @@ const userRole = currentUser?.role?.toUpperCase();
   const [popupData, setPopupData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
+  
+
   
 
   /* ================= EFFECTS ================= */
@@ -103,7 +107,7 @@ useEffect(() => {
 
 
   // Fetch sites
- const fetchSites = async (status = "ALL") => {
+const fetchSites = async (status = "ALL") => {
   try {
     const token = localStorage.getItem("loginToken");
     if (!token) return;
@@ -114,10 +118,18 @@ useEffect(() => {
       },
     });
 
-    setUrls(res.data?.data || []);
+    const data = res.data?.data || [];
+
+    setTableUrls(data); // always update table
+
+    // 🔥 Only update global data if loading ALL
+    if (status === "ALL") {
+      setUrls(data);
+    }
+
   } catch (err) {
     console.error("Fetch sites failed", err);
-    setUrls([]);
+    setTableUrls([]);
   }
 };
 

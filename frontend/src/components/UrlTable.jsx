@@ -6,6 +6,8 @@ import SiteReport from "./SiteReport";
 const UrlTable = ({
   urls,
   theme,
+   selectedSslStatus,
+  setSelectedSslStatus,
   onPin,
   onDelete,
   onEdit,
@@ -18,6 +20,7 @@ const UrlTable = ({
   selectedStatus, 
   setSelectedStatus,
 }) => {
+  const [showSslFilter, setShowSslFilter] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [expandedSite, setExpandedSite] = useState(null);
@@ -40,6 +43,10 @@ const UrlTable = ({
       }
     }
   };
+  const sslOptions = useMemo(() => {
+  const sslStatuses = urls.map((u) => u.sslStatus).filter(Boolean);
+  return ["ALL", ...Array.from(new Set(sslStatuses))];
+}, [urls]);
 
   /* ✅ Dynamic Status Options */
   const statusOptions = useMemo(() => {
@@ -94,7 +101,7 @@ const UrlTable = ({
           >
             <tr>
                 {selectionMode && <th scope="col" className="px-2 py-2 text-left"> </th>}
-              <th scope="col" className="px-2 py-2 text-left">Serial No.</th>
+              <th scope="col" className="px-2 py-2 text-left">S No.</th>
 
               {/* DOMAIN FILTER */}
               <th scope="col" className="px-2 py-2 text-left relative">
@@ -145,7 +152,48 @@ const UrlTable = ({
               </th>
 
               <th scope="col" className="px-2 py-2 text-left">URL</th>
-              <th scope="col" className="px-2 py-2 text-center">SSL Status</th>
+              <th scope="col" className="px-2 py-2 text-center relative">
+  <div className="flex items-center justify-center gap-2">
+    <span>SSL Status</span>
+    <button
+      onClick={() => setShowSslFilter((v) => !v)}
+      className={`p-1 rounded hover:bg-gray-200
+        ${selectedSslStatus !== "ALL"
+          ? "text-blue-600"
+          : "text-gray-500"
+        }`}
+    >
+      <Filter size={14} />
+    </button>
+  </div>
+
+  {showSslFilter && (
+    <div
+      className={`absolute right-0 mt-2 w-36 rounded shadow z-40
+        ${theme === "dark"
+          ? "bg-gray-800 border border-gray-700"
+          : "bg-white border border-gray-200"
+        }`}
+    >
+      {sslOptions.map((ssl) => (
+        <button
+          key={ssl}
+          onClick={() => {
+            setSelectedSslStatus(ssl);
+            setShowSslFilter(false);
+          }}
+          className={`block w-full text-left px-3 py-2 text-sm hover:bg-slate-100
+            ${selectedSslStatus === ssl
+              ? "font-semibold text-blue-600"
+              : ""
+            }`}
+        >
+          {ssl}
+        </button>
+      ))}
+    </div>
+  )}
+</th>
 
               {/* STATUS FILTER */}
               <th scope="col" className="px-2 py-2 text-left relative">
