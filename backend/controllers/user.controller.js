@@ -112,3 +112,40 @@ export const updateUserPassword = async (req, res) => {
     });
   }
 };
+
+export const updateUser = async (req, res) => {
+  try {
+    const { name, email, role, assignedSites } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        name,
+        email,
+        role,
+        assignedSites,
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      message: "User updated successfully",
+      user,
+    });
+
+  } catch (error) {
+
+    console.error("Update user error:", error);
+
+    res.status(500).json({
+      message: "Failed to update user",
+    });
+
+  }
+};

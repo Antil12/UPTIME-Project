@@ -8,14 +8,14 @@ export const ROLE_PERMISSIONS = {
     canAssignSite: true,
     canAssignRole: true,
   },
-  ADMIN: {
-    canEditUser: false,
-    canCreateUser: false,
-    canAddSite: true,
-    canViewAllSites: true,
-    canAssignSite: true,
-    canAssignRole: false,
-  },
+  // ADMIN: {
+  //   canEditUser: false,
+  //   canCreateUser: false,
+  //   canAddSite: true,
+  //   canViewAllSites: true,
+  //   canAssignSite: true,
+  //   canAssignRole: false,
+  // },
   USER: {
     canEditUser: false,
     canCreateUser: false,

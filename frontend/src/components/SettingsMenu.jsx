@@ -19,7 +19,7 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
   }, []);
 
   const user = JSON.parse(localStorage.getItem("user"));
-  const isAdmin = user?.role === "ADMIN";
+  // const isAdmin = user?.role === "ADMIN";
 
   return (
     <div className="relative inline-block text-left" ref={menuRef}>

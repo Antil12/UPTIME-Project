@@ -63,12 +63,19 @@ const statusFilterRef = useRef(null);
     return ["ALL", ...Array.from(new Set(statuses))];
   }, [urls]);
 
- const filteredByCategory =
-  selectedCategories.includes("ALL")
-    ? urls
-    : urls.filter((u) =>
-        selectedCategories.includes(u.category)
-      );
+ const filteredData = urls.filter((u) => {
+  const categoryMatch =
+    selectedCategories.includes("ALL") ||
+    selectedCategories.includes(u.category);
+
+  const statusMatch =
+    selectedStatus === "ALL" || u.status === selectedStatus;
+
+  const sslMatch =
+    selectedSslStatus === "ALL" || u.sslStatus === selectedSslStatus;
+
+  return categoryMatch && statusMatch && sslMatch;
+});
    useEffect(() => {
   function handleClickOutside(event) {
     if (
@@ -100,7 +107,7 @@ const statusFilterRef = useRef(null);
     document.removeEventListener("mousedown", handleClickOutside);
   };
 }, []);
-const sortedData = [...filteredByCategory]
+const sortedData = [...filteredData]
   .sort((a, b) => (b.pinned === true) - (a.pinned === true))
   .sort((a, b) => {
     if (sortOrder === "ASC") {

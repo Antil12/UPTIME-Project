@@ -20,6 +20,13 @@ const SuperAdmin = ({ theme }) => {
 
   const [editUser, setEditUser] = useState(null);
   const [newPassword, setNewPassword] = useState("");
+  const [editForm, setEditForm] = useState({
+  name: "",
+  email: "",
+  role: "",
+});
+
+const [editAssignedSites, setEditAssignedSites] = useState([]);
 
   /* ================= FORM CHANGE ================= */
 
@@ -262,6 +269,37 @@ alert("User created successfully");
 
     }
   };
+  const handleUpdateUser = async () => {
+  try {
+
+    const token = localStorage.getItem("loginToken");
+
+    await axios.put(
+      `http://localhost:5000/api/user/${editUser._id}`,
+      {
+        name: editForm.name,
+        email: editForm.email,
+        role: editForm.role,
+        assignedSites: editForm.role === "VIEWER" ? editAssignedSites : [],
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    alert("User updated successfully");
+
+    fetchUsers();
+
+    setEditUser(null);
+
+  } catch (err) {
+
+    console.error(err);
+    alert("Failed to update user");
+
+  }
+};
 
   return (
     <main className="min-h-screen px-4 py-10 flex justify-center bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-950 dark:to-gray-900">
@@ -355,7 +393,7 @@ alert("User created successfully");
             >
 
               <option value="USER">User</option>
-              <option value="ADMIN">Admin</option>
+              
               <option value="SUPERADMIN">Super Admin</option>
               <option value="VIEWER">Viewer</option>
 
@@ -450,9 +488,9 @@ alert("User created successfully");
               <thead className={`${isDark ? "bg-gray-800" : "bg-gray-100"}`}>
 
                 <tr>
-                  <th className="p-4">Name</th>
-                  <th className="p-4">Email</th>
-                  <th className="p-4">Role</th>
+                  <th className="p-4 text-left">Name</th>
+                  <th className="p-4 text-left">Email</th>
+                  <th className="p-4 text-left">Role</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
 
@@ -489,10 +527,18 @@ alert("User created successfully");
                       <td className="p-4 text-right space-x-2">
 
                         <button
-                          onClick={() => {
-                            setEditUser(user);
-                            setNewPassword("");
-                          }}
+  onClick={() => {
+    setEditUser(user);
+    setNewPassword("");
+
+    setEditForm({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    });
+
+    setEditAssignedSites(user.assignedSites || []);
+  }}
                           className="px-4 py-2 bg-blue-500 text-white rounded-lg text-xs"
                         >
                           Edit
@@ -525,49 +571,161 @@ alert("User created successfully");
 
         {editUser && (
 
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
 
-            <div className={`p-6 rounded-xl ${
-              isDark ? "bg-gray-900" : "bg-white"
-            }`}>
+  <div
+    className={`w-full max-w-md p-6 rounded-2xl shadow-xl ${
+      isDark
+        ? "bg-gray-900 text-white border border-gray-700"
+        : "bg-white text-gray-800 border border-gray-200"
+    }`}
+  >
 
-              <h3 className="mb-4">
-                Update Password for {editUser.name}
-              </h3>
+    <h3 className="text-lg font-semibold mb-4">
+      Edit User
+    </h3>
 
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) =>
-                  setNewPassword(e.target.value)
+    {/* NAME */}
+    <input
+      type="text"
+      value={editForm.name}
+      onChange={(e)=>
+        setEditForm({...editForm,name:e.target.value})
+      }
+      placeholder="Name"
+      className={`w-full mb-3 px-3 py-2 rounded-lg border text-sm
+      ${isDark
+        ? "bg-gray-800 border-gray-700"
+        : "bg-white border-gray-300"
+      }`}
+    />
+
+    {/* EMAIL */}
+    <input
+      type="email"
+      value={editForm.email}
+      onChange={(e)=>
+        setEditForm({...editForm,email:e.target.value})
+      }
+      placeholder="Email"
+      className={`w-full mb-3 px-3 py-2 rounded-lg border text-sm
+      ${isDark
+        ? "bg-gray-800 border-gray-700"
+        : "bg-white border-gray-300"
+      }`}
+    />
+
+    {/* ROLE */}
+    <select
+      value={editForm.role}
+      onChange={(e)=>
+        setEditForm({...editForm,role:e.target.value})
+      }
+      className={`w-full mb-3 px-3 py-2 rounded-lg border text-sm
+      ${isDark
+        ? "bg-gray-800 border-gray-700"
+        : "bg-white border-gray-300"
+      }`}
+    >
+
+      <option value="USER">User</option>
+      
+      <option value="SUPERADMIN">Super Admin</option>
+      <option value="VIEWER">Viewer</option>
+
+    </select>
+
+    {/* WEBSITE ASSIGN */}
+
+    {editForm.role === "VIEWER" && (
+
+      <div
+        className={`mb-3 p-3 rounded-lg border max-h-32 overflow-y-auto text-sm
+        ${isDark
+          ? "border-gray-700 bg-gray-800"
+          : "border-gray-300 bg-gray-50"
+        }`}
+      >
+
+        {availableSites.map((site)=>(
+          <label
+            key={site._id}
+            className="flex items-center gap-2 mb-1"
+          >
+
+            <input
+              type="checkbox"
+              checked={editAssignedSites.includes(site._id)}
+              onChange={(e)=>{
+
+                if(e.target.checked){
+
+                  setEditAssignedSites([
+                    ...editAssignedSites,
+                    site._id
+                  ])
+
+                }else{
+
+                  setEditAssignedSites(
+                    editAssignedSites.filter(
+                      id=>id!==site._id
+                    )
+                  )
+
                 }
-                className="border px-3 py-2 rounded-lg w-full mb-4"
-              />
 
-              <div className="flex gap-3 justify-end">
+              }}
+            />
 
-                <button
-                  onClick={() => setEditUser(null)}
-                  className="px-4 py-2 border rounded-lg"
-                >
-                  Cancel
-                </button>
+            {site.domain || site.url || site.name}
 
-                <button
-                  onClick={handleUpdatePassword}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
-                >
-                  Update
-                </button>
+          </label>
+        ))}
 
-              </div>
+      </div>
 
-            </div>
+    )}
 
-          </div>
+    {/* PASSWORD */}
 
-        )}
+    <input
+      type="password"
+      value={newPassword}
+      onChange={(e)=>setNewPassword(e.target.value)}
+      placeholder="New password (optional)"
+      className={`w-full mb-4 px-3 py-2 rounded-lg border text-sm
+      ${isDark
+        ? "bg-gray-800 border-gray-700"
+        : "bg-white border-gray-300"
+      }`}
+    />
 
+    {/* ACTION BUTTONS */}
+
+    <div className="flex justify-end gap-2">
+
+      <button
+        onClick={()=>setEditUser(null)}
+        className="px-4 py-2 text-sm rounded-lg border"
+      >
+        Cancel
+      </button>
+
+      <button
+        onClick={handleUpdateUser}
+        className="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white"
+      >
+        Save
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+)}
       </div>
 
     </main>

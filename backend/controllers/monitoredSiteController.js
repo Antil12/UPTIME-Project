@@ -327,7 +327,7 @@ export const deleteSite = async (req, res) => {
     }
 
     const role = (req.user && req.user.role) || "";
-    if (!(role === "ADMIN" || role === "SUPERADMIN")) {
+    if (!role === "SUPERADMIN"){
       return res.status(403).json({ success: false, message: "Not authorized to delete site" });
     }
 
