@@ -21,11 +21,15 @@ export const getMonitoredSites = async (req, res) => {
 const userId = req.user?._id;
 
 if (role === "USER" || role === "VIEWER") {
-  const objectUserId = new mongoose.Types.ObjectId(userId);
+
+  const user = await User.findById(userId).select("assignedSites");
+
+  const assignedSiteIds = user?.assignedSites || [];
 
   matchStage.$or = [
-    { owner: objectUserId },
-    { assignedUsers: objectUserId },
+    { owner: userId },
+    { _id: { $in: assignedSiteIds } },   // viewer assigned sites
+    { assignedUsers: userId }            // fallback if assigned via site
   ];
 }
 

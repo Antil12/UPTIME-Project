@@ -6,6 +6,7 @@ import SiteReport from "./SiteReport";
 const UrlTable = ({
   urls,
   theme,
+  currentUser,
    selectedSslStatus,
   setSelectedSslStatus,
   onPin,
@@ -20,6 +21,7 @@ setSelectedCategories,
   selectedStatus, 
   setSelectedStatus,
 }) => {
+  const isViewer = currentUser?.role?.toUpperCase() === "VIEWER";
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showDomainFilter, setShowDomainFilter] = useState(false);
   const [sortOrder, setSortOrder] = useState("ASC"); // ASC | DESC
@@ -456,7 +458,9 @@ const sortedData = [...filteredByCategory]
 
               <th scope="col" className="px-2 py-2 text-center">Status Code</th>
               <th scope="col" className="px-2 py-2 text-left">Last Check</th>
+              {!isViewer && (
               <th scope="col" className="px-2 py-2 text-center">Actions</th>
+               )}
             </tr>
           </thead>
 
@@ -534,8 +538,9 @@ const sortedData = [...filteredByCategory]
                         ? new Date(item.lastCheckedAt).toLocaleString()
                         : "-"}
                     </td>
-                    <td className="px-2 py-2">
-                      <div className="flex justify-center gap-3">
+                   {!isViewer && (
+<td className="px-2 py-2">
+  <div className="flex justify-center gap-3">
                         <button aria-label={item.pinned ? 'Unpin site' : 'Pin site'} title={item.pinned ? 'Unpin' : 'Pin'} onClick={() => onPin(item._id)}>
                           {item.pinned ? <PinOff size={16} aria-hidden="true" /> : <Pin size={16} aria-hidden="true" />}
                           <span className="sr-only">{item.pinned ? 'Unpin site' : 'Pin site'}</span>
@@ -551,11 +556,12 @@ const sortedData = [...filteredByCategory]
                         </button>
                       </div>
                     </td>
+                    )}
                   </tr>
 
                   {expandedSite === item._id && (
                     <tr key={`${item._id}-report`} className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
-                      <td colSpan={selectionMode ? 9 : 8} className="p-4">
+                      <td colSpan={isViewer ? (selectionMode ? 8 : 7) : (selectionMode ? 9 : 8)} className="p-4">
                         <SiteReport site={item} logs={siteLogs[item._id] || []} theme={theme} />
                       </td>
                     </tr>
@@ -707,12 +713,14 @@ const sortedData = [...filteredByCategory]
 
             {/* ACTIONS */}
             <div className="flex justify-between items-center">
-              <button
-                onClick={() => onEdit(item)}
-                className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition"
-              >
-                Edit
-              </button>
+              {!isViewer && (
+<button
+  onClick={() => onEdit(item)}
+  className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition"
+>
+  Edit
+</button>
+)}
 
               <button
                 onClick={() => toggleSite(item)}

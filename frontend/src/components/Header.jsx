@@ -130,7 +130,15 @@ const Header = ({
             <div className="hidden md:flex gap-2">
 
               <CrystalButton label="Dashboard" onClick={() => navigate("/dashboard")} theme={theme}/>
-              <CrystalButton label="Add URL" onClick={() => navigate("/add")} theme={theme}/>
+             {/* Hide Add URL for VIEWER */}
+{currentUser?.role !== "VIEWER" && (
+  <CrystalButton
+    label="Add URL"
+    onClick={() => navigate("/add")}
+    theme={theme}
+  />
+)}
+
               <CrystalButton label="Reports" onClick={() => navigate("/reports")} theme={theme}/>
               {/* <CrystalButton label="Super Admin" onClick={() => navigate("/superadmin")} theme={theme}/> */}
 
@@ -144,13 +152,41 @@ const Header = ({
 )}
 
             </div>
+<div className="flex md:hidden gap-2">
+  <button
+    onClick={() => navigate("/dashboard")}
+    className="px-3 py-2 rounded-lg bg-white/10 text-xs"
+  >
+    📊
+  </button>
 
-            <div className="flex md:hidden gap-2">
-              <button onClick={() => navigate("/dashboard")} className="px-3 py-2 rounded-lg bg-white/10 text-xs">📊</button>
-              <button onClick={() => navigate("/add")} className="px-3 py-2 rounded-lg bg-white/10 text-xs">➕</button>
-              <button onClick={() => navigate("/reports")} className="px-3 py-2 rounded-lg bg-white/10 text-xs">📄</button>
-              <button onClick={() => navigate("/superadmin")} className="px-3 py-2 rounded-lg bg-white/10 text-xs">👑</button>
-            </div>
+  {/* Hide Add URL for VIEWER */}
+  {currentUser?.role !== "VIEWER" && (
+    <button
+      onClick={() => navigate("/add")}
+      className="px-3 py-2 rounded-lg bg-white/10 text-xs"
+    >
+      ➕
+    </button>
+  )}
+
+  <button
+    onClick={() => navigate("/reports")}
+    className="px-3 py-2 rounded-lg bg-white/10 text-xs"
+  >
+    📄
+  </button>
+
+  {/* Only SUPERADMIN */}
+  {currentUser?.role?.toUpperCase() === "SUPERADMIN" && (
+    <button
+      onClick={() => navigate("/superadmin")}
+      className="px-3 py-2 rounded-lg bg-white/10 text-xs"
+    >
+      👑
+    </button>
+  )}
+</div>
 
             <button
               onClick={handleRefresh}

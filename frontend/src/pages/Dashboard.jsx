@@ -37,7 +37,8 @@ const Dashboard = ({
   const [filter, setFilter] = useState("24h");
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-
+  const [currentUser, setCurrentUser] = React.useState(null);
+  const isViewer = currentUser?.role === "VIEWER";
   // Example report data (you can replace with API data)
   const reportData = urls;
 
@@ -84,6 +85,13 @@ const Dashboard = ({
     ];
     setCategories(uniqueCategories);
   }, [urls]);
+
+  useEffect(() => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (user) {
+    setCurrentUser(user);
+  }
+}, []);
 
   /* ===============================
      STATUS LIST
@@ -216,7 +224,8 @@ if (selectedSslStatus !== "ALL") {
   </div>
 
   {/* ✅ SELECT OPTIONS — RIGHT SIDE */}
-  <div className="flex items-center gap-2 justify-end">
+{!isViewer && (
+<div className="flex items-center gap-2 justify-end">
 
     <button
       onClick={() => {
@@ -287,27 +296,27 @@ if (selectedSslStatus !== "ALL") {
       </>
     )}
   </div>
+)}
 </div>
+
       {/* ===============================
          URL TABLE
       =============================== */}
-      <UrlTable
-        urls={finalUrls}
-        theme={theme}
-        categories={categories}
-        selectedCategories={selectedCategories}
-        setSelectedCategories={setSelectedCategories}
-        selectedStatus={selectedStatus}
-        setSelectedStatus={setSelectedStatus}
-         selectedSslStatus={selectedSslStatus}
-        setSelectedSslStatus={setSelectedSslStatus}
-        onPin={onPin}
-        onDelete={onDelete}
-        onEdit={onEdit}
-        selectionMode={selectionMode}
-        selectedIds={selectedIds}
-        setSelectedIds={setSelectedIds}
-      />
+   <UrlTable
+  urls={urls}
+  theme={theme}
+  currentUser={currentUser}
+  selectedSslStatus={selectedSslStatus}
+  setSelectedSslStatus={setSelectedSslStatus}
+  onPin={onPin}
+  onDelete={onDelete}
+  onEdit={onEdit}
+  categories={categories}
+  selectedCategories={selectedCategories}
+  setSelectedCategories={setSelectedCategories}
+  selectedStatus={selectedStatus}
+  setSelectedStatus={setSelectedStatus}
+/>
 
       {/* ===============================
          EXISTING POPUP
