@@ -52,6 +52,10 @@ priority: {
   default: 0,
 },
   
+  // Owner of the site (creator) and explicit assigned users
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false },
+  assignedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  
   // number of consecutive DOWN checks. Incremented on DOWN, reset to 0 on UP.
   failureCount: {
     type: Number,

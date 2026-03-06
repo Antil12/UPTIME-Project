@@ -1,5 +1,5 @@
 import { Pin, PinOff, Trash2, Filter } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import axios from "axios";
 import SiteReport from "./SiteReport";
 
@@ -15,16 +15,23 @@ const UrlTable = ({
   selectedIds = [],
   setSelectedIds = () => {},
   categories = [],
-  selectedCategory,
-  setSelectedCategory,
+  selectedCategories,
+setSelectedCategories,
   selectedStatus, 
   setSelectedStatus,
 }) => {
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [showDomainFilter, setShowDomainFilter] = useState(false);
+  const [sortOrder, setSortOrder] = useState("ASC"); // ASC | DESC
   const [showSslFilter, setShowSslFilter] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [expandedSite, setExpandedSite] = useState(null);
   const [siteLogs, setSiteLogs] = useState({});
+  const domainFilterRef = useRef(null);
+const categoryRef = useRef(null);
+const sslFilterRef = useRef(null);
+const statusFilterRef = useRef(null);
   const LOG_API_BASE = "http://localhost:5000/api/uptime-logs";
 
   const toggleSite = async (item) => {
@@ -54,10 +61,52 @@ const UrlTable = ({
     return ["ALL", ...Array.from(new Set(statuses))];
   }, [urls]);
 
-  const sortedData = [...urls].sort(
-    (a, b) => (b.pinned === true) - (a.pinned === true)
-  );
+ const filteredByCategory =
+  selectedCategories.includes("ALL")
+    ? urls
+    : urls.filter((u) =>
+        selectedCategories.includes(u.category)
+      );
+   useEffect(() => {
+  function handleClickOutside(event) {
+    if (
+      domainFilterRef.current &&
+      !domainFilterRef.current.contains(event.target)
+    ) {
+      setShowDomainFilter(false);
+      setCategoryOpen(false);
+    }
 
+    if (
+      sslFilterRef.current &&
+      !sslFilterRef.current.contains(event.target)
+    ) {
+      setShowSslFilter(false);
+    }
+
+    if (
+      statusFilterRef.current &&
+      !statusFilterRef.current.contains(event.target)
+    ) {
+      setShowStatusFilter(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
+const sortedData = [...filteredByCategory]
+  .sort((a, b) => (b.pinned === true) - (a.pinned === true))
+  .sort((a, b) => {
+    if (sortOrder === "ASC") {
+      return a.domain.localeCompare(b.domain);
+    } else {
+      return b.domain.localeCompare(a.domain);
+    }
+  });
   const getStatusColor = (status) => {
     if (status === "UP") return "text-green-600";
     if (status === "SLOW") return "text-yellow-500";
@@ -103,54 +152,216 @@ const UrlTable = ({
                 {selectionMode && <th scope="col" className="px-2 py-2 text-left"> </th>}
               <th scope="col" className="px-2 py-2 text-left">S No.</th>
 
-              {/* DOMAIN FILTER */}
-              <th scope="col" className="px-2 py-2 text-left relative">
-                <div className="flex items-center gap-2">
-                  <span>Domain</span>
-                  <button
-                    onClick={() => {
-                      setShowFilter((v) => !v);
-                      setShowStatusFilter(false);
-                    }}
-                    aria-label="Filter by category"
-                    className={`p-1 rounded hover:bg-gray-200
-                    ${selectedCategory !== "ALL"
-                        ? "text-blue-600"
-                        : "text-gray-500"
-                      }`}
-                  >
-                    <Filter size={14} />
-                  </button>
-                </div>
+            {/* ================= DOMAIN FILTER COLUMN ================= */}
+<th scope="col" className="px-3 py-3 text-left relative">
+  <div className="flex items-center gap-2">
+    <span className="font-medium">Domain</span>
 
-                {showFilter && (
-                  <div
-                    className={`absolute left-0 mt-2 w-40 rounded shadow z-40
-                    ${theme === "dark"
-                        ? "bg-gray-800 border border-gray-700"
-                        : "bg-white border border-gray-200"
-                      }`}
-                  >
-                    {categories.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => {
-                          setSelectedCategory(cat);
-                          setShowFilter(false);
+    <button
+      onClick={() => {
+        setShowDomainFilter((v) => !v);
+        setShowStatusFilter(false);
+        setShowSslFilter(false);
+      }}
+      className={`relative p-1.5 rounded-lg transition-all duration-200
+        ${
+          !selectedCategories.includes("ALL") || sortOrder !== "ASC"
+            ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30"
+            : "text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
+        }`}
+    >
+      <Filter size={16} />
+
+      {(!selectedCategories.includes("ALL") || sortOrder !== "ASC") && (
+        <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-600 rounded-full" />
+      )}
+    </button>
+  </div>
+
+  {/* ================= FILTER PANEL ================= */}
+  {showDomainFilter && (
+    <div
+    ref={domainFilterRef}
+      className={`absolute left-0 mt-3 w-80 rounded-2xl shadow-2xl z-50
+        ${
+          theme === "dark"
+            ? "bg-gray-900 border border-gray-700 text-gray-200"
+            : "bg-white border border-gray-200 text-gray-800"
+        }`}
+    >
+      {/* ===== HEADER ===== */}
+      <div className="px-5 py-4 border-b dark:border-gray-700">
+        <h3 className="font-semibold text-base">Sort & Filter</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Customize domain results
+        </p>
+      </div>
+
+      <div className="px-5 py-4 space-y-6">
+        {/* ===== SORT SECTION ===== */}
+        <div>
+          <h4 className="text-sm font-semibold mb-3">Sort By</h4>
+
+          <div className="space-y-2 text-sm">
+            {["ASC", "DESC"].map((order) => (
+              <label
+                key={order}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition
+                  ${
+                    theme === "dark"
+                      ? "hover:bg-gray-800"
+                      : "hover:bg-gray-50"
+                  }`}
+              >
+                <input
+                  type="radio"
+                  name="domainSort"
+                  checked={sortOrder === order}
+                  onChange={() => setSortOrder(order)}
+                  className="w-4 h-4 accent-blue-600"
+                />
+                {order === "ASC"
+                  ? "Ascending (A-Z)"
+                  : "Descending (Z-A)"}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* ===== CATEGORY DROPDOWN ===== */}
+       <div ref={categoryRef} className="relative">
+          <h4 className="text-sm font-semibold mb-2 flex justify-between items-center">
+            Categories
+            {!selectedCategories.includes("ALL") && (
+              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                {selectedCategories.length} Selected
+              </span>
+            )}
+          </h4>
+
+          {/* Dropdown Button */}
+          <button
+            onClick={() => setCategoryOpen((v) => !v)}
+            className={`w-full rounded-xl px-4 py-2.5 flex justify-between items-center border transition-all duration-200
+              ${
+                theme === "dark"
+                  ? "bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+                  : "bg-white border-gray-300 text-gray-800 hover:bg-gray-50"
+              }
+              ${
+                !selectedCategories.includes("ALL")
+                  ? "ring-2 ring-blue-400 border-blue-500"
+                  : ""
+              }`}
+          >
+            <span className="truncate text-sm">
+              {selectedCategories.includes("ALL")
+                ? "Select Categories"
+                : selectedCategories.join(", ")}
+            </span>
+
+            <span
+              className={`text-sm transition-transform duration-200 ${
+                categoryOpen ? "rotate-180" : ""
+              }`}
+            >
+              ▼
+            </span>
+          </button>
+
+          {/* Dropdown Panel */}
+          {categoryOpen && (
+            <div
+              className={`absolute z-50 mt-2 w-full rounded-xl shadow-xl border p-3 max-h-60 overflow-y-auto
+                ${
+                  theme === "dark"
+                    ? "bg-gray-800 border-gray-600"
+                    : "bg-white border-gray-200"
+                }`}
+            >
+              <div className="space-y-2">
+                {categories.map((cat) => {
+                  const isChecked = selectedCategories.includes(cat);
+
+                  return (
+                    <label
+                      key={cat}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition
+                        ${
+                          theme === "dark"
+                            ? "hover:bg-gray-700 text-gray-200"
+                            : "hover:bg-gray-50 text-gray-700"
+                        }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        className="w-4 h-4 accent-blue-600 cursor-pointer"
+                        onChange={() => {
+                          if (cat === "ALL") {
+                            setSelectedCategories(["ALL"]);
+                          } else {
+                            let updated = [...selectedCategories];
+                            updated = updated.filter((c) => c !== "ALL");
+
+                            if (updated.includes(cat)) {
+                              updated = updated.filter((c) => c !== cat);
+                            } else {
+                              updated.push(cat);
+                            }
+
+                            if (updated.length === 0) {
+                              updated = ["ALL"];
+                            }
+
+                            setSelectedCategories(updated);
+                          }
                         }}
-                        className={`block w-full text-left px-3 py-2 text-sm hover:bg-slate-100
-                        ${selectedCategory === cat
-                            ? "font-semibold text-blue-600"
-                            : ""
-                          }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </th>
+                      />
+                      <span className="text-sm">{cat}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
+      {/* ===== FOOTER ===== */}
+      <div
+        className={`flex gap-3 px-5 py-4 border-t rounded-b-2xl
+          ${
+            theme === "dark"
+              ? "bg-gray-800 border-gray-700"
+              : "bg-gray-50 border-gray-200"
+          }`}
+      >
+        <button
+          onClick={() => {
+            setSelectedCategories(["ALL"]);
+            setSortOrder("ASC");
+          }}
+          className={`w-1/2 py-2.5 rounded-xl border font-medium transition
+            ${
+              theme === "dark"
+                ? "bg-gray-700 border-gray-600 hover:bg-gray-600"
+                : "bg-white border-gray-300 hover:bg-gray-100"
+            }`}
+        >
+          Reset
+        </button>
+
+        <button
+          onClick={() => setShowDomainFilter(false)}
+          className="w-1/2 py-2.5 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+  )}
+</th>
               <th scope="col" className="px-2 py-2 text-left">URL</th>
               <th scope="col" className="px-2 py-2 text-center relative">
   <div className="flex items-center justify-center gap-2">
@@ -360,22 +571,31 @@ const UrlTable = ({
 <div className="lg:hidden mb-4 px-1 flex gap-3">
 
   {/* CATEGORY FILTER */}
-  <select
-    aria-label="Filter by category"
-    value={selectedCategory}
-    onChange={(e) => setSelectedCategory(e.target.value)}
-    className={`flex-1 p-2 rounded-lg text-sm border
-      ${theme === "dark"
+ <select
+  aria-label="Filter by category"
+  value={selectedCategories[0] || "ALL"}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === "ALL") {
+      setSelectedCategories(["ALL"]);
+    } else {
+      setSelectedCategories([value]);
+    }
+  }}
+  className={`flex-1 p-2 rounded-lg text-sm border
+    ${
+      theme === "dark"
         ? "bg-gray-800 border-gray-700 text-gray-200"
-        : "bg-white border-gray-300 text-gray-700"}
-    `}
-  >
-    {categories.map((cat) => (
-      <option key={cat} value={cat}>
-        {cat}
-      </option>
-    ))}
-  </select>
+        : "bg-white border-gray-300 text-gray-700"
+    }
+  `}
+>
+  {categories.map((cat) => (
+    <option key={cat} value={cat}>
+      {cat}
+    </option>
+  ))}
+</select>
 
   {/* STATUS FILTER */}
   <select

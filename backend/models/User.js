@@ -2,19 +2,26 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 const userSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    role: {
+{
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+
+  role: {
     type: String,
-    enum: ["SUPERADMIN","ADMIN", "USER"],
+    enum: ["SUPERADMIN","ADMIN","USER","VIEWER"],
     default: "USER",
-    
   },
-  },
-  
-  { timestamps: true }
+
+  // ✅ NEW: Sites assigned to this user
+  assignedSites: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MonitoredSite",
+    }
+  ],
+},
+{ timestamps: true }
 );
 
 // Hash password before saving
@@ -25,12 +32,12 @@ userSchema.pre("save", async function () {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Compare password method (for login)
+// Compare password
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Store refresh token (single token rotation)
+// Refresh token
 userSchema.add({
   refreshToken: { type: String },
 });

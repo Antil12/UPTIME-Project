@@ -44,7 +44,7 @@ const Dashboard = ({
   /* ===============================
      FILTER STATES
   =============================== */
-  const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [selectedCategories, setSelectedCategories] = useState(["ALL"]);
   const [categories, setCategories] = useState(["ALL"]);
   const [uptimeData, setUptimeData] = useState(null);
   const [selectedSslStatus, setSelectedSslStatus] = useState("ALL");
@@ -93,21 +93,25 @@ const Dashboard = ({
     ...new Set(urls.map((u) => u.status).filter(Boolean)),
   ];
 
-  /* ===============================
-     FINAL FILTER PIPELINE
-  =============================== */
-  let finalUrls = filteredUrls;
+/* ===============================
+   FINAL FILTER PIPELINE
+=============================== */
+let finalUrls = filteredUrls;
 
-  if (selectedCategory !== "ALL") {
-    finalUrls = finalUrls.filter(
-      (u) => (u.category || "UNCATEGORIZED") === selectedCategory
-    );
-  }
+// ✅ Category filter (multi-select)
+if (!selectedCategories.includes("ALL")) {
+  finalUrls = finalUrls.filter((u) =>
+    selectedCategories.includes(u.category || "UNCATEGORIZED")
+  );
+}
 
-  if (selectedStatus !== "ALL") {
-    finalUrls = finalUrls.filter((u) => u.status === selectedStatus);
-  }
-  if (selectedSslStatus !== "ALL") {
+// ✅ Status filter
+if (selectedStatus !== "ALL") {
+  finalUrls = finalUrls.filter((u) => u.status === selectedStatus);
+}
+
+// ✅ SSL filter
+if (selectedSslStatus !== "ALL") {
   finalUrls = finalUrls.filter(
     (u) => u.sslStatus === selectedSslStatus
   );
@@ -185,90 +189,105 @@ const Dashboard = ({
 />
       </section>
 
-      {/* ===============================
-         SELECT + SEARCH
-      =============================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setSelectionMode((v) => !v);
-              // clear selection when turning off
-              if (selectionMode) setSelectedIds([]);
-            }}
-            className={`px-3 py-2 rounded text-sm border
-            ${theme === "dark" ? "bg-gray-800 border-gray-700 text-gray-200" : "bg-white border-gray-300 text-gray-800"}`}
-            aria-pressed={selectionMode}
-            aria-label={selectionMode ? 'Cancel selection' : 'Select websites'}
-          >
-            {selectionMode ? "Cancel Select" : "Select"}
-          </button>
+   {/* ===============================
+   SELECT + SEARCH
+================================ */}
+<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
 
-          {selectionMode && (
-            <>
-              <button
-                onClick={() => {
-                  const allIds = finalUrls.map((u) => u._id);
-                  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
-                  if (allSelected) setSelectedIds([]);
-                  else setSelectedIds(allIds);
-                }}
-                className={`px-3 py-2 rounded text-sm border
-                  ${theme === "dark"
-                    ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700"
-                    : "bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200"
-                  }`}
-              >
-                {finalUrls.length > 0 && finalUrls.every((u) => selectedIds.includes(u._id)) ? "Deselect All" : "Select All"}
-              </button>
+  {/* 🔍 SEARCH — LEFT SIDE */}
+  <div className="flex justify-center sm:justify-start w-full max-w-sm">
+    <div
+      className={`flex items-center w-full border rounded overflow-hidden
+      ${
+        theme === "dark"
+          ? "bg-gray-700 border-gray-600"
+          : "bg-white border-gray-300"
+      }`}
+    >
+      <span className="px-2" aria-hidden>🔍</span>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search domain or URL"
+        aria-label="Search websites by domain or URL"
+        className="w-full p-1 outline-none bg-transparent text-sm"
+      />
+    </div>
+  </div>
 
-              <button
-                onClick={async () => {
-                  if (selectedIds.length === 0) return alert("No websites selected");
-                  // call provided onDelete (bulk delete handled by parent via onBulkDelete)
-                  if (typeof onBulkDelete === "function") {
-                    await onBulkDelete(selectedIds);
-                  } else if (typeof onDelete === "function") {
-                    for (const id of selectedIds) {
-                      try {
-                        await onDelete(id);
-                      } catch (err) {
-                        console.error('Failed to delete', id, err);
-                      }
-                    }
-                  }
-                  setSelectedIds([]);
-                }}
-                className="px-3 py-2 rounded bg-red-500 text-white text-sm hover:bg-red-600"
-                aria-label={`Delete selected ${selectedIds.length} websites`}
-              >
-                Delete Selected ({selectedIds.length})
-              </button>
-            </>
-          )}
-        </div>
+  {/* ✅ SELECT OPTIONS — RIGHT SIDE */}
+  <div className="flex items-center gap-2 justify-end">
 
-        <div className="flex justify-center sm:justify-end w-full max-w-sm">
-          <div
-            className={`flex items-center w-full border rounded overflow-hidden
-            ${
-              theme === "dark"
-                ? "bg-gray-700 border-gray-600"
-                : "bg-white border-gray-300"
-            }`}
-          >
-            <span className="px-2" aria-hidden>🔍</span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search domain or URL"
-              aria-label="Search websites by domain or URL"
-              className="w-full p-1 outline-none bg-transparent text-sm"
-            />
-          </div>
-        </div>
-      </div>
+    <button
+      onClick={() => {
+        setSelectionMode((v) => !v);
+        if (selectionMode) setSelectedIds([]);
+      }}
+      className={`px-3 py-2 rounded text-sm border
+      ${
+        theme === "dark"
+          ? "bg-gray-800 border-gray-700 text-gray-200"
+          : "bg-white border-gray-300 text-gray-800"
+      }`}
+      aria-pressed={selectionMode}
+      aria-label={selectionMode ? "Cancel selection" : "Select websites"}
+    >
+      {selectionMode ? "Cancel Select" : "Select"}
+    </button>
 
+    {selectionMode && (
+      <>
+        <button
+          onClick={() => {
+            const allIds = finalUrls.map((u) => u._id);
+            const allSelected =
+              allIds.length > 0 &&
+              allIds.every((id) => selectedIds.includes(id));
+
+            if (allSelected) setSelectedIds([]);
+            else setSelectedIds(allIds);
+          }}
+          className={`px-3 py-2 rounded text-sm border
+          ${
+            theme === "dark"
+              ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700"
+              : "bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200"
+          }`}
+        >
+          {finalUrls.length > 0 &&
+          finalUrls.every((u) => selectedIds.includes(u._id))
+            ? "Deselect All"
+            : "Select All"}
+        </button>
+
+        <button
+          onClick={async () => {
+            if (selectedIds.length === 0)
+              return alert("No websites selected");
+
+            if (typeof onBulkDelete === "function") {
+              await onBulkDelete(selectedIds);
+            } else if (typeof onDelete === "function") {
+              for (const id of selectedIds) {
+                try {
+                  await onDelete(id);
+                } catch (err) {
+                  console.error("Failed to delete", id, err);
+                }
+              }
+            }
+
+            setSelectedIds([]);
+          }}
+          className="px-3 py-2 rounded bg-red-500 text-white text-sm hover:bg-red-600"
+          aria-label={`Delete selected ${selectedIds.length} websites`}
+        >
+          Delete Selected ({selectedIds.length})
+        </button>
+      </>
+    )}
+  </div>
+</div>
       {/* ===============================
          URL TABLE
       =============================== */}
@@ -276,8 +295,8 @@ const Dashboard = ({
         urls={finalUrls}
         theme={theme}
         categories={categories}
-        selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
+        selectedCategories={selectedCategories}
+        setSelectedCategories={setSelectedCategories}
         selectedStatus={selectedStatus}
         setSelectedStatus={setSelectedStatus}
          selectedSslStatus={selectedSslStatus}

@@ -18,7 +18,7 @@
 
 import express from "express";
 import { protect } from "../middleware/auth.middleware.js";
-import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import { authorizePermission } from "../middleware/permission.middleware.js";
 import {
   createUser,
   getAllUsers,
@@ -29,15 +29,15 @@ import {
 const router = express.Router();
 
 // Only SUPERADMIN can manage users
-router.post("/create", protect, authorizeRoles("SUPERADMIN"), createUser);
+router.post("/create", protect, authorizePermission("canCreateUser"), createUser);
 
-router.get("/all", protect, authorizeRoles("SUPERADMIN"), getAllUsers);
+router.get("/all", protect, authorizePermission("canCreateUser"), getAllUsers);
 
-router.delete("/:id", protect, authorizeRoles("SUPERADMIN"), deleteUser);
+router.delete("/:id", protect, authorizePermission("canEditUser"), deleteUser);
 router.put(
   "/:id/password",
   protect,
-  authorizeRoles("SUPERADMIN"),
+  authorizePermission("canEditUser"),
   updateUserPassword
 );
 

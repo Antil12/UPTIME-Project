@@ -1,9 +1,11 @@
+import mongoose from "mongoose";
 import axios from "axios";
 import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import SslStatus from "../models/SslStatus.js";
 import { getStatusFromCode } from "../utils/statusHelper.js";
 import { getSlowBatch, clearSlowBatch } from "../services/slowBatchStore.js";
+import User from "../models/User.js";
 /* =====================================================
    GET ALL MONITORED SITES (NO FILTERS ❗)
 ===================================================== */
@@ -13,6 +15,21 @@ export const getMonitoredSites = async (req, res) => {
 
     const matchStage = {};
     if (category) matchStage.category = category;
+
+    // RBAC: restrict results for non-admin users to owned or assigned sites
+ const role = req.user?.role;
+const userId = req.user?._id;
+
+if (role === "USER" || role === "VIEWER") {
+  const objectUserId = new mongoose.Types.ObjectId(userId);
+
+  matchStage.$or = [
+    { owner: objectUserId },
+    { assignedUsers: objectUserId },
+  ];
+}
+
+// SUPERADMIN and ADMIN should see all sites
 
     const pipeline = [
       { $match: matchStage }, // filter by category if provided
@@ -129,6 +146,19 @@ export const getSiteById = async (req, res) => {
       });
     }
 
+    // RBAC: restrict access to owners/assigned for USER/VIEWER
+    const role = (req.user && req.user.role) || "";
+    const userId = req.user?._id?.toString();
+    if (role === "USER" || role === "VIEWER") {
+      const ownerId = site.owner ? site.owner.toString() : null;
+      const assigned = Array.isArray(site.assignedUsers)
+        ? site.assignedUsers.map((a) => a.toString())
+        : [];
+      if (ownerId !== userId && !assigned.includes(userId)) {
+        return res.status(403).json({ success: false, message: "Not authorized to view this site" });
+      }
+    }
+
     res.json({ success: true, data: site });
   } catch {
     res.status(500).json({
@@ -184,6 +214,7 @@ export const addSite = async (req, res) => {
         : [],
        phoneContact: phoneContact || null,
        priority: Number(priority ?? 0),
+      owner: req.user?._id,
 
 
     });
@@ -204,34 +235,6 @@ export const addSite = async (req, res) => {
 
 
 
-/* =====================================================
-   UPDATE SITE
-===================================================== */
-// export const updateSite = async (req, res) => {
-//   try {
-//     const { category } = req.body; // include category
-
-//     const site = await MonitoredSite.findByIdAndUpdate(
-//       req.params.id,
-//       req.body,
-//       { new: true }
-//     );
-
-//     if (!site) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Site not found",
-//       });
-//     }
-
-//     res.json({ success: true, data: site });
-//   } catch {
-//     res.status(500).json({
-//       success: false,
-//       message: "Failed to update site",
-//     });
-//   }
-// };
 
 
 export const updateSite = async (req, res) => {
@@ -263,11 +266,29 @@ export const updateSite = async (req, res) => {
           : null,
     };
 
-    const site = await MonitoredSite.findByIdAndUpdate(
-      req.params.id,
-      updatedData,
-      { new: true }
-    );
+    // Check permissions: owners or admins can update
+    const site = await MonitoredSite.findById(req.params.id);
+
+    if (!site) {
+      return res.status(404).json({ success: false, message: "Site not found" });
+    }
+
+    const role = (req.user && req.user.role) || "";
+    const userId = req.user?._id?.toString();
+
+    if (role === "USER" || role === "VIEWER") {
+      const ownerId = site.owner ? site.owner.toString() : null;
+      const assigned = Array.isArray(site.assignedUsers)
+        ? site.assignedUsers.map((a) => a.toString())
+        : [];
+
+      if (ownerId !== userId && !assigned.includes(userId)) {
+        return res.status(403).json({ success: false, message: "Not authorized to update this site" });
+      }
+    }
+
+    Object.assign(site, updatedData);
+    await site.save();
 
     if (!site) {
       return res.status(404).json({
@@ -295,14 +316,18 @@ export const updateSite = async (req, res) => {
 ===================================================== */
 export const deleteSite = async (req, res) => {
   try {
-    const site = await MonitoredSite.findByIdAndDelete(req.params.id);
+    const site = await MonitoredSite.findById(req.params.id);
 
     if (!site) {
-      return res.status(404).json({
-        success: false,
-        message: "Site not found",
-      });
+      return res.status(404).json({ success: false, message: "Site not found" });
     }
+
+    const role = (req.user && req.user.role) || "";
+    if (!(role === "ADMIN" || role === "SUPERADMIN")) {
+      return res.status(403).json({ success: false, message: "Not authorized to delete site" });
+    }
+
+    await MonitoredSite.findByIdAndDelete(req.params.id);
 
     await SiteCurrentStatus.deleteOne({ siteId: site._id });
     await SslStatus.deleteOne({ siteId: site._id });
@@ -315,6 +340,83 @@ export const deleteSite = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to delete site",
+    });
+  }
+};
+
+
+/* =====================================================
+   ASSIGN / UNASSIGN USERS TO SITE
+   Body options:
+     - { userId, action: 'assign'|'unassign' }
+     - OR { assignedUsers: [userId1, userId2] } to replace list
+===================================================== */
+export const assignUsersToSite = async (req, res) => {
+  try {
+    const { userId, action, assignedUsers } = req.body;
+
+    const site = await MonitoredSite.findById(req.params.id);
+    if (!site) {
+      return res.status(404).json({ success: false, message: "Site not found" });
+    }
+
+    // Replace entire list
+    if (Array.isArray(assignedUsers)) {
+      site.assignedUsers = assignedUsers;
+      await site.save();
+
+      // sync users collection
+      await User.updateMany(
+        { assignedSites: site._id },
+        { $pull: { assignedSites: site._id } }
+      );
+
+      await User.updateMany(
+        { _id: { $in: assignedUsers } },
+        { $addToSet: { assignedSites: site._id } }
+      );
+
+      return res.json({ success: true, data: site });
+    }
+
+    if (!userId || !action) {
+      return res.status(400).json({
+        success: false,
+        message: "userId and action required",
+      });
+    }
+
+    if (action === "assign") {
+      await MonitoredSite.findByIdAndUpdate(site._id, {
+        $addToSet: { assignedUsers: userId },
+      });
+
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: { assignedSites: site._id },
+      });
+    }
+
+    if (action === "unassign") {
+      await MonitoredSite.findByIdAndUpdate(site._id, {
+        $pull: { assignedUsers: userId },
+      });
+
+      await User.findByIdAndUpdate(userId, {
+        $pull: { assignedSites: site._id },
+      });
+    }
+
+    const updated = await MonitoredSite.findById(site._id);
+
+    res.json({
+      success: true,
+      data: updated,
+    });
+  } catch (error) {
+    console.error("❌ assignUsersToSite error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update assigned users",
     });
   }
 };

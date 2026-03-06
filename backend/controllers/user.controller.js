@@ -2,7 +2,7 @@ import User from "../models/User.js";
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, assignedSites } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -16,8 +16,11 @@ export const createUser = async (req, res) => {
     const user = await User.create({
       name,
       email,
-      password, // Will be hashed by schema pre("save")
+      password, // hashed automatically by schema
       role,
+
+      // ✅ Save assigned sites for viewer
+      assignedSites: role === "VIEWER" ? assignedSites || [] : [],
     });
 
     res.status(201).json({
@@ -26,7 +29,12 @@ export const createUser = async (req, res) => {
       user,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Create user error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
