@@ -21,7 +21,11 @@ setSelectedCategories,
   selectedStatus, 
   setSelectedStatus,
 }) => {
+  const [selectedRole, setSelectedRole] = useState("ALL");
+const [showRoleFilter, setShowRoleFilter] = useState(false);
+const roleFilterRef = useRef(null);
   const isViewer = currentUser?.role?.toUpperCase() === "VIEWER";
+  const isSuperAdmin = currentUser?.role?.toUpperCase() === "SUPERADMIN";
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showDomainFilter, setShowDomainFilter] = useState(false);
   const [sortOrder, setSortOrder] = useState("ASC"); // ASC | DESC
@@ -52,6 +56,10 @@ const statusFilterRef = useRef(null);
       }
     }
   };
+  const roleOptions = useMemo(() => {
+  const roles = urls.map((u) => u.ownerRole).filter(Boolean);
+  return ["ALL", ...Array.from(new Set(roles))];
+}, [urls]);
   const sslOptions = useMemo(() => {
   const sslStatuses = urls.map((u) => u.sslStatus).filter(Boolean);
   return ["ALL", ...Array.from(new Set(sslStatuses))];
@@ -74,7 +82,10 @@ const statusFilterRef = useRef(null);
   const sslMatch =
     selectedSslStatus === "ALL" || u.sslStatus === selectedSslStatus;
 
-  return categoryMatch && statusMatch && sslMatch;
+  const roleMatch =
+    selectedRole === "ALL" || u.ownerRole === selectedRole;
+
+  return categoryMatch && statusMatch && sslMatch && roleMatch;
 });
    useEffect(() => {
   function handleClickOutside(event) {
@@ -188,188 +199,174 @@ const sortedData = [...filteredData]
   </div>
 
   {/* ================= FILTER PANEL ================= */}
-  {showDomainFilter && (
-    <div
+{showDomainFilter && (
+  <div
     ref={domainFilterRef}
-      className={`absolute left-0 mt-3 w-80 rounded-2xl shadow-2xl z-50
-        ${
-          theme === "dark"
-            ? "bg-gray-900 border border-gray-700 text-gray-200"
-            : "bg-white border border-gray-200 text-gray-800"
-        }`}
-    >
-      {/* ===== HEADER ===== */}
-      <div className="px-5 py-4 border-b dark:border-gray-700">
-        <h3 className="font-semibold text-base">Sort & Filter</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Customize domain results
+    className={`absolute left-0 mt-2 w-72 rounded-xl shadow-xl z-50
+      ${
+        theme === "dark"
+          ? "bg-gray-900 border border-gray-700 text-gray-200"
+          : "bg-white border border-gray-200 text-gray-800"
+      }`}
+  >
+    {/* HEADER */}
+    <div className="px-4 py-3 border-b dark:border-gray-700 flex justify-between items-center">
+      <h3 className="text-sm font-semibold">Filter Domain</h3>
+    </div>
+
+    <div className="p-4 space-y-4">
+
+      {/* SORT */}
+      <div>
+        <p className="text-xs font-semibold mb-2 opacity-70">
+          Sort
         </p>
-      </div>
 
-      <div className="px-5 py-4 space-y-6">
-        {/* ===== SORT SECTION ===== */}
-        <div>
-          <h4 className="text-sm font-semibold mb-3">Sort By</h4>
-
-          <div className="space-y-2 text-sm">
-            {["ASC", "DESC"].map((order) => (
-              <label
-                key={order}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition
-                  ${
-                    theme === "dark"
-                      ? "hover:bg-gray-800"
-                      : "hover:bg-gray-50"
-                  }`}
-              >
-                <input
-                  type="radio"
-                  name="domainSort"
-                  checked={sortOrder === order}
-                  onChange={() => setSortOrder(order)}
-                  className="w-4 h-4 accent-blue-600"
-                />
-                {order === "ASC"
-                  ? "Ascending (A-Z)"
-                  : "Descending (Z-A)"}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* ===== CATEGORY DROPDOWN ===== */}
-       <div ref={categoryRef} className="relative">
-          <h4 className="text-sm font-semibold mb-2 flex justify-between items-center">
-            Categories
-            {!selectedCategories.includes("ALL") && (
-              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                {selectedCategories.length} Selected
-              </span>
-            )}
-          </h4>
-
-          {/* Dropdown Button */}
+        <div className="flex gap-2">
           <button
-            onClick={() => setCategoryOpen((v) => !v)}
-            className={`w-full rounded-xl px-4 py-2.5 flex justify-between items-center border transition-all duration-200
+            onClick={() => setSortOrder("ASC")}
+            className={`flex-1 text-xs py-2 rounded-lg border
               ${
-                theme === "dark"
-                  ? "bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
-                  : "bg-white border-gray-300 text-gray-800 hover:bg-gray-50"
-              }
-              ${
-                !selectedCategories.includes("ALL")
-                  ? "ring-2 ring-blue-400 border-blue-500"
-                  : ""
+                sortOrder === "ASC"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : theme === "dark"
+                  ? "border-gray-600 hover:bg-gray-800"
+                  : "border-gray-300 hover:bg-gray-50"
               }`}
           >
-            <span className="truncate text-sm">
-              {selectedCategories.includes("ALL")
-                ? "Select Categories"
-                : selectedCategories.join(", ")}
-            </span>
-
-            <span
-              className={`text-sm transition-transform duration-200 ${
-                categoryOpen ? "rotate-180" : ""
-              }`}
-            >
-              ▼
-            </span>
+            A → Z
           </button>
 
-          {/* Dropdown Panel */}
-          {categoryOpen && (
-            <div
-              className={`absolute z-50 mt-2 w-full rounded-xl shadow-xl border p-3 max-h-60 overflow-y-auto
-                ${
-                  theme === "dark"
-                    ? "bg-gray-800 border-gray-600"
-                    : "bg-white border-gray-200"
-                }`}
-            >
-              <div className="space-y-2">
-                {categories.map((cat) => {
-                  const isChecked = selectedCategories.includes(cat);
-
-                  return (
-                    <label
-                      key={cat}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition
-                        ${
-                          theme === "dark"
-                            ? "hover:bg-gray-700 text-gray-200"
-                            : "hover:bg-gray-50 text-gray-700"
-                        }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        className="w-4 h-4 accent-blue-600 cursor-pointer"
-                        onChange={() => {
-                          if (cat === "ALL") {
-                            setSelectedCategories(["ALL"]);
-                          } else {
-                            let updated = [...selectedCategories];
-                            updated = updated.filter((c) => c !== "ALL");
-
-                            if (updated.includes(cat)) {
-                              updated = updated.filter((c) => c !== cat);
-                            } else {
-                              updated.push(cat);
-                            }
-
-                            if (updated.length === 0) {
-                              updated = ["ALL"];
-                            }
-
-                            setSelectedCategories(updated);
-                          }
-                        }}
-                      />
-                      <span className="text-sm">{cat}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          <button
+            onClick={() => setSortOrder("DESC")}
+            className={`flex-1 text-xs py-2 rounded-lg border
+              ${
+                sortOrder === "DESC"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : theme === "dark"
+                  ? "border-gray-600 hover:bg-gray-800"
+                  : "border-gray-300 hover:bg-gray-50"
+              }`}
+          >
+            Z → A
+          </button>
         </div>
       </div>
 
-      {/* ===== FOOTER ===== */}
-      <div
-        className={`flex gap-3 px-5 py-4 border-t rounded-b-2xl
-          ${
-            theme === "dark"
-              ? "bg-gray-800 border-gray-700"
-              : "bg-gray-50 border-gray-200"
-          }`}
-      >
-        <button
-          onClick={() => {
-            setSelectedCategories(["ALL"]);
-            setSortOrder("ASC");
-          }}
-          className={`w-1/2 py-2.5 rounded-xl border font-medium transition
-            ${
-              theme === "dark"
-                ? "bg-gray-700 border-gray-600 hover:bg-gray-600"
-                : "bg-white border-gray-300 hover:bg-gray-100"
-            }`}
-        >
-          Reset
-        </button>
+      {/* CATEGORY */}
+      <div ref={categoryRef} className="relative">
+        <p className="text-xs font-semibold mb-2 opacity-70">
+          Category
+        </p>
 
         <button
-          onClick={() => setShowDomainFilter(false)}
-          className="w-1/2 py-2.5 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
+          onClick={() => setCategoryOpen((v) => !v)}
+          className={`w-full px-3 py-2 text-xs flex justify-between items-center rounded-lg border
+            ${
+              theme === "dark"
+                ? "bg-gray-800 border-gray-600 hover:bg-gray-700"
+                : "bg-white border-gray-300 hover:bg-gray-50"
+            }`}
         >
-          Apply
+          <span className="truncate">
+            {selectedCategories.includes("ALL")
+              ? "All Categories"
+              : selectedCategories.join(", ")}
+          </span>
+
+          <span className={`transition ${categoryOpen ? "rotate-180" : ""}`}>
+            ▼
+          </span>
         </button>
+
+        {categoryOpen && (
+          <div
+            className={`absolute mt-2 w-full max-h-48 overflow-y-auto rounded-lg border shadow-lg z-50
+              ${
+                theme === "dark"
+                  ? "bg-gray-800 border-gray-600"
+                  : "bg-white border-gray-200"
+              }`}
+          >
+            {categories.map((cat) => {
+              const checked = selectedCategories.includes(cat);
+
+              return (
+                <label
+                  key={cat}
+                  className={`flex items-center gap-2 px-3 py-2 text-xs cursor-pointer
+                    ${
+                      theme === "dark"
+                        ? "hover:bg-gray-700"
+                        : "hover:bg-gray-50"
+                    }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    className="accent-blue-600"
+                    onChange={() => {
+                      if (cat === "ALL") {
+                        setSelectedCategories(["ALL"]);
+                      } else {
+                        let updated = [...selectedCategories];
+                        updated = updated.filter((c) => c !== "ALL");
+
+                        if (updated.includes(cat)) {
+                          updated = updated.filter((c) => c !== cat);
+                        } else {
+                          updated.push(cat);
+                        }
+
+                        if (updated.length === 0) updated = ["ALL"];
+
+                        setSelectedCategories(updated);
+                      }
+                    }}
+                  />
+
+                  {cat}
+                </label>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
-  )}
+
+    {/* FOOTER */}
+    <div
+      className={`flex gap-2 px-4 py-3 border-t
+        ${
+          theme === "dark"
+            ? "border-gray-700 bg-gray-800"
+            : "border-gray-200 bg-gray-50"
+        }`}
+    >
+      <button
+        onClick={() => {
+          setSelectedCategories(["ALL"]);
+          setSortOrder("ASC");
+        }}
+        className={`flex-1 text-xs py-2 rounded-lg border
+          ${
+            theme === "dark"
+              ? "border-gray-600 hover:bg-gray-700"
+              : "border-gray-300 hover:bg-gray-100"
+          }`}
+      >
+        Reset
+      </button>
+
+      <button
+        onClick={() => setShowDomainFilter(false)}
+        className="flex-1 text-xs py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+      >
+        Apply
+      </button>
+    </div>
+  </div>
+)}
 </th>
               <th scope="col" className="px-2 py-2 text-left">URL</th>
               <th scope="col" className="px-2 py-2 text-center relative">
@@ -462,6 +459,52 @@ const sortedData = [...filteredData]
                   </div>
                 )}
               </th>
+              {isSuperAdmin && (
+                  <>
+              <th scope="col" className="px-2 py-2 text-left">User Email</th>
+              <th scope="col" className="px-2 py-2 text-center relative">
+  <div className="flex items-center justify-center gap-2">
+    <span>User Role</span>
+
+    <button
+      onClick={() => setShowRoleFilter((v) => !v)}
+      className={`p-1 rounded hover:bg-gray-200
+        ${selectedRole !== "ALL" ? "text-blue-600" : "text-gray-500"}
+      `}
+    >
+      <Filter size={14} />
+    </button>
+  </div>
+
+  {showRoleFilter && (
+    <div
+      ref={roleFilterRef}
+      className={`absolute right-0 mt-2 w-36 rounded shadow z-40
+        ${
+          theme === "dark"
+            ? "bg-gray-800 border border-gray-700"
+            : "bg-white border border-gray-200"
+        }`}
+    >
+      {roleOptions.map((role) => (
+        <button
+          key={role}
+          onClick={() => {
+            setSelectedRole(role);
+            setShowRoleFilter(false);
+          }}
+          className={`block w-full text-left px-3 py-2 text-sm hover:bg-slate-100
+            ${selectedRole === role ? "font-semibold text-blue-600" : ""}
+          `}
+        >
+          {role}
+        </button>
+      ))}
+    </div>
+  )}
+</th>
+              </>
+              )}
 
               <th scope="col" className="px-2 py-2 text-center">Status Code</th>
               <th scope="col" className="px-2 py-2 text-left">Last Check</th>
@@ -536,6 +579,17 @@ const sortedData = [...filteredData]
                     <td className={`px-2 py-2 text-center font-semibold ${getStatusColor(item.status)}`}>
                       {item.status || "CHECKING"}
                     </td>
+                    {isSuperAdmin && (
+  <>
+    <td className="px-2 py-2 text-sm text-gray-500">
+  {item.ownerEmail || "--"}
+</td>
+
+<td className="px-2 py-2 text-center font-medium">
+  {item.ownerRole || "--"}
+</td>
+  </>
+)}
 
                     <td className="px-2 py-2 text-center">
                       {item.statusCode || "--"}
@@ -568,7 +622,13 @@ const sortedData = [...filteredData]
 
                   {expandedSite === item._id && (
                     <tr key={`${item._id}-report`} className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
-                      <td colSpan={isViewer ? (selectionMode ? 8 : 7) : (selectionMode ? 9 : 8)} className="p-4">
+                     <td colSpan={
+  isSuperAdmin
+    ? (selectionMode ? 11 : 10)
+    : isViewer
+    ? (selectionMode ? 8 : 7)
+    : (selectionMode ? 9 : 8)
+} className="p-4">
                         <SiteReport site={item} logs={siteLogs[item._id] || []} theme={theme} />
                       </td>
                     </tr>
@@ -627,6 +687,7 @@ const sortedData = [...filteredData]
       </option>
     ))}
   </select>
+  
 
 </div>
 

@@ -36,7 +36,23 @@ if (role === "USER" || role === "VIEWER") {
 // SUPERADMIN and ADMIN should see all sites
 
     const pipeline = [
-      { $match: matchStage }, // filter by category if provided
+  { $match: matchStage },
+
+  // ✅ Join owner (User collection)
+{
+  $lookup: {
+    from: "users",
+    localField: "owner",
+    foreignField: "_id",
+    as: "ownerData"
+  }
+},
+{
+  $unwind: {
+    path: "$ownerData",
+    preserveNullAndEmptyArrays: true
+  }
+},
       {
         $lookup: {
           from: "sitecurrentstatuses",
@@ -71,6 +87,8 @@ if (role === "USER" || role === "VIEWER") {
           priority: 1,
           responseThresholdMs: 1,
           createdAt: 1,
+          ownerEmail: "$ownerData.email",
+ownerRole: "$ownerData.role",
           status: { $ifNull: ["$uptime.status", "UNKNOWN"] },
           statusCode: "$uptime.statusCode",
           responseTimeMs: "$uptime.responseTimeMs",
@@ -78,6 +96,7 @@ if (role === "USER" || role === "VIEWER") {
           sslStatus: "$ssl.sslStatus",
           sslDaysRemaining: "$ssl.daysRemaining",
           sslValidTo: "$ssl.validTo",
+          
         },
       },
     ];
@@ -327,7 +346,7 @@ export const deleteSite = async (req, res) => {
     }
 
     const role = (req.user && req.user.role) || "";
-    if (!role === "SUPERADMIN"){
+    if (role !== "SUPERADMIN"){
       return res.status(403).json({ success: false, message: "Not authorized to delete site" });
     }
 

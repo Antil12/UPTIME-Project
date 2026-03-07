@@ -218,7 +218,12 @@ if (selectedSslStatus !== "ALL") {
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search domain or URL"
         aria-label="Search websites by domain or URL"
-        className="w-full p-1 outline-none bg-transparent text-sm"
+        className={`w-full p-1 outline-none bg-transparent text-sm
+        ${
+            theme === "dark"
+              ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700"
+              : "bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200"
+          }`}
       />
     </div>
   </div>
@@ -303,7 +308,7 @@ if (selectedSslStatus !== "ALL") {
          URL TABLE
       =============================== */}
    <UrlTable
-  urls={urls}
+  urls={finalUrls}
   theme={theme}
   currentUser={currentUser}
   selectedSslStatus={selectedSslStatus}
