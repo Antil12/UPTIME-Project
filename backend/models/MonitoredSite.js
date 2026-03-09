@@ -61,8 +61,20 @@ priority: {
     type: Number,
     default: 0,
   },
+ updatedBy: { type: mongoose.Schema.Types.ObjectId,
+   ref: "User",
+   default: null 
+  },
 
+  deletedBy: { type: mongoose.Schema.Types.ObjectId,
+   ref: "User",
+   default: null },
 
+   isActive: { 
+    type: Number,
+     enum: [0, 1],
+      default: 1, 
+    },
 
 
 }, { timestamps: true });

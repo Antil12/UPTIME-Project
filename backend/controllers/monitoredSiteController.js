@@ -13,7 +13,10 @@ export const getMonitoredSites = async (req, res) => {
   try {
     const { category } = req.query; // optional query param
 
-    const matchStage = {};
+    const matchStage = {
+  isActive: 1 // only active sites
+};
+    
     if (category) matchStage.category = category;
 
     // RBAC: restrict results for non-admin users to owned or assigned sites
@@ -339,31 +342,42 @@ export const updateSite = async (req, res) => {
 ===================================================== */
 export const deleteSite = async (req, res) => {
   try {
+
     const site = await MonitoredSite.findById(req.params.id);
 
     if (!site) {
-      return res.status(404).json({ success: false, message: "Site not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Site not found",
+      });
     }
 
-    const role = (req.user && req.user.role) || "";
-    if (role !== "SUPERADMIN"){
-      return res.status(403).json({ success: false, message: "Not authorized to delete site" });
+    if (req.user.role !== "SUPERADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Only SuperAdmin can delete sites",
+      });
     }
 
-    await MonitoredSite.findByIdAndDelete(req.params.id);
+    site.isActive = 0;
+    site.deletedBy = req.user._id;
 
-    await SiteCurrentStatus.deleteOne({ siteId: site._id });
-    await SslStatus.deleteOne({ siteId: site._id });
+    await site.save();
 
     res.json({
       success: true,
-      message: "Site deleted successfully",
+      message: "Site moved to logs successfully",
     });
-  } catch {
+
+  } catch (error) {
+
+    console.error("Delete site error:", error);
+
     res.status(500).json({
       success: false,
       message: "Failed to delete site",
     });
+
   }
 };
 
@@ -451,7 +465,10 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
   const { siteId } = req.params;
 
   try {
-    const site = await MonitoredSite.findById(siteId);
+    const site = await MonitoredSite.findOne({
+  _id: siteId,
+  isActive: 1
+});
     if (!site) {
       return res.status(404).json({
         success: false,
@@ -546,7 +563,7 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
 ===================================================== */
 export const getCategories = async (req, res) => {
   try {
-    const categories = await MonitoredSite.distinct("category"); // get unique categories
+    const categories = await MonitoredSite.distinct("category", { isActive: 1 }); // get unique categories
     const allCategories = ["ALL", ...categories.map((c) => c || "UNCATEGORIZED")];
     res.json({ success: true, data: allCategories });
   } catch (error) {
@@ -571,4 +588,37 @@ export const getSlowAlertBatch = (req, res) => {
     success: true,
     data: batch,
   });
+};
+
+
+export const getDeletedLogs = async (req, res) => {
+  try {
+
+    const logs = await MonitoredSite.find({ isActive: 0 })
+      .populate("deletedBy", "email role")
+      .sort({ updatedAt: -1 });
+
+    const formattedLogs = logs.map((site) => ({
+      domain: site.domain,
+      url: site.url,
+      emailContact: site.emailContact,
+      deletedBy: site.deletedBy?.email || "Unknown",
+      deletedAt: site.updatedAt
+    }));
+
+    res.json({
+      success: true,
+      data: formattedLogs
+    });
+
+  } catch (error) {
+
+    console.error("❌ Logs API error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch logs"
+    });
+
+  }
 };

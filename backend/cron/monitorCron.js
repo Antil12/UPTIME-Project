@@ -21,7 +21,7 @@ export const startMonitoringCron = () => {
 
       let sites = [];
       try {
-        sites = await MonitoredSite.find();
+        sites = await MonitoredSite.find({ isActive: 1 });  
       } catch (err) {
         console.error("Failed to fetch sites:", err.message);
         return;

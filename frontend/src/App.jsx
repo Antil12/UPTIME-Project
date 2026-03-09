@@ -1,6 +1,6 @@
 import axios from "axios"; 
 import { useEffect, useState, useRef } from "react";
-import SettingsMenu from "./components/SettingsMenu";
+
 import EditModal from "./components/EditModal";
 import { isValidUrl } from "./utils/validators";
 import CrystalButton from "./components/CrystalButton";
@@ -14,7 +14,8 @@ import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Header from "./components/Header";
 import { startSlowAlertListener } from "./api/alertApi";
 import SuperAdmin from "./pages/SuperAdmin";
-
+import Logs from "./pages/Logs";
+// import SettingsMenu from "../components/SettingsMenu";
 
 
 
@@ -532,6 +533,14 @@ if (!isLoggedIn) {
               />
             }
           />
+          <Route
+path="/logs"
+element={
+userRole === "SUPERADMIN"
+? <Logs theme={theme}/>
+: <Navigate to="/dashboard"/>
+}
+/>
 
           <Route
             path="/reports"

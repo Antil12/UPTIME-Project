@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Settings, LogOut, Moon, Sun, User, Shield, X } from "lucide-react";
+import { Settings, LogOut, Moon, Sun, User, Shield, X ,FileText} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const isAdmin = user?.role === "ADMIN" || user?.role === "SUPERADMIN";
@@ -124,39 +126,50 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
 
         </div>
 
-        {/* SETTINGS OPTIONS */}
-        <div className="p-5 space-y-5">
+     {/* SETTINGS OPTIONS */}
+<div className="p-5 space-y-4">
 
-          {/* THEME TOGGLE */}
-          <div className="flex items-center justify-between">
+  {/* THEME TOGGLE */}
+  <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
 
-            <div className="flex items-center gap-3 text-gray-700 dark:text-gray-200">
-              {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
-              Theme
-            </div>
+    <div className="flex items-center gap-3 text-gray-700 dark:text-gray-200">
+      {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+      Theme
+    </div>
 
-            {/* TOGGLE SWITCH */}
-            <button
-              onClick={toggleTheme}
-              className={`
-                relative w-11 h-6 rounded-full transition
-                ${theme === "dark" ? "bg-blue-600" : "bg-gray-300"}
-              `}
-            >
-              <span
-                className={`
-                absolute top-0.5 left-0.5
-                w-5 h-5 bg-white rounded-full shadow
-                transform transition
-                ${theme === "dark" ? "translate-x-5" : ""}
-                `}
-              />
-            </button>
+    {/* TOGGLE SWITCH */}
+    <button
+      onClick={toggleTheme}
+      className={`
+        relative w-11 h-6 rounded-full transition
+        ${theme === "dark" ? "bg-blue-600" : "bg-gray-300"}
+      `}
+    >
+      <span
+        className={`
+          absolute top-0.5 left-0.5
+          w-5 h-5 bg-white rounded-full shadow
+          transform transition
+          ${theme === "dark" ? "translate-x-5" : ""}
+        `}
+      />
+    </button>
 
-          </div>
+  </div>
 
-        </div>
+  {/* LOGS BUTTON */}
+  <button
+    onClick={() => {
+      navigate("/logs");
+      setOpen(false);
+    }}
+    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+  >
+    <FileText size={18} />
+    Logs
+  </button>
 
+</div>
         {/* FOOTER */}
         <div className="absolute bottom-0 left-0 w-full p-5 border-t border-gray-200 dark:border-gray-700">
 
