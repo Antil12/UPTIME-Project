@@ -274,23 +274,71 @@ alert("User created successfully");
 
     const token = localStorage.getItem("loginToken");
 
+    const oldSites = editUser.assignedSites || [];
+    const newSites = editAssignedSites || [];
+
+    // find removed sites
+    const removedSites = oldSites.filter(
+      (id) => !newSites.includes(id)
+    );
+
+    // find newly added sites
+    const addedSites = newSites.filter(
+      (id) => !oldSites.includes(id)
+    );
+
+    /* ================= UPDATE USER ================= */
+
     await axios.put(
       `http://localhost:5000/api/user/${editUser._id}`,
       {
         name: editForm.name,
         email: editForm.email,
         role: editForm.role,
-        assignedSites: editForm.role === "VIEWER" ? editAssignedSites : [],
+        assignedSites: editForm.role === "VIEWER" ? newSites : [],
       },
       {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
 
+    /* ================= UNASSIGN REMOVED SITES ================= */
+
+    for (const siteId of removedSites) {
+
+      await axios.patch(
+        `http://localhost:5000/api/monitoredsite/${siteId}/assign`,
+        {
+          userId: editUser._id,
+          action: "unassign",
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+    }
+
+    /* ================= ASSIGN NEW SITES ================= */
+
+    for (const siteId of addedSites) {
+
+      await axios.patch(
+        `http://localhost:5000/api/monitoredsite/${siteId}/assign`,
+        {
+          userId: editUser._id,
+          action: "assign",
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+    }
+
     alert("User updated successfully");
 
     fetchUsers();
-
     setEditUser(null);
 
   } catch (err) {
@@ -300,7 +348,6 @@ alert("User created successfully");
 
   }
 };
-
   return (
     <main className="min-h-screen px-4 py-10 flex justify-center bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-950 dark:to-gray-900">
 

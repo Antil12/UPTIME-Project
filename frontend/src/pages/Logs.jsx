@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Globe, Trash2 } from "lucide-react";
+import { Globe } from "lucide-react";
 
 const Logs = () => {
   const [logs, setLogs] = useState([]);
@@ -34,30 +34,24 @@ const Logs = () => {
   return (
     <div className="max-w-7xl mx-auto p-6">
 
-      {/* HEADER
-      <div className="flex items-center justify-between mb-6">
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
 
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-            <Trash2 size={18} className="text-red-600 dark:text-red-400"/>
-          </div> */}
+        <div>
+          <h1 className="text-xl font-semibold text-gray-800 dark:text-white">
+            Website Logs
+          </h1>
 
-          <div>
-            <h1 className="text-xl font-semibold text-gray-800 dark:text-white">
-               Website Logs
-            </h1>
-
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Websites removed from monitoring system
-            </p>
-          </div>
-       
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Activity history of monitored websites
+          </p>
+        </div>
 
         <div className="text-sm text-gray-500 dark:text-gray-400">
           Total: {logs.length}
         </div>
 
-    
+      </div>
 
 
       {/* CARD */}
@@ -69,11 +63,8 @@ const Logs = () => {
           </div>
         ) : logs.length === 0 ? (
           <div className="p-10 flex flex-col items-center gap-3 text-gray-500">
-
             <Globe size={32} />
-
-            <p>No deleted websites found</p>
-
+            <p>No logs found</p>
           </div>
         ) : (
 
@@ -83,16 +74,15 @@ const Logs = () => {
 
               {/* TABLE HEADER */}
               <thead className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
-
                 <tr>
-                  <th className="px-5 py-3 text-left font-medium">S No.</th>
-                  <th className="px-5 py-3 text-left font-medium">Domain</th>
-                  <th className="px-5 py-3 text-left font-medium">URL</th>
-                  <th className="px-5 py-3 text-left font-medium">SSL</th>
-                  <th className="px-5 py-3 text-left font-medium">User</th>
-                  <th className="px-5 py-3 text-left font-medium">Email Contact</th>
+                  <th className="px-5 py-3 text-left">S No.</th>
+                  <th className="px-5 py-3 text-left">Domain</th>
+                  <th className="px-5 py-3 text-left">URL</th>
+                  <th className="px-5 py-3 text-left">Created By</th>
+                  <th className="px-5 py-3 text-left">Action</th>
+                  <th className="px-5 py-3 text-left">Action By</th>
+                  <th className="px-5 py-3 text-left">Timestamp</th>
                 </tr>
-
               </thead>
 
 
@@ -115,7 +105,6 @@ const Logs = () => {
                     </td>
 
                     <td className="px-5 py-4">
-
                       <a
                         href={log.url}
                         target="_blank"
@@ -124,25 +113,38 @@ const Logs = () => {
                       >
                         {log.url}
                       </a>
-
                     </td>
 
+                    <td className="px-5 py-4 text-gray-700 dark:text-gray-300">
+                      {log.createdBy || "—"}
+                    </td>
+
+                    {/* ACTION */}
                     <td className="px-5 py-4">
 
-                      <span className="px-2 py-1 text-xs rounded-md bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-
-                        {log.sslStatus || "UNKNOWN"}
-
+                      <span
+                        className={`px-2 py-1 text-xs rounded-md font-medium
+                        ${
+                          log.action === "Created"
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            : log.action === "Updated"
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        }`}
+                      >
+                        {log.action}
                       </span>
 
                     </td>
 
                     <td className="px-5 py-4 text-gray-700 dark:text-gray-300">
-                      {log.deletedBy}
+                      {log.user}
                     </td>
 
                     <td className="px-5 py-4 text-gray-500 dark:text-gray-400">
-                      {log.emailContact?.join(", ") || "—"}
+                      {log.timestamp
+                        ? new Date(log.timestamp).toLocaleString()
+                        : "—"}
                     </td>
 
                   </tr>
@@ -164,4 +166,3 @@ const Logs = () => {
 };
 
 export default Logs;
-

@@ -314,8 +314,8 @@ export const updateSite = async (req, res) => {
     }
 
     Object.assign(site, updatedData);
-    await site.save();
-
+site.updatedBy = req.user._id;
+await site.save();
     if (!site) {
       return res.status(404).json({
         success: false,
@@ -399,10 +399,25 @@ export const assignUsersToSite = async (req, res) => {
 
     // Replace entire list
     if (Array.isArray(assignedUsers)) {
-      site.assignedUsers = assignedUsers;
+
+     const users = await User.find({ _id: { $in: assignedUsers } });
+
+const viewerEmails = users.map(u => u.email);
+
+// Keep non-viewer emails (like admin manual emails)
+const manualEmails = site.emailContact.filter(
+  email => !users.some(u => u.email === email)
+);
+
+// rebuild emailContact
+site.assignedUsers = assignedUsers;
+
+site.emailContact = [...new Set([
+  ...manualEmails,
+  ...viewerEmails
+])];
       await site.save();
 
-      // sync users collection
       await User.updateMany(
         { assignedSites: site._id },
         { $pull: { assignedSites: site._id } }
@@ -423,9 +438,22 @@ export const assignUsersToSite = async (req, res) => {
       });
     }
 
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
     if (action === "assign") {
+
       await MonitoredSite.findByIdAndUpdate(site._id, {
-        $addToSet: { assignedUsers: userId },
+        $addToSet: {
+          assignedUsers: userId,
+          emailContact: user.email  // 🔥 add email automatically
+        },
       });
 
       await User.findByIdAndUpdate(userId, {
@@ -434,8 +462,12 @@ export const assignUsersToSite = async (req, res) => {
     }
 
     if (action === "unassign") {
+
       await MonitoredSite.findByIdAndUpdate(site._id, {
-        $pull: { assignedUsers: userId },
+        $pull: {
+          assignedUsers: userId,
+          emailContact: user.email // 🔥 remove email also
+        },
       });
 
       await User.findByIdAndUpdate(userId, {
@@ -449,6 +481,7 @@ export const assignUsersToSite = async (req, res) => {
       success: true,
       data: updated,
     });
+
   } catch (error) {
     console.error("❌ assignUsersToSite error:", error);
     res.status(500).json({
@@ -457,7 +490,6 @@ export const assignUsersToSite = async (req, res) => {
     });
   }
 };
-
 /* =====================================================
    CHECK & UPDATE SITE CURRENT STATUS
 ===================================================== */
@@ -594,17 +626,43 @@ export const getSlowAlertBatch = (req, res) => {
 export const getDeletedLogs = async (req, res) => {
   try {
 
-    const logs = await MonitoredSite.find({ isActive: 0 })
+    const logs = await MonitoredSite.find({
+      $or: [
+        { isActive: 0 },
+        { updatedBy: { $ne: null } }
+      ]
+    })
+      .populate("owner", "email role")
+      .populate("updatedBy", "email role")
       .populate("deletedBy", "email role")
       .sort({ updatedAt: -1 });
 
-    const formattedLogs = logs.map((site) => ({
-      domain: site.domain,
-      url: site.url,
-      emailContact: site.emailContact,
-      deletedBy: site.deletedBy?.email || "Unknown",
-      deletedAt: site.updatedAt
-    }));
+    const formattedLogs = logs.map((site) => {
+
+      let action = "Created";
+      let user = site.owner?.email || "Unknown";
+      let timestamp = site.createdAt;
+
+      if (site.deletedBy) {
+        action = "Deleted";
+        user = site.deletedBy?.email || "Unknown";
+        timestamp = site.updatedAt;
+      } 
+      else if (site.updatedBy) {
+        action = "Updated";
+        user = site.updatedBy?.email || "Unknown";
+        timestamp = site.updatedAt;
+      }
+
+      return {
+        domain: site.domain,
+        url: site.url,
+        createdBy: site.owner?.email || "Unknown",
+        action,
+        user,
+        timestamp
+      };
+    });
 
     res.json({
       success: true,
@@ -612,13 +670,11 @@ export const getDeletedLogs = async (req, res) => {
     });
 
   } catch (error) {
-
     console.error("❌ Logs API error:", error);
 
     res.status(500).json({
       success: false,
       message: "Failed to fetch logs"
     });
-
   }
 };
