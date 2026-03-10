@@ -78,7 +78,6 @@ const Logs = () => {
                   <th className="px-5 py-3 text-left">S No.</th>
                   <th className="px-5 py-3 text-left">Domain</th>
                   <th className="px-5 py-3 text-left">URL</th>
-                  <th className="px-5 py-3 text-left">Created By</th>
                   <th className="px-5 py-3 text-left">Action</th>
                   <th className="px-5 py-3 text-left">Action By</th>
                   <th className="px-5 py-3 text-left">Timestamp</th>
@@ -115,10 +114,7 @@ const Logs = () => {
                       </a>
                     </td>
 
-                    <td className="px-5 py-4 text-gray-700 dark:text-gray-300">
-                      {log.createdBy || "—"}
-                    </td>
-
+                    
                     {/* ACTION */}
                     <td className="px-5 py-4">
 

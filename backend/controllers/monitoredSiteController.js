@@ -648,7 +648,8 @@ export const getDeletedLogs = async (req, res) => {
     const logs = await MonitoredSite.find({
       $or: [
         { isActive: 0 },
-        { updatedBy: { $ne: null } }
+        { updatedBy: { $ne: null } },
+        { createdAt: { $exists: true } }
       ]
     })
       .populate("owner", "email role")
@@ -674,13 +675,12 @@ export const getDeletedLogs = async (req, res) => {
       }
 
       return {
-        domain: site.domain,
-        url: site.url,
-        createdBy: site.owner?.email || "Unknown",
-        action,
-        user,
-        timestamp
-      };
+  domain: site.domain,
+  url: site.url,
+  action,
+  user,
+  timestamp
+};
     });
 
     res.json({
