@@ -16,6 +16,7 @@ import { startSlowAlertListener } from "./api/alertApi";
 import SuperAdmin from "./pages/SuperAdmin";
 import Logs from "./pages/Logs";
 // import SettingsMenu from "../components/SettingsMenu";
+import QueueDashboard from "./pages/QueueDashboard";
 
 
 
@@ -457,6 +458,7 @@ if (!isLoggedIn) {
           />
         }
       />
+   
 
       {/* SIGNUP
       <Route
@@ -542,6 +544,7 @@ userRole === "SUPERADMIN"
 }
 />
 
+
           <Route
             path="/reports"
             element={
@@ -554,6 +557,15 @@ userRole === "SUPERADMIN"
               />
             }
           />
+          <Route
+path="/queue"
+element={
+userRole === "SUPERADMIN"
+? <QueueDashboard />
+: <Navigate to="/dashboard" replace />
+}
+/>
+
   <Route
   path="/superadmin"
   element={
@@ -565,6 +577,8 @@ userRole === "SUPERADMIN"
   }
 /><Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
+
+        
       </main>
 
       {/* EDIT MODAL */}

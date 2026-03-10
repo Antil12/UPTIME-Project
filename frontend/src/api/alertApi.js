@@ -10,7 +10,7 @@ export const startSlowAlertListener = () => {
 
       if (batch) {
         console.log("📩 Slow batch found. Sending email...");
-        await sendSlowEmail(batch);
+        
       }
     } catch (err) {
       console.error("Slow alert check failed:", err.message);

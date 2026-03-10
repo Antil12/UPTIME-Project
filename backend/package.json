@@ -11,13 +11,17 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@bull-board/api": "^6.20.3",
+    "@bull-board/express": "^6.20.3",
     "@sendgrid/mail": "^8.1.6",
     "axios": "^1.13.4",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^5.70.4",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "ioredis": "^5.10.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.5",
     "mustache": "^4.2.0",

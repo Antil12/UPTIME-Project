@@ -3,7 +3,7 @@ services:
     image: mongo:7.0
     restart: unless-stopped
     ports:
-      - "27017:27017"  
+      - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
@@ -12,7 +12,16 @@ services:
       - mongodb_data:/data/db
     networks:
       - app-network
-      
+
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
 
   backend:
     build: .
@@ -23,18 +32,20 @@ services:
       NODE_ENV: production
       PORT: 5000
       MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=admin
+      REDIS_HOST: redis
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       ACCESS_TOKEN_EXPIRES_IN: ${ACCESS_TOKEN_EXPIRES_IN}
       REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN}
-      # SendGrid and alert config - ensure these are set in your host environment or in a .env file
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
       SENDGRID_FROM: ${SENDGRID_FROM}
       ALERT_RECIPIENTS: ${ALERT_RECIPIENTS}
     depends_on:
       - mongodb
+      - redis
     networks:
       - app-network
+
 
   seeder:
     build: .
@@ -49,6 +60,7 @@ services:
     command: ["node", "seed/createSuperAdmin.js"]
     networks:
       - app-network
+
 
 networks:
   app-network:

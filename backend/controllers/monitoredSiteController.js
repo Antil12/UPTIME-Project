@@ -6,6 +6,7 @@ import SslStatus from "../models/SslStatus.js";
 import { getStatusFromCode } from "../utils/statusHelper.js";
 import { getSlowBatch, clearSlowBatch } from "../services/slowBatchStore.js";
 import User from "../models/User.js";
+import { emailQueue } from "../queue/emailQueue.js";
 /* =====================================================
    GET ALL MONITORED SITES (NO FILTERS ❗)
 ===================================================== */
@@ -606,22 +607,40 @@ export const getCategories = async (req, res) => {
 
 
 
-export const getSlowAlertBatch = (req, res) => {
+
+
+export const getSlowAlertBatch = async (req, res) => {
+
   const batch = getSlowBatch();
 
   if (!batch) {
     return res.json({ success: true, data: null });
   }
 
-  // Clear after sending once
-  clearSlowBatch();
+  try {
 
-  res.json({
-    success: true,
-    data: batch,
-  });
+    await emailQueue.add("slow-site-alert", batch);
+
+    console.log("📩 Slow alert pushed to queue");
+
+    clearSlowBatch();
+
+    res.json({
+      success: true,
+      message: "Batch pushed to email queue"
+    });
+
+  } catch (err) {
+
+    console.error("Queue push failed:", err);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to push email job"
+    });
+
+  }
 };
-
 
 export const getDeletedLogs = async (req, res) => {
   try {

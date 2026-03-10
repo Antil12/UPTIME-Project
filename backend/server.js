@@ -13,6 +13,8 @@ import uptimeLogRoutes from "./routes/uptimeLog.routes.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/user.routes.js";
 import emailRoutes from "./routes/emailRoutes.js";
+import "./workers/emailWorker.js";
+import bullDashboardRoutes from "./routes/bullDashboard.js";
 
 const app = express();
 
@@ -66,6 +68,7 @@ app.use("/api/uptime-logs", uptimeLogRoutes);
 app.use("/api", checkUrlRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/email", emailRoutes);
+app.use("/", bullDashboardRoutes);
 
 /* ======================
    START SERVER

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, LogOut, Moon, Sun, User, Shield, X ,FileText} from "lucide-react";
+import { Settings, LogOut, Moon, Sun, User, Shield, X ,FileText, Database } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
@@ -168,6 +168,16 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
     <FileText size={18} />
     Logs
   </button>
+ <button
+  onClick={() => {
+    navigate("/queue");
+    setOpen(false);
+  }}
+  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+>
+  <Database size={18} />
+  Queue Dashboard
+</button>
 
 </div>
         {/* FOOTER */}

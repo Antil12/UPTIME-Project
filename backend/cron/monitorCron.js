@@ -8,6 +8,7 @@ import { handleStatusAlert } from "../services/alertService.js";
 import sendSlowBatchEmail from "../services/sendSlowBatchEmail.js";
 //import { sendSlowAlertEmail } from "../services/emailService.js";
 import { setSlowBatch } from "../services/slowBatchStore.js";
+import { emailQueue } from "../queue/emailQueue.js";
 
 import fs from "fs";
 import path from "path";
@@ -169,19 +170,26 @@ export const startMonitoringCron = () => {
       );
 
       sslRunCounter++;
-      if (slowSitesTemp.length > 0) {
-        console.log("🚨 Slow batch created");
+    if (slowSitesTemp.length > 0) {
 
-        const alertPayload = {
-          batchId: Date.now(),
-          downCount: slowSitesTemp.length,
-          slowSites: slowSitesTemp,
-        };
+  const uniqueSlow = Array.from(
+    new Map(slowSitesTemp.map((s) => [s.domain, s])).values()
+  );
 
-        setSlowBatch(alertPayload);
+  console.log("🚨 Slow batch created", uniqueSlow.map(s => s.domain));
 
-        //await generateCSV(slowSitesTemp);
-      } else {
+  const payload = {
+    batchId: Date.now(),
+    slowCount: uniqueSlow.length,
+    slowSites: uniqueSlow,
+    checkedAt,
+    alertType: "SLOW",
+  };
+
+  await emailQueue.add("slow-site-alert", payload);
+
+  console.log("📩 Slow alert pushed to queue");
+} else {
         // clear old batch if nothing slow this time
         setSlowBatch(null);
       }
@@ -198,9 +206,9 @@ export const startMonitoringCron = () => {
           alertType: "DOWN",
         };
 
-        sendSlowBatchEmail(payload).catch((err) =>
-          console.error("❌ Failed to send down-sites batch email:", err.message || err),
-        );
+        await emailQueue.add("down-site-alert", payload);
+
+        console.log("📩 Down-site alert pushed to queue");
       }
 
       // dedupe and send combined HIGH_PRIORITY alerts
@@ -215,9 +223,9 @@ export const startMonitoringCron = () => {
           alertType: "HIGH_PRIORITY",
         };
 
-        sendSlowBatchEmail(payload).catch((err) =>
-           console.error("❌ Failed to send high-priority batch email:", err.message || err),
-        );
+        await emailQueue.add("high-priority-alert", payload);
+
+         console.log("📩 High priority alert pushed to queue");
       }
 
       console.log(`✅ Checked ${sites.length} sites`);
