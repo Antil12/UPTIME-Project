@@ -301,6 +301,22 @@ alert("User created successfully");
         headers: { Authorization: `Bearer ${token}` },
       }
     );
+     
+
+           /* ================= UPDATE PASSWORD (IF PROVIDED) ================= */
+
+    if (newPassword && newPassword.trim() !== "") {
+
+      await axios.put(
+        `http://localhost:5000/api/user/${editUser._id}/password`,
+        { password: newPassword },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+    }
+
 
     /* ================= UNASSIGN REMOVED SITES ================= */
 

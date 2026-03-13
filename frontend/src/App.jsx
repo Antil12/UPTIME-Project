@@ -16,6 +16,9 @@ import { startSlowAlertListener } from "./api/alertApi";
 import SuperAdmin from "./pages/SuperAdmin";
 import Logs from "./pages/Logs";
 // import SettingsMenu from "../components/SettingsMenu";
+import setupaxios from "./api/setupAxios";
+
+setupaxios();
 
 
 
@@ -71,7 +74,7 @@ const userRole = currentUser?.role?.toUpperCase();
   const [popupData, setPopupData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
-  
+  const logoutTimerRef = useRef(null);
 
   
 
@@ -343,60 +346,60 @@ await axios.delete(`${API_BASE}/${id}`, {
   }
 };
 
- const handleLogout = () => {
+const handleLogout = async () => {
   try {
-    axios.post("http://localhost:5000/api/auth/logout", {}, { withCredentials: true }).catch(() => {});
-  } finally {
-    if (logoutTimerRef.current) {
-      clearTimeout(logoutTimerRef.current);
-      logoutTimerRef.current = null;
-    }
-    localStorage.removeItem("loginToken");
-    localStorage.removeItem("user");
-    setIsLoggedIn(false);
-    setCurrentUser(null);
-    setUrls([]);
-    setActivePage("dashboard");
+    await axios.post("/auth/logout");
+  } catch (err) {
+    console.error("Logout error:", err);
   }
+
+  localStorage.removeItem("loginToken");
+  localStorage.removeItem("user");
+
+  setIsLoggedIn(false);
+  setCurrentUser(null);
+  setUrls([]);
+
+  navigate("/login");
 };
 
-// auto logout timer ref
-const logoutTimerRef = useRef(null);
+// // auto logout timer ref
+// const logoutTimerRef = useRef(null);
 
-// schedule auto-logout when token expires
-useEffect(() => {
-  const token = localStorage.getItem("loginToken");
-  if (!token) return;
+// // schedule auto-logout when token expires
+// useEffect(() => {
+//   const token = localStorage.getItem("loginToken");
+//   if (!token) return;
 
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return;
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-    if (!payload.exp) return;
-    const expMs = payload.exp * 1000;
-    const delay = expMs - Date.now();
-    if (delay <= 0) {
-      handleLogout();
-      return;
-    }
+//   try {
+//     const parts = token.split(".");
+//     if (parts.length !== 3) return;
+//     const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+//     if (!payload.exp) return;
+//     const expMs = payload.exp * 1000;
+//     const delay = expMs - Date.now();
+//     if (delay <= 0) {
+//       handleLogout();
+//       return;
+//     }
 
-    // clear existing timer
-    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+//     // clear existing timer
+//     if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
 
-    logoutTimerRef.current = setTimeout(() => {
-      handleLogout();
-    }, delay);
-  } catch (err) {
-    // malformed token — ignore
-  }
+//     logoutTimerRef.current = setTimeout(() => {
+//       handleLogout();
+//     }, delay);
+//   } catch (err) {
+//     // malformed token — ignore
+//   }
 
-  return () => {
-    if (logoutTimerRef.current) {
-      clearTimeout(logoutTimerRef.current);
-      logoutTimerRef.current = null;
-    }
-  };
-}, [isLoggedIn]);
+//   return () => {
+//     if (logoutTimerRef.current) {
+//       clearTimeout(logoutTimerRef.current);
+//       logoutTimerRef.current = null;
+//     }
+//   };
+// }, [isLoggedIn]);
 
 
 
