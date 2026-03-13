@@ -79,7 +79,7 @@ if (role === "USER" || role === "VIEWER") {
       {
         $unwind: { path: "$ssl", preserveNullAndEmptyArrays: true },
       },
-      { $sort: { createdAt: -1 } },
+ 
       {
         $project: {
           _id: 1,
@@ -100,9 +100,18 @@ ownerRole: "$ownerData.role",
           sslStatus: "$ssl.sslStatus",
           sslDaysRemaining: "$ssl.daysRemaining",
           sslValidTo: "$ssl.validTo",
+          statusPriority: { $ifNull: ["$uptime.statusPriority", 4] },
+sslPriority: { $ifNull: ["$ssl.sslPriority", 5] },
           
         },
       },
+      {
+  $sort: {
+    statusPriority: 1,
+    sslPriority: 1,
+    createdAt: -1
+  }
+}
     ];
 
     const data = await MonitoredSite.aggregate(pipeline);
@@ -508,11 +517,19 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
         message: "Site not found",
       });
     }
-
     let status = "UNKNOWN";
-    let statusCode = null;
-    let responseTimeMs = null;
-    let reason = null;
+let statusCode = null;
+let responseTimeMs = null;
+let reason = null;
+let statusPriority = 4;
+
+if (status === "DOWN") statusPriority = 1;
+else if (status === "SLOW") statusPriority = 2;
+else if (status === "UP") statusPriority = 3;
+else statusPriority = 4;
+
+
+    
 
     const startTime = Date.now();
 
@@ -564,17 +581,18 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
 
     // 🔹 4️⃣ Save in DB
     const currentStatus = await SiteCurrentStatus.findOneAndUpdate(
-      { siteId },
-      {
-        siteId,
-        status,
-        statusCode,
-        reason,
-        responseTimeMs,
-        lastCheckedAt: new Date(),
-      },
-      { upsert: true, new: true }
-    );
+{ siteId },
+{
+  siteId,
+  status,
+  statusPriority,
+  statusCode,
+  reason,
+  responseTimeMs,
+  lastCheckedAt: new Date()
+},
+{ upsert: true, new: true }
+);
 
     res.json({
       success: true,

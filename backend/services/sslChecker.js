@@ -21,18 +21,37 @@ export const checkSsl = async (site) => {
       let sslStatus = "VALID";
       if (daysRemaining <= 0) sslStatus = "EXPIRED";
       else if (daysRemaining <= site.sslAlertBeforeDays) sslStatus = "EXPIRING";
+      let sslPriority = 5;
+
+if (sslStatus === "ERROR") {
+  sslPriority = 1;
+}
+else if (daysRemaining >=1 && daysRemaining <=3) {
+  sslPriority = 2;
+}
+else if (daysRemaining >=4 && daysRemaining <=5) {
+  sslPriority = 3;
+}
+else if (daysRemaining >=6 && daysRemaining <=7) {
+  sslPriority = 4;
+}
+else {
+  sslPriority = 5; // valid
+}
+      
 
       await SslStatus.findOneAndUpdate(
-      { siteId: site._id },
-       {
-         siteId: site._id,
-         sslStatus,
-         validTo,
-         daysRemaining,
-         lastCheckedAt: new Date()
-       },
-         { upsert: true }
-         );
+{ siteId: site._id },
+{
+  siteId: site._id,
+  sslStatus,
+  sslPriority,
+  validTo,
+  daysRemaining,
+  lastCheckedAt: new Date()
+},
+{ upsert: true }
+);
 
 
       await handleSslAlert(site._id, sslStatus);
@@ -48,29 +67,31 @@ export const checkSsl = async (site) => {
       socket.destroy();
 
       await SslStatus.findOneAndUpdate(
-        { siteId: site._id },
-        {
-          siteId: site._id,
-          sslStatus: "ERROR",
-          lastCheckedAt: new Date()
-        },
-        { upsert: true }
-      );
+  { siteId: site._id },
+  {
+    siteId: site._id,
+    sslStatus: "ERROR",
+sslPriority: 1,
+    lastCheckedAt: new Date()
+  },
+  { upsert: true }
+);
 
       await handleSslAlert(site._id, "ERROR");
       resolve();
     });
 
     socket.on("error", async () => {
-      await SslStatus.findOneAndUpdate(
-        { siteId: site._id },
-        {
-          siteId: site._id,
-          sslStatus: "ERROR",
-          lastCheckedAt: new Date()
-        },
-        { upsert: true }
-      );
+    await SslStatus.findOneAndUpdate(
+  { siteId: site._id },
+  {
+    siteId: site._id,
+    sslStatus: "ERROR",
+sslPriority: 1,
+    lastCheckedAt: new Date()
+  },
+  { upsert: true }
+);
 
       await handleSslAlert(site._id, "ERROR");
       resolve();

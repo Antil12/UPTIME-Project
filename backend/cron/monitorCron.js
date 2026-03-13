@@ -80,17 +80,24 @@ export const startMonitoringCron = () => {
           /* =========================
        SAVE CURRENT STATUS
     ========================= */
-          await SiteCurrentStatus.findOneAndUpdate(
-            { siteId: site._id },
-            {
-              siteId: site._id,
-              status,
-              statusCode,
-              responseTimeMs,
-              lastCheckedAt: checkedAt,
-            },
-            { upsert: true },
-          );
+    let statusPriority = 4;
+
+if (status === "DOWN") statusPriority = 1;
+else if (status === "SLOW") statusPriority = 2;
+else if (status === "UP") statusPriority = 3;
+else statusPriority = 4;
+        await SiteCurrentStatus.findOneAndUpdate(
+  { siteId: site._id },
+  {
+    siteId: site._id,
+    status,
+    statusPriority,
+    statusCode,
+    responseTimeMs,
+    lastCheckedAt: checkedAt,
+  },
+  { upsert: true },
+);
 
           /* =========================
        SAVE UPTIME LOG

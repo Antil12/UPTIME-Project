@@ -5,6 +5,8 @@ import { Globe } from "lucide-react";
 const Logs = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+const [rowsPerPage, setRowsPerPage] = useState(10);
 
   useEffect(() => {
     fetchLogs();
@@ -30,6 +32,11 @@ const Logs = () => {
       setLoading(false);
     }
   };
+  const indexOfLastRow = currentPage * rowsPerPage;
+const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+const currentLogs = logs.slice(indexOfFirstRow, indexOfLastRow);
+
+const totalPages = Math.ceil(logs.length / rowsPerPage);
 
   return (
     <div className="max-w-7xl mx-auto p-6">
@@ -84,11 +91,11 @@ const Logs = () => {
                 </tr>
               </thead>
 
-
+            
               {/* TABLE BODY */}
               <tbody>
 
-                {logs.map((log, index) => (
+                {currentLogs.map((log, index) => (
 
                   <tr
                     key={index}
@@ -113,6 +120,7 @@ const Logs = () => {
                         {log.url}
                       </a>
                     </td>
+                    
 
                     
                     {/* ACTION */}
@@ -150,8 +158,55 @@ const Logs = () => {
               </tbody>
 
             </table>
+           <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
 
+  {/* PAGE SIZE */}
+  <div className="flex items-center gap-2 text-sm">
+    <span className="text-gray-500 dark:text-gray-400">Rows:</span>
+
+    <select
+      value={rowsPerPage}
+      onChange={(e) => {
+        setRowsPerPage(Number(e.target.value));
+        setCurrentPage(1);
+      }}
+      className="border rounded px-2 py-1 text-sm dark:bg-gray-800"
+    >
+      <option value={10}>10</option>
+      <option value={20}>20</option>
+      <option value={50}>50</option>
+      <option value={100}>100</option>
+    </select>
+  </div>
+
+  {/* PAGE NAVIGATION */}
+  <div className="flex items-center gap-2">
+
+    <button
+      disabled={currentPage === 1}
+      onClick={() => setCurrentPage((prev) => prev - 1)}
+      className="px-3 py-1 text-sm border rounded disabled:opacity-50"
+    >
+      Prev
+    </button>
+
+    <span className="text-sm text-gray-600 dark:text-gray-300">
+      Page {currentPage} of {totalPages}
+    </span>
+
+    <button
+      disabled={currentPage === totalPages}
+      onClick={() => setCurrentPage((prev) => prev + 1)}
+      className="px-3 py-1 text-sm border rounded disabled:opacity-50"
+    >
+      Next
+    </button>
+
+  </div>
+
+</div>
           </div>
+          
 
         )}
 

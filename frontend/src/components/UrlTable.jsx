@@ -118,15 +118,37 @@ const statusFilterRef = useRef(null);
     document.removeEventListener("mousedown", handleClickOutside);
   };
 }, []);
-const sortedData = [...filteredData]
-  .sort((a, b) => (b.pinned === true) - (a.pinned === true))
-  .sort((a, b) => {
-    if (sortOrder === "ASC") {
-      return a.domain.localeCompare(b.domain);
-    } else {
-      return b.domain.localeCompare(a.domain);
-    }
-  });
+const sortedData = [...filteredData].sort((a, b) => {
+
+  // 1️⃣ Pinned first
+  if (a.pinned !== b.pinned) {
+    return (b.pinned === true) - (a.pinned === true);
+  }
+
+  // 2️⃣ HTTP Status Priority
+  const statusA = a.statusPriority ?? 4;
+  const statusB = b.statusPriority ?? 4;
+
+  if (statusA !== statusB) {
+    return statusA - statusB;
+  }
+
+  // 3️⃣ SSL Priority
+  const sslA = a.sslPriority ?? 5;
+  const sslB = b.sslPriority ?? 5;
+
+  if (sslA !== sslB) {
+    return sslA - sslB;
+  }
+
+  // 4️⃣ Domain sorting
+  if (sortOrder === "ASC") {
+    return a.domain.localeCompare(b.domain);
+  } else {
+    return b.domain.localeCompare(a.domain);
+  }
+
+});
   const getStatusColor = (status) => {
     if (status === "UP") return "text-green-600";
     if (status === "SLOW") return "text-yellow-500";

@@ -14,6 +14,13 @@ const sslStatusSchema = new mongoose.Schema({
     required: true
   },
 
+    // 🔥 NEW
+  sslPriority: {
+    type: Number,
+    enum: [1,2,3,4,5],
+    default: 5
+  },
+
   validTo: { type: Date },
   daysRemaining: { type: Number },
   lastCheckedAt: { type: Date, default: Date.now }

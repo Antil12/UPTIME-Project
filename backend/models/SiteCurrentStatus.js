@@ -20,7 +20,12 @@ const siteCurrentStatusSchema = new mongoose.Schema(
       type: Number,
       default: null, // 0 = no response
     },
-
+  // 🔥 NEW PRIORITY FIELD
+  statusPriority: {
+    type: Number,
+    enum: [1,2,3,4],
+    default: 4
+  },
     responseTimeMs: {
       type: Number,
       default: null,

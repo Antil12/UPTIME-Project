@@ -10,7 +10,14 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-export default function SiteReport({ site, logs, range = "24h", theme }) {
+export default function SiteReport({
+  site,
+  logs,
+  range = "24h",
+  theme,
+  customFrom,
+  customTo
+}) {
   const logsWithTs = logs.map((l) => ({ ...l, ts: new Date(l.timestamp).getTime() }));
   const now = Date.now();
 
@@ -28,7 +35,23 @@ export default function SiteReport({ site, logs, range = "24h", theme }) {
 
   const rangeMs =
     range === "24h" ? 24 * 3600 * 1000 : range === "7d" ? 7 * 24 * 3600 * 1000 : 30 * 24 * 3600 * 1000;
-  const filtered = logsWithTs.filter((l) => l.ts >= now - rangeMs);
+  let filtered;
+
+if (range === "custom" && customFrom && customTo) {
+  const from = new Date(customFrom).getTime();
+  const to = new Date(customTo).getTime();
+
+  filtered = logsWithTs.filter((l) => l.ts >= from && l.ts <= to);
+} else {
+  const rangeMs =
+    range === "24h"
+      ? 24 * 3600 * 1000
+      : range === "7d"
+      ? 7 * 24 * 3600 * 1000
+      : 30 * 24 * 3600 * 1000;
+
+  filtered = logsWithTs.filter((l) => l.ts >= now - rangeMs);
+}
 
   if (!filtered.length) return <p className="text-sm text-gray-500">No data in selected range.</p>;
 

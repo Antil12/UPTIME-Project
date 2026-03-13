@@ -16,7 +16,7 @@ import { startSlowAlertListener } from "./api/alertApi";
 import SuperAdmin from "./pages/SuperAdmin";
 import Logs from "./pages/Logs";
 // import SettingsMenu from "../components/SettingsMenu";
-import QueueDashboard from "./pages/QueueDashboard";
+
 
 
 
@@ -557,14 +557,7 @@ userRole === "SUPERADMIN"
               />
             }
           />
-          <Route
-path="/queue"
-element={
-userRole === "SUPERADMIN"
-? <QueueDashboard />
-: <Navigate to="/dashboard" replace />
-}
-/>
+ 
 
   <Route
   path="/superadmin"

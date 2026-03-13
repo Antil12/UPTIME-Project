@@ -8,7 +8,16 @@ const LOG_API = "http://localhost:5000/api/uptime-logs/all";
 export default function Report({ urls, reportSearch, setReportSearch, theme }) {
   const [allLogs, setAllLogs] = useState([]);
   const [range, setRange] = useState("7d");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [tempFrom, setTempFrom] = useState("");
+  const [tempTo, setTempTo] = useState("");
+  const applyCustomRange = () => {
+  if (!tempFrom || !tempTo) return;
 
+  setCustomFrom(tempFrom);
+  setCustomTo(tempTo);
+};
   // ================= Fetch Logs =================
   useEffect(() => {
     const fetchAllLogs = async () => {
@@ -31,18 +40,29 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
 
   // ================= Filter Logs By Date Range =================
   const filteredLogsByRange = useMemo(() => {
-    const now = Date.now();
-    const rangeMs =
-      range === "24h"
-        ? 24 * 60 * 60 * 1000
-        : range === "7d"
-        ? 7 * 24 * 60 * 60 * 1000
-        : 30 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
 
-    return allLogs.filter(
-      (log) => now - new Date(log.timestamp).getTime() <= rangeMs
-    );
-  }, [allLogs, range]);
+  if (range === "custom" && customFrom && customTo) {
+    const from = new Date(customFrom).getTime();
+    const to = new Date(customTo).getTime();
+
+    return allLogs.filter((log) => {
+      const ts = new Date(log.timestamp).getTime();
+      return ts >= from && ts <= to;
+    });
+  }
+
+  const rangeMs =
+    range === "24h"
+      ? 24 * 60 * 60 * 1000
+      : range === "7d"
+      ? 7 * 24 * 60 * 60 * 1000
+      : 30 * 24 * 60 * 60 * 1000;
+
+  return allLogs.filter(
+    (log) => now - new Date(log.timestamp).getTime() <= rangeMs
+  );
+}, [allLogs, range, customFrom, customTo]);
 
   // ================= Group Logs By Site =================
   const logsBySite = useMemo(() => {
@@ -124,8 +144,57 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
             <option value="24h">Last 24 Hours</option>
             <option value="7d">Last 7 Days</option>
             <option value="30d">Last 30 Days</option>
+            <option value="custom">Custom Range</option>
           </select>
         </div>
+      {range === "custom" && (
+  <div
+    className={`mt-3 p-3 rounded-lg flex flex-col items-center gap-3
+    ${theme === "dark" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-800"}`}
+  >
+    <div className="flex items-end gap-3">
+      
+      {/* FROM */}
+      <div className="flex flex-col text-sm">
+        <label className="text-xs">From</label>
+        <input
+          type="date"
+          value={tempFrom}
+          onChange={(e) => setTempFrom(e.target.value)}
+          className={`p-1.5 rounded border text-sm ${
+            theme === "dark"
+              ? "bg-gray-800 border-gray-600"
+              : "bg-white border-gray-300"
+          }`}
+        />
+      </div>
+
+      {/* TO */}
+      <div className="flex flex-col text-sm">
+        <label className="text-xs">To</label>
+        <input
+          type="date"
+          value={tempTo}
+          onChange={(e) => setTempTo(e.target.value)}
+          className={`p-1.5 rounded border text-sm ${
+            theme === "dark"
+              ? "bg-gray-800 border-gray-600"
+              : "bg-white border-gray-300"
+          }`}
+        />
+      </div>
+
+      {/* APPLY */}
+      <button
+        onClick={applyCustomRange}
+        className="px-4 py-1.5 rounded text-sm text-white bg-blue-600 hover:bg-blue-700"
+      >
+        Apply
+      </button>
+
+    </div>
+  </div>
+)}
 
         <div className="flex items-center justify-end">
           <ExportButtons urls={filteredSites} logsBySite={logsBySite} theme={theme} />
@@ -208,6 +277,8 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
               logs={logs}
               theme={theme}
               range={range}
+              customFrom={customFrom}
+              customTo={customTo}
             />
           </div>
         );
