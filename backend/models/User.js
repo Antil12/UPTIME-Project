@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema(
       ref: "MonitoredSite",
     }
   ],
+  hiddenColumns: {
+  type: [String],
+  default: [],
+},
 },
 { timestamps: true }
 );

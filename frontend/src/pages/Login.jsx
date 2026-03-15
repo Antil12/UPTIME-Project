@@ -33,8 +33,7 @@ onLogin(res.data.user);   // ✅ PASS USER DIRECTLY
 
  return (
   <div
-    className="relative min-h-screen flex items-center justify-center overflow-hidden"
-    style={{ background: "hsl(var(--background))" }}
+    className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black"
   >
     {/* 🌌 Galaxy Background */}
     <Galaxy
@@ -75,22 +74,21 @@ onLogin(res.data.user);   // ✅ PASS USER DIRECTLY
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email */}
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full px-4 py-3 rounded-xl transition duration-300"
-          style={{
-            background: "hsl(var(--card) / 0.06)",
-            color: "hsl(var(--card-foreground))",
-            outline: "none",
-            border: "1px solid hsl(var(--border) / 0.6)",
-          }}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-
-   {/* Password Field */}
+<input
+  type="email"
+  placeholder="Email"
+  className="w-full px-4 py-3 rounded-xl transition duration-300 text-white placeholder-gray-400"
+  style={{
+    background: "hsl(var(--card) / 0.06)",
+    color: "#ffffff",   // 🔴 force white text
+    outline: "none",
+    border: "1px solid hsl(var(--border) / 0.6)",
+  }}
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  required
+/>
+{/* Password Field */}
 <div className="relative group">
   <input
     type={showPassword ? "text" : "password"}
@@ -101,15 +99,15 @@ onLogin(res.data.user);   // ✅ PASS USER DIRECTLY
     className="
       w-full px-4 py-3 pr-12 rounded-xl
       bg-[hsl(var(--card)/0.08)]
-      text-[hsl(var(--card-foreground))]
+      text-white placeholder-gray-400
       border border-[hsl(var(--border)/0.6)]
       backdrop-blur-xl
       shadow-inner
       transition-all duration-300
       focus:outline-none
-      focus:border-[hsl(var(--chart-4))]
-      focus:ring-2 focus:ring-[hsl(var(--chart-4)/0.4)]
-      group-hover:border-[hsl(var(--chart-4)/0.4)]
+      focus:border-indigo-400
+      focus:ring-2 focus:ring-indigo-400/40
+      group-hover:border-indigo-400/40
     "
   />
 
@@ -122,7 +120,7 @@ onLogin(res.data.user);   // ✅ PASS USER DIRECTLY
       p-2 rounded-lg
       text-gray-400
       hover:text-white
-      hover:bg-[hsl(var(--chart-4)/0.15)]
+      hover:bg-indigo-500/20
       active:scale-95
       transition-all duration-200
     "

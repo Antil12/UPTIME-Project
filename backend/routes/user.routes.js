@@ -7,11 +7,16 @@ import {
   deleteUser,
   updateUserPassword,
   updateUser,  
+  getHiddenColumns,
+  updateHiddenColumns
 } from "../controllers/user.controller.js";
 
 const router = express.Router();
 
 // Only SUPERADMIN can manage users
+router.get("/hidden-columns", protect, getHiddenColumns);
+
+router.put("/hidden-columns", protect, updateHiddenColumns);
 router.post("/create", protect, authorizePermission("canCreateUser"), createUser);
 
 router.get("/all", protect, authorizePermission("canCreateUser"), getAllUsers);

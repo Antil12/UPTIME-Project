@@ -311,6 +311,9 @@ if (selectedSslStatus !== "ALL") {
   urls={finalUrls}
   theme={theme}
   currentUser={currentUser}
+  selectionMode={selectionMode}
+  selectedIds={selectedIds}
+  setSelectedIds={setSelectedIds}
   selectedSslStatus={selectedSslStatus}
   setSelectedSslStatus={setSelectedSslStatus}
   onPin={onPin}

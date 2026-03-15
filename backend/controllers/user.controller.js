@@ -149,3 +149,88 @@ export const updateUser = async (req, res) => {
 
   }
 };
+
+// ================= GET HIDDEN COLUMNS =================
+export const getHiddenColumns = async (req, res) => {
+  try {
+
+    const userId = req.user.id || req.user._id;
+
+    const user = await User.findById(userId).select("hiddenColumns");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      hiddenColumns: user.hiddenColumns || []
+    });
+
+  } catch (error) {
+
+    console.error("Get hidden columns error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch hidden columns"
+    });
+
+  }
+};
+
+
+// ================= UPDATE HIDDEN COLUMNS =================
+export const updateHiddenColumns = async (req, res) => {
+  try {
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated"
+      });
+    }
+
+    const { hiddenColumns } = req.body;
+
+    if (!Array.isArray(hiddenColumns)) {
+      return res.status(400).json({
+        success: false,
+        message: "hiddenColumns must be an array"
+      });
+    }
+
+    const userId = req.user._id;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { hiddenColumns },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      hiddenColumns: user.hiddenColumns
+    });
+
+  } catch (error) {
+
+    console.error("Update hidden columns error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
+  }
+};
