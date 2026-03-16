@@ -5,6 +5,7 @@
 
   const UrlTable = ({
     urls,
+    allUrls,
     theme,
     currentUser,
     selectedSslStatus,
@@ -77,20 +78,19 @@ const filteredColumns = DEFAULT_COLUMNS.filter((col) =>
       }
     };
     const roleOptions = useMemo(() => {
-    const roles = urls.map((u) => u.ownerRole).filter(Boolean);
-    return ["ALL", ...Array.from(new Set(roles))];
-  }, [urls]);
-    const sslOptions = useMemo(() => {
-    const sslStatuses = urls.map((u) => u.sslStatus).filter(Boolean);
-    return ["ALL", ...Array.from(new Set(sslStatuses))];
-  }, [urls]);
+  const roles = allUrls.map((u) => u.ownerRole).filter(Boolean);
+  return ["ALL", ...Array.from(new Set(roles))];
+}, [allUrls]);
 
-    /* ✅ Dynamic Status Options */
-    const statusOptions = useMemo(() => {
-      const statuses = urls.map((u) => u.status).filter(Boolean);
-      return ["ALL", ...Array.from(new Set(statuses))];
-    }, [urls]);
+const sslOptions = useMemo(() => {
+  const sslStatuses = allUrls.map((u) => u.sslStatus).filter(Boolean);
+  return ["ALL", ...Array.from(new Set(sslStatuses))];
+}, [allUrls]);
 
+const statusOptions = useMemo(() => {
+  const statuses = allUrls.map((u) => u.status).filter(Boolean);
+  return ["ALL", ...Array.from(new Set(statuses))];
+}, [allUrls]);
   const filteredData = urls.filter((u) => {
     const categoryMatch =
       selectedCategories.includes("ALL") ||
@@ -251,7 +251,7 @@ const filteredColumns = DEFAULT_COLUMNS.filter((col) =>
     return (
       <div className="w-full">
       
-<div className="flex justify-end mb-3 relative">
+<div className="hidden lg:flex justify-end mb-3 relative">
 
   {/* Button */}
   <button
@@ -550,16 +550,21 @@ const filteredColumns = DEFAULT_COLUMNS.filter((col) =>
               {!hiddenColumns.includes("url") && (
                 <th scope="col" className="px-2 py-2 text-left">URL</th>)}
                 {!hiddenColumns.includes("ssl") && (
-                <th scope="col" className="px-2 py-2 text-center relative">
+  <th scope="col" className="px-2 py-2 text-center relative">
     <div className="flex items-center justify-center gap-2">
       <span>SSL Status</span>
+
       <button
-        onClick={() => setShowSslFilter((v) => !v)}
-        className={`p-1 rounded hover:bg-gray-200
-          ${selectedSslStatus !== "ALL"
-            ? "text-blue-600"
-            : "text-gray-500"
-          }`}
+        onClick={() => {
+          setShowSslFilter((v) => !v);
+          setShowStatusFilter(false);
+        }}
+        className={`p-1 rounded transition
+        ${
+          selectedSslStatus !== "ALL"
+            ? "text-blue-600 bg-blue-50"
+            : "text-gray-500 hover:bg-gray-200"
+        }`}
       >
         <Filter size={14} />
       </button>
@@ -567,11 +572,13 @@ const filteredColumns = DEFAULT_COLUMNS.filter((col) =>
 
     {showSslFilter && (
       <div
-        className={`absolute right-0 mt-2 w-36 rounded shadow z-40
-          ${theme === "dark"
+        ref={sslFilterRef}
+        className={`absolute right-0 mt-2 w-40 rounded-lg shadow-lg z-40 overflow-hidden
+        ${
+          theme === "dark"
             ? "bg-gray-800 border border-gray-700"
             : "bg-white border border-gray-200"
-          }`}
+        }`}
       >
         {sslOptions.map((ssl) => (
           <button
@@ -580,83 +587,126 @@ const filteredColumns = DEFAULT_COLUMNS.filter((col) =>
               setSelectedSslStatus(ssl);
               setShowSslFilter(false);
             }}
-            className={`block w-full text-left px-3 py-2 text-sm hover:bg-slate-100
-              ${selectedSslStatus === ssl
-                ? "font-semibold text-blue-600"
-                : ""
-              }`}
+            className={`flex justify-between items-center w-full px-3 py-2 text-sm transition
+            ${
+              selectedSslStatus === ssl
+  ? "bg-blue-100 text-blue-700 font-semibold dark:bg-blue-900/40 dark:text-blue-300"
+  : theme === "dark"
+  ? "hover:bg-gray-700"
+  : "hover:bg-gray-100"
+            }`}
           >
-            {ssl}
+            <span>{ssl}</span>
+
+            {selectedSslStatus === ssl && (
+              <span className="text-xs">✓</span>
+            )}
           </button>
         ))}
+
+        <div className="border-t border-gray-200 dark:border-gray-700" />
+
+        <button
+          onClick={() => setSelectedSslStatus("ALL")}
+          className="block w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-gray-100"
+        >
+          Clear Filter
+        </button>
       </div>
     )}
-  </th>)}
-
+  </th>
+)}
 
                 {/* STATUS FILTER */}
-              {!hiddenColumns.includes("status") && (
-                <th scope="col" className="px-2 py-2 text-left relative">
-                  <div className="flex items-center gap-2">
-                    <span>Status</span>
-                    <button
-                      onClick={() => {
-                        setShowStatusFilter((v) => !v);
-                        setShowFilter(false);
-                      }}
-                      aria-label="Filter by status"
-                      className={`p-1 rounded hover:bg-gray-200
-                      ${selectedStatus !== "ALL"
-                          ? "text-blue-600"
-                          : "text-gray-500"
-                        }`}
-                    >
-                      <Filter size={14} />
-                    </button>
-                  </div>
+            {!hiddenColumns.includes("status") && (
+  <th scope="col" className="px-2 py-2 text-left relative">
+    <div className="flex items-center gap-2">
+      <span>Status</span>
 
-                  {showStatusFilter && (
-                    <div
-                      className={`absolute left-0 mt-2 w-36 rounded shadow z-40
-                      ${theme === "dark"
-                          ? "bg-gray-800 border border-gray-700"
-                          : "bg-white border border-gray-200"
-                        }`}
-                    >
-                      {statusOptions.map((status) => (
-                        <button
-                          key={status}
-                          onClick={() => {
-                            setSelectedStatus(status);
-                            setShowStatusFilter(false);
-                          }}
-                          className={`block w-full text-left px-3 py-2 text-sm hover:bg-slate-100
-                          ${selectedStatus === status
-                              ? "font-semibold text-blue-600"
-                              : ""
-                            }`}
-                        >
-                          {status}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </th>)}
+      <button
+        onClick={() => {
+          setShowStatusFilter((v) => !v);
+          setShowSslFilter(false);
+        }}
+        className={`p-1 rounded transition
+        ${
+          selectedStatus !== "ALL"
+            ? "text-blue-600 bg-blue-50"
+            : "text-gray-500 hover:bg-gray-200"
+        }`}
+      >
+        <Filter size={14} />
+      </button>
+    </div>
+
+    {showStatusFilter && (
+      <div
+        ref={statusFilterRef}
+        className={`absolute left-0 mt-2 w-40 rounded-lg shadow-lg z-40 overflow-hidden
+        ${
+          theme === "dark"
+            ? "bg-gray-800 border border-gray-700"
+            : "bg-white border border-gray-200"
+        }`}
+      >
+        {statusOptions.map((status) => (
+          <button
+            key={status}
+            onClick={() => {
+              setSelectedStatus(status);
+              setShowStatusFilter(false);
+            }}
+            className={`flex justify-between items-center w-full px-3 py-2 text-sm transition
+            ${
+             selectedStatus === status
+  ? "bg-blue-100 text-blue-700 font-semibold dark:bg-blue-900/40 dark:text-blue-300"
+  : theme === "dark"
+  ? "hover:bg-gray-700"
+  : "hover:bg-gray-100"
+            }`}
+          >
+            <span>{status}</span>
+
+            {selectedStatus === status && (
+              <span className="text-xs">✓</span>
+            )}
+          </button>
+        ))}
+
+        <div className="border-t border-gray-200 dark:border-gray-700" />
+
+        <button
+          onClick={() => {
+  setSelectedStatus("ALL");
+  setShowStatusFilter(false);
+}}
+          className="block w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-gray-100"
+        >
+          Clear Filter
+        </button>
+      </div>
+    )}
+  </th>
+)}
                 
                 {isSuperAdmin && (
                     <>
                 {isSuperAdmin && !hiddenColumns.includes("userEmail") && (   
                 <th scope="col" className="px-2 py-2 text-left">User Email</th>)}
-                  {isSuperAdmin && !hiddenColumns.includes("userRole") && (
-                <th scope="col" className="px-2 py-2 text-center relative">
+                 {isSuperAdmin && !hiddenColumns.includes("userRole") && (
+  <th scope="col" className="px-2 py-2 text-center relative">
     <div className="flex items-center justify-center gap-2">
-      <span>User Role</span>    
+      <span>User Role</span>
 
       <button
         onClick={() => setShowRoleFilter((v) => !v)}
-        className={`p-1 rounded hover:bg-gray-200
-          ${selectedRole !== "ALL" ? "text-blue-600" : "text-gray-500"}
-        `}
+        
+        className={`p-1 rounded transition
+        ${
+          selectedRole !== "ALL"
+            ? "text-blue-600 bg-blue-50"
+            : "text-gray-500 hover:bg-gray-200"
+        }`}
       >
         <Filter size={14} />
       </button>
@@ -665,12 +715,12 @@ const filteredColumns = DEFAULT_COLUMNS.filter((col) =>
     {showRoleFilter && (
       <div
         ref={roleFilterRef}
-        className={`absolute right-0 mt-2 w-36 rounded shadow z-40
-          ${
-            theme === "dark"
-              ? "bg-gray-800 border border-gray-700"
-              : "bg-white border border-gray-200"
-          }`}
+        className={`absolute right-0 mt-2 w-40 rounded-lg shadow-lg z-40 overflow-hidden
+        ${
+          theme === "dark"
+            ? "bg-gray-800 border border-gray-700"
+            : "bg-white border border-gray-200"
+        }`}
       >
         {roleOptions.map((role) => (
           <button
@@ -678,17 +728,40 @@ const filteredColumns = DEFAULT_COLUMNS.filter((col) =>
             onClick={() => {
               setSelectedRole(role);
               setShowRoleFilter(false);
+              
             }}
-            className={`block w-full text-left px-3 py-2 text-sm hover:bg-slate-100
-              ${selectedRole === role ? "font-semibold text-blue-600" : ""}
-            `}
+            className={`flex justify-between items-center w-full px-3 py-2 text-sm transition
+            ${
+              selectedRole === role
+  ? "bg-blue-100 text-blue-700 font-semibold dark:bg-blue-900/40 dark:text-blue-300"
+  : theme === "dark"
+  ? "hover:bg-gray-700"
+  : "hover:bg-gray-100"
+            }`}
           >
-            {role}
+            <span>{role}</span>
+
+            {selectedRole === role && (
+              <span className="text-xs">✓</span>
+            )}
           </button>
         ))}
+
+        <div className="border-t border-gray-200 dark:border-gray-700" />
+
+        <button
+          onClick={() => {
+  setSelectedRole("ALL");
+  setShowRoleFilter(false);
+}}
+          className="block w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-gray-100"
+        >
+          Clear Filter
+        </button>
       </div>
     )}
-  </th>)}
+  </th>
+)}
                 </>
                 )}
                 {!hiddenColumns.includes("statusCode") && (

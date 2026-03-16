@@ -302,17 +302,20 @@ alert("User created successfully");
 
         {/* HEADER */}
 
-        <div className="flex justify-between mb-10">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-3">
 
           <div>
-            <h1 className="text-3xl font-bold">Super Admin Dashboard</h1>
-            <p className="text-sm opacity-60">Manage system users</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">
+  Super Admin Dashboard
+</h1>
+<p className="text-xs sm:text-sm opacity-60">
+  Manage system users
+</p>
           </div>
 
-          <div className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs">
-            Access: SUPERADMIN
-          </div>
-
+          <div className="self-start sm:self-auto px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-[10px] sm:text-xs font-medium">
+  Access: SUPERADMIN
+</div>
         </div>
 
         {/* CREATE USER */}
@@ -467,13 +470,104 @@ alert("User created successfully");
 
         </div>
 
+
+{/* MOBILE / TABLET USER CARDS */}
+
+<div className="grid gap-4 lg:hidden">
+
+  {users.length === 0 ? (
+
+    <div className="text-center p-6 border rounded-xl">
+      No users found
+    </div>
+
+  ) : (
+
+    users.map((user) => (
+
+      <div
+        key={user._id}
+        className={`p-4 rounded-2xl border shadow-sm
+        ${isDark
+          ? "bg-gray-900 border-gray-700"
+          : "bg-white border-gray-200"
+        }`}
+      >
+
+        {/* USER INFO */}
+
+        <div className="space-y-1 mb-3">
+
+          <p className="font-semibold text-base">
+            {user.name}
+          </p>
+
+          <p className="text-sm opacity-70 break-all">
+            {user.email}
+          </p>
+
+          <span
+            className={`inline-block text-xs px-2 py-1 rounded-full
+            ${
+              user.role === "SUPERADMIN"
+                ? "bg-purple-100 text-purple-700"
+                : user.role === "VIEWER"
+                ? "bg-blue-100 text-blue-700"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            {user.role}
+          </span>
+
+        </div>
+
+        {/* ACTIONS */}
+
+        <div className="flex gap-2">
+
+          <button
+            onClick={() => {
+              setEditUser(user);
+              setNewPassword("");
+
+              setEditForm({
+                name: user.name,
+                email: user.email,
+                role: user.role,
+              });
+
+              setEditAssignedSites(user.assignedSites || []);
+            }}
+            className="flex-1 py-2 text-xs rounded-lg bg-blue-500 text-white"
+          >
+            Edit
+          </button>
+
+          <button
+            onClick={() => handleDelete(user._id)}
+            className="flex-1 py-2 text-xs rounded-lg bg-red-500 text-white"
+          >
+            Delete
+          </button>
+
+        </div>
+
+      </div>
+
+    ))
+
+  )}
+
+</div>
+
+
         {/* USERS TABLE */}
 
         <div>
 
           <h2 className="text-xl font-semibold mb-6">Manage Users</h2>
 
-          <div className="overflow-x-auto border rounded-2xl">
+          <div className="hidden lg:block overflow-x-auto border rounded-2xl">
 
             <table className="w-full text-sm">
 

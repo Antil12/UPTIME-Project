@@ -304,8 +304,30 @@ if (selectedSslStatus !== "ALL") {
       {/* ===============================
          URL TABLE
       =============================== */}
+  
+  {finalUrls.length === 0 ? (
+
+  <div
+    className={`text-center py-12 rounded-xl border
+    ${
+      theme === "dark"
+        ? "border-gray-700 text-gray-400"
+        : "border-gray-300 text-gray-500"
+    }`}
+  >
+    <p className="text-lg font-semibold">
+      No domain or URL found
+    </p>
+    <p className="text-sm mt-1 opacity-70">
+      Try searching with a different keyword
+    </p>
+  </div>
+
+) : (
+  
    <UrlTable
   urls={finalUrls}
+  allUrls={urls}
   theme={theme}
   currentUser={currentUser}
   selectionMode={selectionMode}
@@ -322,6 +344,7 @@ if (selectedSslStatus !== "ALL") {
   selectedStatus={selectedStatus}
   setSelectedStatus={setSelectedStatus}
 />
+)}
 
       {/* ===============================
          EXISTING POPUP
