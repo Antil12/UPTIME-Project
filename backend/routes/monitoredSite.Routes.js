@@ -12,9 +12,9 @@ import {
   getCategories,
   getSlowAlertBatch,
   getDeletedLogs
-} from "../controllers/monitoredSiteController.js";
+} from "../controllers/monitoredSite.Controller.js";
 
-import { assignUsersToSite } from "../controllers/monitoredSiteController.js";
+import { assignUsersToSite } from "../controllers/monitoredSite.Controller.js";
 
 const router = express.Router();
 

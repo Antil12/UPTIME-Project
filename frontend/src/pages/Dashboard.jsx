@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../api/setupAxios";
 import UrlTable from "../components/UrlTable";
 import StatCard from "../components/StatCard";
 import CrystalPopup from "../components/CrystalPopup";
@@ -54,10 +54,7 @@ const Dashboard = ({
 
   const fetchUptimeAnalytics = async () => {
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/uptime-logs/analytics?range=${filter}`
-      );
-
+      const res = await axios.get(`/uptime-logs/analytics?range=${filter}`);
       console.log("Analytics Response:", res.data);
 
       if (res.data.success) {

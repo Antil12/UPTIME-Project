@@ -1,69 +1,44 @@
 import axios from "axios"; 
 import { useEffect, useState, useRef } from "react";
-
 import EditModal from "./components/EditModal";
 import { isValidUrl } from "./utils/validators";
-import CrystalButton from "./components/CrystalButton";
 import PreLoginSplash from "./components/PreLoginSplash";
 import Dashboard from "./pages/Dashboard";
 import AddUrl from "./pages/AddUrl";
 import Report from "./pages/Report";
 import Login from "./pages/Login";
-// import Signup from "./pages/Signup";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Header from "./components/Header";
 import { startSlowAlertListener } from "./api/alertApi";
 import SuperAdmin from "./pages/SuperAdmin";
 import Logs from "./pages/Logs";
-// import SettingsMenu from "../components/SettingsMenu";
 import setupaxios from "./api/setupAxios";
 
 setupaxios();
-
-
-
-
-
-
-const API_BASE = "http://localhost:5000/api/monitoredsite";
+const API_BASE = "/monitoredsite";
 
 function App() {
   
-  /* ================= STATE ================= */
-//   const currentUser = JSON.parse(localStorage.getItem("user"));
-// const userRole = currentUser?.role;
-
-
 const [currentUser, setCurrentUser] = useState(() => {
   const stored = localStorage.getItem("user");
   return stored ? JSON.parse(stored) : null;
 });
-
 const userRole = currentUser?.role?.toUpperCase();
-
-
   const [isLoggedIn, setIsLoggedIn] = useState(
   !!localStorage.getItem("loginToken")
 );
- const navigate = useNavigate();
-
+  const navigate = useNavigate();
   const [authPage, setAuthPage] = useState("login"); 
-
   const [activePage, setActivePage] = useState("dashboard");
   const [message, setMessage] = useState("");
   const [urls, setUrls] = useState([]);
-  const [tableUrls, setTableUrls] = useState([]); // FILTERED DATA
-  
-
+  const [tableUrls, setTableUrls] = useState([]); 
   const [domain, setDomain] = useState("");
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState("");
-
   const [search, setSearch] = useState("");
   const [reportSearch, setReportSearch] = useState("");
-
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
-
   const [editItem, setEditItem] = useState(null);
   const [editDomain, setEditDomain] = useState("");
   const [editUrl, setEditUrl] = useState("");
@@ -76,11 +51,7 @@ const userRole = currentUser?.role?.toUpperCase();
   const [selectedStatus, setSelectedStatus] = useState("ALL");
   const logoutTimerRef = useRef(null);
 
-  
-
   /* ================= EFFECTS ================= */
-   
-  
 useEffect(() => {
   let interval;
 
@@ -93,23 +64,10 @@ useEffect(() => {
   };
 }, [isLoggedIn]);
 
-
   useEffect(() => {
   document.documentElement.classList.toggle("dark", theme === "dark");
   localStorage.setItem("theme", theme);
 }, [theme]);
-
-
-  // Backend health check
-//   useEffect(() => {
-//   if (!isLoggedIn) return;
-
-//   axios
-//     .get("http://localhost:5000/api/test")
-//     .then((res) => setMessage(res.data.message))
-//     .catch(() => setMessage("Backend not connected"));
-// }, [isLoggedIn]);
-
 
   // Fetch sites
 const fetchSites = async (status = "ALL") => {
@@ -117,17 +75,10 @@ const fetchSites = async (status = "ALL") => {
     const token = localStorage.getItem("loginToken");
     if (!token) return;
 
-    const res = await axios.get(`${API_BASE}?status=${status}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
+    const res = await axios.get(`${API_BASE}?status=${status}`);
     const data = res.data?.data || [];
 
-    setTableUrls(data); // always update table
-
-    // 🔥 Only update global data if loading ALL
+    setTableUrls(data); 
     if (status === "ALL") {
       setUrls(data);
     }
@@ -138,15 +89,12 @@ const fetchSites = async (status = "ALL") => {
   }
 };
 
-
  useEffect(() => {
   if (!isLoggedIn) return;
   fetchSites(selectedStatus);
 }, [selectedStatus, isLoggedIn]);
 
-
   /* ================= HANDLERS ================= */
-
   // ADD SITE
 const handleAddUrl = async (data) => {
   const {
@@ -175,26 +123,18 @@ const handleAddUrl = async (data) => {
   try {
     const token = localStorage.getItem("loginToken");
 
-    await axios.post(
-      API_BASE,
-      {
-        domain,
-        url,
-        category,
-        responseThresholdMs,
-        alertChannels,
-        regions,
-        alertIfAllRegionsDown,
-        emailContact,
-        phoneContact,
-        priority,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+ await axios.post(API_BASE, {
+  domain,
+  url,
+  category,
+  responseThresholdMs,
+  alertChannels,
+  regions,
+  alertIfAllRegionsDown,
+  emailContact,
+  phoneContact,
+  priority,
+});
 
     setDomain("");
     setUrl("");
@@ -215,11 +155,7 @@ const handleAddUrl = async (data) => {
     
       const token = localStorage.getItem("loginToken");
 
-await axios.delete(`${API_BASE}/${id}`, {
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
+await axios.delete(`${API_BASE}/${id}`);
 
       fetchSites();
     } catch (err) {
@@ -315,10 +251,8 @@ await axios.delete(`${API_BASE}/${id}`, {
     },
   }
 );
-
     setEditItem(null);
     setUrlError("");
-    // clear optional edit fields
     setEditEmail([]);
     setEditPhone("");
     setEditPriority(0);
@@ -330,14 +264,11 @@ await axios.delete(`${API_BASE}/${id}`, {
   }
 };
 
-
-  //const handleRefresh = () => fetchSites();
   const handleRefresh = async () => {
   try {
     setIsRefreshing(true);
     await fetchSites(selectedStatus);
 
-    // Optional small delay for smooth UX
     setTimeout(() => {
       setIsRefreshing(false);
     }, 600);
@@ -362,47 +293,6 @@ const handleLogout = async () => {
 
   navigate("/login");
 };
-
-// // auto logout timer ref
-// const logoutTimerRef = useRef(null);
-
-// // schedule auto-logout when token expires
-// useEffect(() => {
-//   const token = localStorage.getItem("loginToken");
-//   if (!token) return;
-
-//   try {
-//     const parts = token.split(".");
-//     if (parts.length !== 3) return;
-//     const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-//     if (!payload.exp) return;
-//     const expMs = payload.exp * 1000;
-//     const delay = expMs - Date.now();
-//     if (delay <= 0) {
-//       handleLogout();
-//       return;
-//     }
-
-//     // clear existing timer
-//     if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
-
-//     logoutTimerRef.current = setTimeout(() => {
-//       handleLogout();
-//     }, delay);
-//   } catch (err) {
-//     // malformed token — ignore
-//   }
-
-//   return () => {
-//     if (logoutTimerRef.current) {
-//       clearTimeout(logoutTimerRef.current);
-//       logoutTimerRef.current = null;
-//     }
-//   };
-// }, [isLoggedIn]);
-
-
-
   /* ================= DERIVED ================= */
 
   const safeUrls = Array.isArray(urls) ? urls : [];
@@ -415,7 +305,6 @@ const handleLogout = async () => {
         (u.url || "").toLowerCase().includes(search.toLowerCase())
     );
 
-  // DYNAMIC STATUS MAP
   const statusMap = safeUrls.reduce((acc, u) => {
     const s = u.status || "UNKNOWN";
     if (!acc[s]) acc[s] = [];
@@ -425,7 +314,6 @@ const handleLogout = async () => {
 
   const upSites = [...(statusMap["UP"] || []), ...(statusMap["SLOW"] || [])];
   const downSites = [...(statusMap["DOWN"] || [])];
-
   const reportData = safeUrls
     .filter(
       (u) =>
@@ -442,7 +330,6 @@ const handleLogout = async () => {
       downTime: u.downTime || 0,
     }));
   
-
 if (!isLoggedIn) {
   return (
     <Routes>
@@ -461,26 +348,12 @@ if (!isLoggedIn) {
           />
         }
       />
-   
-
-      {/* SIGNUP
-      <Route
-        path="/signup"
-        element={
-          <Signup
-            onSignup={() => {
-              setIsLoggedIn(true);
-            }}
-          />
-        }
-      /> */}
-
+  
       {/* DEFAULT REDIRECT */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
-
 
   return (
     <div id="main-container" className="min-h-screen">
@@ -547,7 +420,6 @@ userRole === "SUPERADMIN"
 }
 />
 
-
           <Route
             path="/reports"
             element={
@@ -573,37 +445,30 @@ userRole === "SUPERADMIN"
   }
 /><Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
-
         
       </main>
-
       {/* EDIT MODAL */}
       {editItem && (
   <EditModal
     item={editItem}
     theme={theme}
-
     editDomain={editDomain}
     editUrl={editUrl}
     setEditDomain={setEditDomain}
     setEditUrl={setEditUrl}
-
     editEmail={editEmail}
     editPhone={editPhone}
     editPriority={editPriority}
     editResponseThresholdMs={editResponseThresholdMs}
-
     setEditEmail={setEditEmail}
     setEditPhone={setEditPhone}
     setEditPriority={setEditPriority}
     setEditResponseThresholdMs={setEditResponseThresholdMs}
-
     urlError={urlError}
     onClose={() => setEditItem(null)}
     onSave={handleSaveEdit}
   />
 )}
-
     </div>
   );
 }

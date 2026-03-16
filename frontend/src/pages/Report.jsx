@@ -3,7 +3,7 @@ import axios from "axios";
 import SiteReport from "../components/SiteReport";
 import ExportButtons from "../components/ExportButtons";
 
-const LOG_API = "http://localhost:5000/api/uptime-logs/all";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function Report({ urls, reportSearch, setReportSearch, theme }) {
   const [allLogs, setAllLogs] = useState([]);
@@ -25,9 +25,9 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
         const token = localStorage.getItem("loginToken");
         if (!token) return;
 
-        const res = await axios.get(LOG_API, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+       const res = await axios.get(`${API_URL}/uptime-logs/all`, {
+  headers: { Authorization: `Bearer ${token}` },
+});
 
         setAllLogs(res.data?.data || []);
       } catch (err) {

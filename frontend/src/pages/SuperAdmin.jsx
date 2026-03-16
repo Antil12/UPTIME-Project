@@ -45,61 +45,45 @@ const [editAssignedSites, setEditAssignedSites] = useState([]);
       ? "Weak"
       : "";
 
-  /* ================= FETCH USERS ================= */
+ const API_URL = import.meta.env.VITE_API_URL;
 
-  const fetchUsers = async () => {
-    try {
-      const token = localStorage.getItem("loginToken");
+/* ================= FETCH USERS ================= */
+const fetchUsers = async () => {
+  try {
+    const token = localStorage.getItem("loginToken");
 
-      const res = await axios.get(
-        "http://localhost:5000/api/user/all",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+    const res = await axios.get(`${API_URL}/user/all`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      setUsers(res.data.users || []);
-    } catch (err) {
-      console.error("Failed to fetch users");
-    }
-  };
+    setUsers(res.data.users || []);
+  } catch (err) {
+    console.error("Failed to fetch users");
+  }
+};
 
   /* ================= FETCH SITES ================= */
+const fetchSites = async () => {
+  try {
+    const token = localStorage.getItem("loginToken");
 
-  const fetchSites = async () => {
-    try {
-      const token = localStorage.getItem("loginToken");
+    const res = await axios.get(`${API_URL}/monitoredsite`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      const res = await axios.get(
-  "http://localhost:5000/api/monitoredsite",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+    console.log("Sites API response:", res.data);
 
-      console.log("Sites API:", res.data);
+    let sites = [];
+    if (Array.isArray(res.data)) sites = res.data;
+    else if (Array.isArray(res.data.data)) sites = res.data.data;
+    else if (Array.isArray(res.data.sites)) sites = res.data.sites;
+    else if (Array.isArray(res.data.data?.sites)) sites = res.data.data.sites;
 
-     console.log("Sites API response:", res.data);
-
-let sites = [];
-
-if (Array.isArray(res.data)) {
-  sites = res.data;
-} else if (Array.isArray(res.data.data)) {
-  sites = res.data.data;
-} else if (Array.isArray(res.data.sites)) {
-  sites = res.data.sites;
-} else if (Array.isArray(res.data.data?.sites)) {
-  sites = res.data.data.sites;
-}
-
-setAvailableSites(sites);
-
-    } catch (err) {
-      console.error("Failed to fetch sites", err);
-    }
-  };
-
+    setAvailableSites(sites);
+  } catch (err) {
+    console.error("Failed to fetch sites", err);
+  }
+};
   /* ================= INITIAL LOAD ================= */
 
   useEffect(() => {
@@ -126,19 +110,18 @@ setAvailableSites(sites);
       const token = localStorage.getItem("loginToken");
 
       const res = await axios.post(
-        "http://localhost:5000/api/user/create",
-        {
-          name: form.username,
-          email: form.email,
-          password: form.password,
-          role: form.role,
-          assignedSites: form.role === "VIEWER" ? assignedSites : [],
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
+    `${API_URL}/user/create`,
+    {
+      name: form.username,
+      email: form.email,
+      password: form.password,
+      role: form.role,
+      assignedSites: form.role === "VIEWER" ? assignedSites : [],
+    },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
       const createdUser = res.data.user;
 
 /* ⭐ ASSIGN SITES TO VIEWER */
@@ -151,47 +134,17 @@ if (form.role === "VIEWER" && assignedSites.length > 0) {
     try {
 
       await axios.patch(
-        `http://localhost:5000/api/monitoredsite/${siteId}/assign`,
-        {
-          userId: createdUser._id,
-          action: "assign",
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      `${API_URL}/monitoredsite/${siteId}/assign`,
+      { userId: createdUser._id, action: "assign" },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
     } catch (err) {
       console.error("Site assignment failed:", err);
     }
   }
 }
-/* ================= ASSIGN SITES TO VIEWER ================= */
 
-if (form.role === "VIEWER" && assignedSites.length > 0) {
-
-  for (const siteId of assignedSites) {
-
-    try {
-
-      await axios.patch(
-        `http://localhost:5000/api/monitoredsite/${siteId}/assign`,
-        {
-          userId: createdUser._id,
-          action: "assign"
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-    } catch (err) {
-      console.error("Site assignment failed:", err);
-    }
-
-  }
-
-}
 setUsers((prev) => [createdUser, ...prev]);
 
 alert("User created successfully");
@@ -221,12 +174,10 @@ alert("User created successfully");
 
       const token = localStorage.getItem("loginToken");
 
-      await axios.delete(
-        `http://localhost:5000/api/user/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+     await axios.delete(`${API_URL}/user/${id}`, {
+  headers: { Authorization: `Bearer ${token}` },
+});
+
 
       setUsers((prev) => prev.filter((user) => user._id !== id));
 
@@ -250,13 +201,11 @@ alert("User created successfully");
 
       const token = localStorage.getItem("loginToken");
 
-      await axios.put(
-        `http://localhost:5000/api/user/${editUser._id}/password`,
-        { password: newPassword },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await axios.put(`${API_URL}/user/${editUser._id}/password`, 
+  { password: newPassword }, 
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+
 
       alert("Password updated successfully");
 
@@ -289,31 +238,23 @@ alert("User created successfully");
 
     /* ================= UPDATE USER ================= */
 
-    await axios.put(
-      `http://localhost:5000/api/user/${editUser._id}`,
-      {
-        name: editForm.name,
-        email: editForm.email,
-        role: editForm.role,
-        assignedSites: editForm.role === "VIEWER" ? newSites : [],
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+   await axios.put(`${API_URL}/user/${editUser._id}`, {
+  name: editForm.name,
+  email: editForm.email,
+  role: editForm.role,
+  assignedSites: editForm.role === "VIEWER" ? newSites : [],
+}, { headers: { Authorization: `Bearer ${token}` } });
      
 
            /* ================= UPDATE PASSWORD (IF PROVIDED) ================= */
 
     if (newPassword && newPassword.trim() !== "") {
 
-      await axios.put(
-        `http://localhost:5000/api/user/${editUser._id}/password`,
-        { password: newPassword },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+    await axios.put(`${API_URL}/user/${editUser._id}/password`, 
+  { password: newPassword }, 
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+
 
     }
 
@@ -322,16 +263,10 @@ alert("User created successfully");
 
     for (const siteId of removedSites) {
 
-      await axios.patch(
-        `http://localhost:5000/api/monitoredsite/${siteId}/assign`,
-        {
-          userId: editUser._id,
-          action: "unassign",
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+     await axios.patch(`${API_URL}/monitoredsite/${siteId}/assign`, {
+  userId: editUser._id,
+  action: removedSites.includes(siteId) ? "unassign" : "assign",
+}, { headers: { Authorization: `Bearer ${token}` } });
 
     }
 
@@ -339,16 +274,10 @@ alert("User created successfully");
 
     for (const siteId of addedSites) {
 
-      await axios.patch(
-        `http://localhost:5000/api/monitoredsite/${siteId}/assign`,
-        {
-          userId: editUser._id,
-          action: "assign",
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+   await axios.patch(`${API_URL}/monitoredsite/${siteId}/assign`, {
+  userId: editUser._id,
+  action: removedSites.includes(siteId) ? "unassign" : "assign",
+}, { headers: { Authorization: `Bearer ${token}` } });
 
     }
 

@@ -2,8 +2,6 @@ import mongoose from "mongoose";
 import axios from "axios";
 import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
-import SslStatus from "../models/SslStatus.js";
-import { getStatusFromCode } from "../utils/statusHelper.js";
 import { getSlowBatch, clearSlowBatch } from "../services/slowBatchStore.js";
 import User from "../models/User.js";
 import { emailQueue } from "../queue/emailQueue.js";

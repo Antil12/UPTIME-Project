@@ -1,6 +1,6 @@
 import express from "express";
 import axios from "axios";
-import { checkAndUpdateSiteStatus } from "../controllers/monitoredSiteController.js";
+import { checkAndUpdateSiteStatus } from "../controllers/monitoredSite.Controller.js";
 
 const router = express.Router();
 
