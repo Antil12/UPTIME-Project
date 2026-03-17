@@ -420,7 +420,16 @@ userRole === "SUPERADMIN"
 : <Navigate to="/dashboard"/>
 }
 />
-<Route path="/bulk-import" element={<BulkUpload />} />
+<Route
+  path="/bulk-import"
+  element={
+    userRole !== "VIEWER" ? (
+      <BulkUpload />
+    ) : (
+      <Navigate to="/dashboard" replace />
+    )
+  }
+/>
 
           <Route
             path="/reports"

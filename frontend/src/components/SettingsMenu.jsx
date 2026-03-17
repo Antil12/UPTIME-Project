@@ -129,17 +129,7 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
      {/* SETTINGS OPTIONS */}
 <div className="p-5 space-y-4">
 
-  {/* BULK UPLOAD */}
-<button
-  onClick={() => {
-    navigate("/bulk-import");
-    setOpen(false);
-  }}
-  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
->
-  <Upload size={18} />
-  Bulk Upload Sites
-</button>
+
 
   {/* THEME TOGGLE */}
   <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
@@ -170,6 +160,7 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
   </div>
 
   {/* LOGS BUTTON */}
+  {user?.role !== "VIEWER" && (
   <button
     onClick={() => {
       navigate("/logs");
@@ -180,8 +171,21 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
     <FileText size={18} />
     Logs
   </button>
+  )}
 
-
+{/* BULK UPLOAD (HIDE FOR VIEWER) */}
+{user?.role !== "VIEWER" && (
+  <button
+    onClick={() => {
+      navigate("/bulk-import");
+      setOpen(false);
+    }}
+    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+  >
+    <Upload size={18} />
+    Bulk Upload Sites
+  </button>
+)}
 </div>
         {/* FOOTER */}
         <div className="absolute bottom-0 left-0 w-full p-5 border-t border-gray-200 dark:border-gray-700">
