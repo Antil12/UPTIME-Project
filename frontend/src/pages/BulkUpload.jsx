@@ -1,6 +1,12 @@
 import { useState } from "react";
 import axios from "axios";
-import { UploadCloud, FileText, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  UploadCloud,
+  FileText,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
 const BulkUpload = () => {
@@ -44,10 +50,17 @@ const BulkUpload = () => {
         },
       });
 
-      setMessage({ type: "success", text: "Sites imported successfully" });
+      setMessage({
+        type: "success",
+        text: "Sites imported successfully",
+      });
+
       setFile(null);
     } catch (err) {
-      setMessage({ type: "error", text: "Upload failed. Please try again." });
+      setMessage({
+        type: "error",
+        text: "Upload failed. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -58,10 +71,11 @@ const BulkUpload = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-xl"
+        className="w-full max-w-6xl grid md:grid-cols-2 gap-6"
       >
+        {/* ================= LEFT: UPLOAD ================= */}
         <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-2xl p-8 shadow-xl">
-
+          
           {/* HEADER */}
           <div className="mb-6 text-center">
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
@@ -69,7 +83,6 @@ const BulkUpload = () => {
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Upload your CSV file to import multiple sites instantly
-              
             </p>
           </div>
 
@@ -78,10 +91,13 @@ const BulkUpload = () => {
 
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-blue-500/10 to-purple-500/10 transition" />
 
-            <UploadCloud size={40} className="text-gray-400 group-hover:text-blue-500 transition mb-3" />
+            <UploadCloud
+              size={40}
+              className="text-gray-400 group-hover:text-blue-500 transition mb-3"
+            />
 
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Click or drag & drop CSV file
+              Click to select CSV file
             </p>
 
             <p className="text-xs text-gray-400 mt-1">
@@ -155,8 +171,72 @@ const BulkUpload = () => {
               </>
             )}
           </button>
-
         </div>
+
+        {/* ================= RIGHT: INSTRUCTIONS ================= */}
+        <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-xl h-fit sticky top-6">
+
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+            CSV Upload Guide
+          </h3>
+
+          {/* HEADERS */}
+          <div className="mb-5">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Required CSV Headers
+            </p>
+
+            <div className="mt-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-3 text-xs font-mono">
+              domain, url, category, priority
+            </div>
+
+            <p className="text-xs text-gray-500 mt-2">
+              Headers must match exactly. 
+            </p>
+          </div>
+
+          {/* REQUIRED */}
+          <div className="mb-4">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Required Field
+            </p>
+
+            <ul className="text-xs text-gray-500 mt-1 list-disc ml-4 space-y-1">
+               <li><b>domain</b></li>
+              <li>
+                <b>url</b> → must start with http:// or https://
+              </li>
+            </ul>
+          </div>
+
+          {/* OPTIONAL */}
+          <div className="mb-4">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Optional Fields
+            </p>
+
+            <ul className="text-xs text-gray-500 mt-1 list-disc ml-4 space-y-1">
+             
+              <li><b>category</b> (default: UNCATEGORIZED)</li>
+              <li><b>priority</b> (default: 0)</li>
+            </ul>
+          </div>
+
+          
+          {/* NOTES */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Notes
+            </p>
+
+            <ul className="text-xs text-gray-500 mt-1 list-disc ml-4 space-y-1">
+              <li>Invalid URLs will be skipped</li>
+              <li>Empty rows are ignored</li>
+              <li>Only CSV files are allowed</li>
+            </ul>
+          </div>
+        </div>
+
       </motion.div>
     </div>
   );

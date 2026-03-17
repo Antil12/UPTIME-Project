@@ -9,20 +9,66 @@ const Logs = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
+  const [stats, setStats] = useState({
+    created: 0,
+    updated: 0,
+    deleted: 0,
+});
+  const filterByDateAndStats = () => {
+  let filtered = logs;
+
+  // DATE FILTER
+  if (fromDate && toDate) {
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+
+    // include full day
+    to.setHours(23, 59, 59, 999);
+
+    filtered = logs.filter((log) => {
+      const logDate = new Date(log.timestamp);
+      return logDate >= from && logDate <= to;
+    });
+  }
+
+  // SEARCH FILTER (reuse your existing logic)
+  if (searchQuery) {
+    const lowerQuery = searchQuery.toLowerCase();
+    filtered = filtered.filter(
+      (log) =>
+        log.domain?.toLowerCase().includes(lowerQuery) ||
+        log.url?.toLowerCase().includes(lowerQuery) ||
+        log.action?.toLowerCase().includes(lowerQuery) ||
+        log.user?.toLowerCase().includes(lowerQuery)
+    );
+  }
+
+  // CALCULATE STATS
+  const created = filtered.filter((l) => l.action === "Created").length;
+  const updated = filtered.filter((l) => l.action === "Updated").length;
+  const deleted = filtered.filter((l) => l.action === "Deleted").length;
+
+  setStats({ created, updated, deleted });
+  setFilteredLogs(filtered);
+  setCurrentPage(1);
+};
   useEffect(() => {
     fetchLogs();
   }, []);
-
-  useEffect(() => {
-    handleSearch(searchQuery);
-  }, [logs, searchQuery]);
+useEffect(() => {
+  filterByDateAndStats();
+}, [logs, searchQuery, fromDate, toDate]);
 
   const fetchLogs = async () => {
     try {
       const token = localStorage.getItem("loginToken");
-      const res = await axios.get(
-        "http://localhost:5000/api/monitoredsite/logs",
+      const API = import.meta.env.VITE_API_URL;
+
+const res = await axios.get(
+  `${API}/monitoredsite/logs`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -59,7 +105,7 @@ const Logs = () => {
 
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentLogs = (searchQuery ? filteredLogs : logs).slice(
+  const currentLogs = filteredLogs.slice(
     indexOfFirstRow,
     indexOfLastRow
   );
@@ -95,6 +141,109 @@ const Logs = () => {
         </div>
       </div>
 
+      
+{/* --------------------------------------------------------------------------------------------------- */}
+  {/* ================= FILTER + STATS ================= */}
+<div className="mb-6 space-y-4">
+
+  {/* 🔷 FILTER BAR */}
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
+
+    {/* DATE FILTER */}
+    <div className="flex items-center gap-3 flex-wrap">
+
+      <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
+        <span className="text-xs text-gray-500">From</span>
+        <input
+          type="date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          className="bg-transparent outline-none text-sm dark:text-white"
+        />
+      </div>
+
+      <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
+        <span className="text-xs text-gray-500">To</span>
+        <input
+          type="date"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+          className="bg-transparent outline-none text-sm dark:text-white"
+        />
+      </div>
+
+    </div>
+
+    {/* CLEAR BUTTON */}
+    <button
+      onClick={() => {
+        setFromDate("");
+        setToDate("");
+      }}
+      className="text-xs px-3 py-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 transition"
+    >
+      Clear Filter
+    </button>
+
+  </div>
+
+  {/* 🔷 STATS CARDS */}
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+    {/* CREATED */}
+    <div className="relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/20 dark:to-green-900/10 border border-green-200 dark:border-green-800 shadow-sm">
+      
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-green-600">Created</p>
+        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-green-200 dark:bg-green-800">
+          ✅
+        </div>
+      </div>
+
+      <p className="mt-2 text-2xl font-bold text-green-700 dark:text-green-400">
+        {stats.created}
+      </p>
+
+      <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-green-300/30 rounded-full blur-2xl" />
+    </div>
+
+    {/* UPDATED */}
+    <div className="relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-blue-900/10 border border-blue-200 dark:border-blue-800 shadow-sm">
+      
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-blue-600">Updated</p>
+        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-200 dark:bg-blue-800">
+          🔄
+        </div>
+      </div>
+
+      <p className="mt-2 text-2xl font-bold text-blue-700 dark:text-blue-400">
+        {stats.updated}
+      </p>
+
+      <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-blue-300/30 rounded-full blur-2xl" />
+    </div>
+
+    {/* DELETED */}
+    <div className="relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-red-100 to-red-50 dark:from-red-900/20 dark:to-red-900/10 border border-red-200 dark:border-red-800 shadow-sm">
+      
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-red-600">Deleted</p>
+        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-red-200 dark:bg-red-800">
+          ❌
+        </div>
+      </div>
+
+      <p className="mt-2 text-2xl font-bold text-red-700 dark:text-red-400">
+        {stats.deleted}
+      </p>
+
+      <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-red-300/30 rounded-full blur-2xl" />
+    </div>
+
+  </div>
+  
+</div>
       {/* CARD */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
         {loading ? (
@@ -174,6 +323,8 @@ const Logs = () => {
                 ))}
               </tbody>
             </table>
+
+            
 
             {/* PAGINATION */}
             <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">

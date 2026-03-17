@@ -160,7 +160,7 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
   </div>
 
   {/* LOGS BUTTON */}
-  {user?.role !== "VIEWER" && (
+  {user?.role === "SUPERADMIN" && (
   <button
     onClick={() => {
       navigate("/logs");
