@@ -13,6 +13,7 @@ import { startSlowAlertListener } from "./api/alertApi";
 import SuperAdmin from "./pages/SuperAdmin";
 import Logs from "./pages/Logs";
 import setupaxios from "./api/setupAxios";
+import BulkUpload from "./pages/BulkUpload";
 
 setupaxios();
 const API_BASE = "/monitoredsite";
@@ -419,6 +420,7 @@ userRole === "SUPERADMIN"
 : <Navigate to="/dashboard"/>
 }
 />
+<Route path="/bulk-import" element={<BulkUpload />} />
 
           <Route
             path="/reports"

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, LogOut, Moon, Sun, User, Shield, X ,FileText } from "lucide-react";
+import { Settings, LogOut, Moon, Sun, User, Shield, X ,FileText,Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
@@ -128,6 +128,18 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
 
      {/* SETTINGS OPTIONS */}
 <div className="p-5 space-y-4">
+
+  {/* BULK UPLOAD */}
+<button
+  onClick={() => {
+    navigate("/bulk-import");
+    setOpen(false);
+  }}
+  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+>
+  <Upload size={18} />
+  Bulk Upload Sites
+</button>
 
   {/* THEME TOGGLE */}
   <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">

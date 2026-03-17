@@ -5,6 +5,9 @@ import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import { getSlowBatch, clearSlowBatch } from "../services/slowBatchStore.js";
 import User from "../models/User.js";
 import { emailQueue } from "../queue/emailQueue.js";
+import fs from "fs";
+import csv from "csv-parser";
+
 /* =====================================================
    GET ALL MONITORED SITES (NO FILTERS ❗)
 ===================================================== */
@@ -710,6 +713,85 @@ export const getDeletedLogs = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch logs"
+    });
+  }
+};
+
+
+
+export const bulkImportSites = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "CSV file is required",
+      });
+    }
+
+    const results = [];
+
+    fs.createReadStream(req.file.path)
+      .pipe(
+        csv({
+          mapHeaders: ({ header }) =>
+            header.trim().toLowerCase(), // 🔥 KEY FIX
+        })
+      )
+      .on("data", (row) => {
+        // Optional debug
+        // console.log("ROW:", row);
+
+        if (!row.url) return;
+
+        // Optional URL validation
+        if (!row.url.startsWith("http")) return;
+
+        results.push({
+          domain: row.domain || "",
+          url: row.url,
+          category: row.category || "UNCATEGORIZED",
+          owner: req.user._id,
+          priority: Number(row.priority ?? 0),
+        });
+      })
+      .on("end", async () => {
+        try {
+          if (results.length === 0) {
+            return res.status(400).json({
+              success: false,
+              message: "CSV has no valid rows",
+            });
+          }
+
+          await MonitoredSite.insertMany(results, { ordered: false });
+
+          fs.unlinkSync(req.file.path);
+
+          res.json({
+            success: true,
+            message: `${results.length} sites imported successfully`,
+          });
+        } catch (err) {
+          console.error("Insert error:", err);
+          res.status(500).json({
+            success: false,
+            message: "Database insert failed",
+          });
+        }
+      })
+      .on("error", (err) => {
+        console.error("CSV parse error:", err);
+        res.status(500).json({
+          success: false,
+          message: "CSV parsing failed",
+        });
+      });
+  } catch (error) {
+    console.error("❌ CSV Import error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Bulk import failed",
     });
   }
 };
