@@ -6,74 +6,23 @@ import ExportButtons from "../components/ExportButtons";
 const API_URL = import.meta.env.VITE_API_URL;
 
 export default function Report({ urls, reportSearch, setReportSearch, theme }) {
-  const [allLogs, setAllLogs] = useState([]);
+
+  // ================= STATES =================
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [logs, setLogs] = useState([]);
+
+  const LIMIT = 50; // logs per request
+  const SITE_PER_PAGE = 5;
+
   const [range, setRange] = useState("7d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [tempFrom, setTempFrom] = useState("");
   const [tempTo, setTempTo] = useState("");
-  const applyCustomRange = () => {
-  if (!tempFrom || !tempTo) return;
+  
 
-  setCustomFrom(tempFrom);
-  setCustomTo(tempTo);
-};
-  // ================= Fetch Logs =================
-  useEffect(() => {
-    const fetchAllLogs = async () => {
-      try {
-        const token = localStorage.getItem("loginToken");
-        if (!token) return;
-
-       const res = await axios.get(`${API_URL}/uptime-logs/all`, {
-  headers: { Authorization: `Bearer ${token}` },
-});
-
-        setAllLogs(res.data?.data || []);
-      } catch (err) {
-        console.error("Failed to fetch logs", err);
-      }
-    };
-
-    fetchAllLogs();
-  }, []);
-
-  // ================= Filter Logs By Date Range =================
-  const filteredLogsByRange = useMemo(() => {
-  const now = Date.now();
-
-  if (range === "custom" && customFrom && customTo) {
-    const from = new Date(customFrom).getTime();
-    const to = new Date(customTo).getTime();
-
-    return allLogs.filter((log) => {
-      const ts = new Date(log.timestamp).getTime();
-      return ts >= from && ts <= to;
-    });
-  }
-
-  const rangeMs =
-    range === "24h"
-      ? 24 * 60 * 60 * 1000
-      : range === "7d"
-      ? 7 * 24 * 60 * 60 * 1000
-      : 30 * 24 * 60 * 60 * 1000;
-
-  return allLogs.filter(
-    (log) => now - new Date(log.timestamp).getTime() <= rangeMs
-  );
-}, [allLogs, range, customFrom, customTo]);
-
-  // ================= Group Logs By Site =================
-  const logsBySite = useMemo(() => {
-    return filteredLogsByRange.reduce((acc, log) => {
-      if (!acc[log.siteId]) acc[log.siteId] = [];
-      acc[log.siteId].push(log);
-      return acc;
-    }, {});
-  }, [filteredLogsByRange]);
-
-  // ================= Filter Sites By Search =================
+  // ================= FILTERED SITES (FIRST) =================
   const filteredSites = useMemo(() => {
     return urls.filter(
       (u) =>
@@ -85,6 +34,71 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
           .includes(reportSearch.toLowerCase())
     );
   }, [urls, reportSearch]);
+
+  // ================= PAGINATED SITES (AFTER filteredSites) =================
+  const paginatedSites = useMemo(() => {
+    const start = (page - 1) * SITE_PER_PAGE;
+    return filteredSites.slice(start, start + SITE_PER_PAGE);
+  }, [filteredSites, page]);
+
+  // ================= TOTAL PAGES =================
+  useEffect(() => {
+    setTotalPages(Math.ceil(filteredSites.length / SITE_PER_PAGE));
+  }, [filteredSites]);
+
+  // ================= RESET PAGE ON FILTER CHANGE =================
+  useEffect(() => {
+    setPage(1);
+  }, [reportSearch, range]);
+
+  // ================= APPLY CUSTOM RANGE =================
+  const applyCustomRange = () => {
+    if (!tempFrom || !tempTo) return;
+    setCustomFrom(tempFrom);
+    setCustomTo(tempTo);
+  };
+
+useEffect(() => {
+  const fetchLogs = async () => {
+    try {
+      const token = localStorage.getItem("loginToken");
+      if (!token) return;
+
+      const siteIds = paginatedSites.map((s) => s._id).join(",");
+
+      const res = await axios.get(`${API_URL}/uptime-logs`, {
+        params: {
+          
+          range,
+          from: customFrom,
+          to: customTo,
+          siteIds,
+        },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setLogs(res.data.data);
+      
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchLogs();
+}, [ range, customFrom, customTo, paginatedSites]);
+
+
+  const logsBySite = useMemo(() => {
+  const grouped = {};
+  logs.forEach((log) => {
+    const key = log.siteId?.toString(); 
+    if (!grouped[log.siteId]) grouped[log.siteId] = [];
+    grouped[log.siteId].push(log);
+  });
+  return grouped;
+}, [logs]);
+
+  
 
   // ================= Helper Functions =================
   const calculateStats = (logs = []) => {
@@ -197,12 +211,18 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
 )}
 
         <div className="flex items-center justify-end">
-          <ExportButtons urls={filteredSites} logsBySite={logsBySite} theme={theme} />
+          <ExportButtons 
+  urls={filteredSites}
+  theme={theme}
+  range={range}
+  customFrom={customFrom}
+  customTo={customTo}
+/>
         </div>
       </div>
 
       {/* Site Cards */}
-      {filteredSites.map((site) => {
+      {paginatedSites.map((site) => {
         const logs = logsBySite[site._id] || [];
         const stats = calculateStats(logs);
         const response = getResponseStats(logs);
@@ -270,7 +290,9 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
                 <p>Slowest: {response.max} ms</p>
               </div>
             </div>
-
+           <div className="flex justify-center gap-3 mt-6">
+ 
+</div>
             {/* Charts Section */}
             <SiteReport
               site={site}
@@ -287,6 +309,28 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
       {filteredSites.length === 0 && (
         <p className="text-gray-500">No websites found.</p>
       )}
+
+       <button
+    disabled={page === 1}
+    onClick={() => setPage((p) => p - 1)}
+    className="px-3 py-1 bg-gray-300 rounded disabled:opacity-50"
+  >
+    Prev
+  </button>
+
+  <span className="px-3 py-1">
+    Page {page} of {totalPages}
+  </span>
+
+  <button
+    disabled={page === totalPages}
+    onClick={() => setPage((p) => p + 1)}
+    className="px-3 py-1 bg-gray-300 rounded disabled:opacity-50"
+  >
+    Next
+  </button>
     </div>
+
+    
   );
 }

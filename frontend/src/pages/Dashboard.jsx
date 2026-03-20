@@ -132,7 +132,17 @@ if (selectedSslStatus !== "ALL") {
   const globalDownSites = urls.filter(
     (u) => u.status === "DOWN"
   );
+ 
+ const themeStyles = {
+  dark: {
+    chip: "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700",
+  },
+  light: {
+    chip: "bg-gray-100 border-gray-300 text-gray-800 hover:bg-gray-200",
+  },
+};
 
+const t = themeStyles[theme] || themeStyles.dark;
   return (
     <main className="p-3 md:p-4 max-w-7xl mx-auto space-y-5">
 
@@ -227,27 +237,28 @@ if (selectedSslStatus !== "ALL") {
 
   {/* ✅ SELECT OPTIONS — RIGHT SIDE */}
 {!isViewer && (
-<div className="flex items-center gap-2 justify-end">
+  <div className="flex items-center gap-3 justify-end flex-wrap">
 
+    {/* SELECT TOGGLE */}
     <button
       onClick={() => {
         setSelectionMode((v) => !v);
         if (selectionMode) setSelectedIds([]);
       }}
-      className={`px-3 py-2 rounded text-sm border
-      ${
-        theme === "dark"
-          ? "bg-gray-800 border-gray-700 text-gray-200"
-          : "bg-white border-gray-300 text-gray-800"
-      }`}
+      className={`
+        px-4 py-2 rounded-xl text-sm font-medium border transition-all
+        ${t.chip}
+        hover:scale-105 active:scale-95
+      `}
       aria-pressed={selectionMode}
       aria-label={selectionMode ? "Cancel selection" : "Select websites"}
     >
-      {selectionMode ? "Cancel Select" : "Select"}
+      {selectionMode ? "Cancel" : "Select"}
     </button>
 
     {selectionMode && (
       <>
+        {/* SELECT ALL */}
         <button
           onClick={() => {
             const allIds = finalUrls.map((u) => u._id);
@@ -255,15 +266,15 @@ if (selectedSslStatus !== "ALL") {
               allIds.length > 0 &&
               allIds.every((id) => selectedIds.includes(id));
 
-            if (allSelected) setSelectedIds([]);
-            else setSelectedIds(allIds);
+            setSelectedIds(allSelected ? [] : allIds);
           }}
-          className={`px-3 py-2 rounded text-sm border
-          ${
-            theme === "dark"
-              ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700"
-              : "bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200"
-          }`}
+          disabled={finalUrls.length === 0}
+          className={`
+            px-4 py-2 rounded-xl text-sm font-medium border transition-all
+            ${t.chip}
+            disabled:opacity-50 disabled:cursor-not-allowed
+            hover:scale-105 active:scale-95
+          `}
         >
           {finalUrls.length > 0 &&
           finalUrls.every((u) => selectedIds.includes(u._id))
@@ -271,34 +282,43 @@ if (selectedSslStatus !== "ALL") {
             : "Select All"}
         </button>
 
+        {/* DELETE BUTTON */}
         <button
           onClick={async () => {
-            if (selectedIds.length === 0)
-              return alert("No websites selected");
+            if (selectedIds.length === 0) return;
 
-            if (typeof onBulkDelete === "function") {
-              await onBulkDelete(selectedIds);
-            } else if (typeof onDelete === "function") {
-              for (const id of selectedIds) {
-                try {
-                  await onDelete(id);
-                } catch (err) {
-                  console.error("Failed to delete", id, err);
-                }
+            if (!confirm(`Delete ${selectedIds.length} websites?`)) return;
+
+            try {
+              if (typeof onBulkDelete === "function") {
+                await onBulkDelete(selectedIds);
+              } else if (typeof onDelete === "function") {
+                await Promise.all(
+                  selectedIds.map((id) => onDelete(id))
+                );
               }
+              setSelectedIds([]);
+            } catch (err) {
+              console.error("Bulk delete failed", err);
             }
-
-            setSelectedIds([]);
           }}
-          className="px-3 py-2 rounded bg-red-500 text-white text-sm hover:bg-red-600"
+          disabled={selectedIds.length === 0}
+          className={`
+            px-4 py-2 rounded-xl text-sm font-semibold
+            transition-all
+            bg-red-500 text-white
+            hover:bg-red-600 hover:scale-105 active:scale-95
+            disabled:opacity-50 disabled:cursor-not-allowed
+          `}
           aria-label={`Delete selected ${selectedIds.length} websites`}
         >
-          Delete Selected ({selectedIds.length})
+          Delete ({selectedIds.length})
         </button>
       </>
     )}
   </div>
 )}
+
 </div>
 
       {/* ===============================

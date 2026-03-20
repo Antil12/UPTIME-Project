@@ -1,13 +1,13 @@
 import express from "express";
 import {
   getUptimeLogsBySite,
-  getAllUptimeLogs,   // ✅ ADD THIS
+  getPaginatedLogs,   // ✅ ADD THIS
   getUptimeAnalytics
 } from "../controllers/uptimeLog.controller.js";
 
 const router = express.Router();
 
-router.get("/all", getAllUptimeLogs);   // ✅ ADD THIS LINE
+router.get("/", getPaginatedLogs);  // ✅ ADD THIS LINE
 router.get("/analytics", getUptimeAnalytics);
 
 router.get("/:siteId", getUptimeLogsBySite);
