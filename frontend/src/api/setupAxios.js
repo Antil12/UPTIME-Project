@@ -25,7 +25,27 @@ axios.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const message = error.response?.data?.message;
 
+    // 🔥 CASE 1: USER DELETED → FORCE LOGOUT
+    if (
+  error.response?.status === 401 &&
+  (message?.includes("User deleted") ||
+   message?.includes("User no longer exists"))
+) {
+      
+      localStorage.removeItem("loginToken");
+      localStorage.removeItem("user");
+
+      try {
+        await axios.post("/auth/logout");
+      } catch (e) {}
+
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
+
+    // 🔄 CASE 2: TOKEN EXPIRED → TRY REFRESH
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
@@ -46,6 +66,8 @@ axios.interceptors.response.use(
         return axios(originalRequest);
 
       } catch (refreshError) {
+
+        // 🔥 refresh failed → logout
         localStorage.removeItem("loginToken");
         localStorage.removeItem("user");
 
@@ -54,6 +76,7 @@ axios.interceptors.response.use(
         } catch (e) {}
 
         window.location.href = "/login";
+
         return Promise.reject(refreshError);
       }
     }

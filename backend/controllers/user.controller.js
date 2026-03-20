@@ -40,7 +40,9 @@ export const createUser = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const users = await User.find()
+      .select("-password")
+      .populate("assignedSites", "_id domain url name"); // ✅ FIX
 
     res.status(200).json({
       success: true,

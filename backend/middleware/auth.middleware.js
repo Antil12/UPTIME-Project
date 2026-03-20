@@ -4,12 +4,10 @@ import User from "../models/User.js";
 export const protect = async (req, res, next) => {
   let token;
 
-  // Try Authorization header
   if (req.headers.authorization?.startsWith("Bearer")) {
     token = req.headers.authorization.split(" ")[1];
   }
 
-  // Fallback: access token in cookie (optional)
   if (!token && req.cookies?.accessToken) {
     token = req.cookies.accessToken;
   }
@@ -20,8 +18,20 @@ export const protect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select("-password");
-    return next();
+
+    const user = await User.findById(decoded.id).select("-password");
+
+    // 🔥 IMPORTANT CHECK
+    if (!user) {
+      return res.status(401).json({
+        message: "User no longer exists"
+      });
+    }
+
+    req.user = user;
+
+    next();
+
   } catch (error) {
     return res.status(401).json({ message: "Not authorized" });
   }
