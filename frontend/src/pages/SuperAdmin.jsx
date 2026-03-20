@@ -126,7 +126,7 @@ const fetchSites = async () => {
 
 /* ⭐ ASSIGN SITES TO VIEWER */
 
-if (form.role === "VIEWER" && assignedSites.length > 0) {
+if (form.role !== "SUPERADMIN" && assignedSites.length > 0) {
 
   const token = localStorage.getItem("loginToken");
 
@@ -223,9 +223,8 @@ alert("User created successfully");
 
     const token = localStorage.getItem("loginToken");
 
-    const oldSites = editUser.assignedSites || [];
-    const newSites = editAssignedSites || [];
-
+   const oldSites = (editUser.assignedSites || []).map(id => id.toString());
+const newSites = (editAssignedSites || []).map(id => id.toString());
     // find removed sites
     const removedSites = oldSites.filter(
       (id) => !newSites.includes(id)
@@ -261,25 +260,30 @@ alert("User created successfully");
 
     /* ================= UNASSIGN REMOVED SITES ================= */
 
-    for (const siteId of removedSites) {
+   for (const siteId of removedSites) {
+  await axios.patch(
+    `${API_URL}/monitoredsite/${siteId}/assign`,
+    {
+      userId: editUser._id,
+      action: "unassign",
+    },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+}
 
-     await axios.patch(`${API_URL}/monitoredsite/${siteId}/assign`, {
-  userId: editUser._id,
-  action: removedSites.includes(siteId) ? "unassign" : "assign",
-}, { headers: { Authorization: `Bearer ${token}` } });
-
-    }
 
     /* ================= ASSIGN NEW SITES ================= */
 
-    for (const siteId of addedSites) {
-
-   await axios.patch(`${API_URL}/monitoredsite/${siteId}/assign`, {
-  userId: editUser._id,
-  action: removedSites.includes(siteId) ? "unassign" : "assign",
-}, { headers: { Authorization: `Bearer ${token}` } });
-
-    }
+   for (const siteId of addedSites) {
+  await axios.patch(
+    `${API_URL}/monitoredsite/${siteId}/assign`,
+    {
+      userId: editUser._id,
+      action: "assign",
+    },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+}
 
     alert("User updated successfully");
 
@@ -398,7 +402,7 @@ alert("User created successfully");
 
           {/* ASSIGN SITES */}
 
-          {form.role === "VIEWER" && (
+          {form.role !== "SUPERADMIN" && (
 
             <div className="mt-6">
 
@@ -536,7 +540,9 @@ alert("User created successfully");
                 role: user.role,
               });
 
-              setEditAssignedSites(user.assignedSites || []);
+              setEditAssignedSites(
+  (user.assignedSites || []).map(id => id.toString())
+);
             }}
             className="flex-1 py-2 text-xs rounded-lg bg-blue-500 text-white"
           >
@@ -623,7 +629,9 @@ alert("User created successfully");
       role: user.role,
     });
 
-    setEditAssignedSites(user.assignedSites || []);
+    setEditAssignedSites(
+  (user.assignedSites || []).map(id => id.toString())
+);
   }}
                           className="px-4 py-2 bg-blue-500 text-white rounded-lg text-xs"
                         >
@@ -723,7 +731,7 @@ alert("User created successfully");
 
     {/* WEBSITE ASSIGN */}
 
-    {editForm.role === "VIEWER" && (
+    {editForm.role !== "SUPERADMIN" && (
 
       <div
         className={`mb-3 p-3 rounded-lg border max-h-32 overflow-y-auto text-sm
@@ -741,7 +749,7 @@ alert("User created successfully");
 
             <input
               type="checkbox"
-              checked={editAssignedSites.includes(site._id)}
+              checked={editAssignedSites.includes(site._id.toString())}
               onChange={(e)=>{
 
                 if(e.target.checked){
