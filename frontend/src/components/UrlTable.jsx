@@ -22,21 +22,39 @@
     selectedStatus, 
     setSelectedStatus,
   }) => {
-    const DEFAULT_COLUMNS = [
-    "sno",
-    "domain",
-    "url",
-    "ssl",
-    "status",
-    "userEmail",
-    "userRole",
-    "statusCode",
-    "lastCheckedAt",
-    "actions"
-  ];
+    const isViewer = currentUser?.role?.toUpperCase() === "VIEWER";
+    const isSuperAdmin = currentUser?.role?.toUpperCase() === "SUPERADMIN";
+   const BASE_COLUMNS = [
+  "sno",
+  "domain",
+  "url",
+  "ssl",
+  "status",
+  "statusCode",
+  "lastCheckedAt",
+  "actions"
+];
+
+const ADMIN_COLUMNS = ["userEmail", "userRole"];
+
+const DEFAULT_COLUMNS = isSuperAdmin
+  ? [...BASE_COLUMNS.slice(0, 5), ...ADMIN_COLUMNS, ...BASE_COLUMNS.slice(5)]
+  : BASE_COLUMNS;
+
   const [searchColumn, setSearchColumn] = useState("");
 
-const filteredColumns = DEFAULT_COLUMNS.filter((col) =>
+const visibleColumnsForRole = DEFAULT_COLUMNS.filter((col) => {
+  if (!isSuperAdmin && (col === "userEmail" || col === "userRole")) {
+    return false;
+  }
+    // 🚀 Hide actions column from VIEWER in column settings
+  if (isViewer && col === "actions") {
+    return false;
+  }
+  return true;
+});
+
+const filteredColumns = visibleColumnsForRole.filter((col) =>
   col.toLowerCase().includes(searchColumn.toLowerCase())
 );
   const columnMenuRef = useRef(null);
@@ -45,8 +63,7 @@ const filteredColumns = DEFAULT_COLUMNS.filter((col) =>
     const [selectedRole, setSelectedRole] = useState("ALL");
   const [showRoleFilter, setShowRoleFilter] = useState(false);
   const roleFilterRef = useRef(null);
-    const isViewer = currentUser?.role?.toUpperCase() === "VIEWER";
-    const isSuperAdmin = currentUser?.role?.toUpperCase() === "SUPERADMIN";
+    
     const [categoryOpen, setCategoryOpen] = useState(false);
     const [showDomainFilter, setShowDomainFilter] = useState(false);
     const [sortOrder, setSortOrder] = useState("ASC"); // ASC | DESC
@@ -223,29 +240,34 @@ const statusOptions = useMemo(() => {
 
 
     const toggleColumn = async (column) => {
-    let updated;
 
-    if (hiddenColumns.includes(column)) {
-      updated = hiddenColumns.filter((c) => c !== column);
-    } else {
-      updated = [...hiddenColumns, column];
-    }
+  // ❌ Prevent non-admin from modifying restricted columns
+  if (!isSuperAdmin && (column === "userEmail" || column === "userRole")) {
+    return;
+  }
 
-    setHiddenColumns(updated);
+  let updated;
 
-    try {
-      const token = localStorage.getItem("loginToken");
+  if (hiddenColumns.includes(column)) {
+    updated = hiddenColumns.filter((c) => c !== column);
+  } else {
+    updated = [...hiddenColumns, column];
+  }
 
-      await axios.put(
-        "/user/hidden-columns",
-        { hiddenColumns: updated },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    } catch (err) {
-      console.error("Save hidden column failed");
-    }
-  };
+  setHiddenColumns(updated);
 
+  try {
+    const token = localStorage.getItem("loginToken");
+
+    await axios.put(
+      "/user/hidden-columns",
+      { hiddenColumns: updated },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+  } catch (err) {
+    console.error("Save hidden column failed");
+  }
+};
 
 
     return (

@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import MonitoredSite from "../models/MonitoredSite.js";
 
 export const createUser = async (req, res) => {
   try {
@@ -61,13 +62,38 @@ export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // 🔹 1. Find user first
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // 🔹 2. Remove user from all sites
+    await MonitoredSite.updateMany(
+      {},
+      {
+        $pull: {
+          assignedUsers: user._id,   // remove userId
+          emailContact: user.email,  // remove email
+        },
+      }
+    );
+
+    // 🔹 3. Delete user
     await User.findByIdAndDelete(id);
 
     res.status(200).json({
       success: true,
-      message: "User deleted successfully",
+      message: "User deleted and cleaned from all sites",
     });
+
   } catch (error) {
+    console.error("Delete user error:", error);
+
     res.status(500).json({
       success: false,
       message: "Delete failed",
@@ -125,7 +151,7 @@ export const updateUser = async (req, res) => {
         name,
         email,
         role,
-        assignedSites,
+        assignedSites: role === "VIEWER" ? assignedSites || [] : [],
       },
       { new: true }
     );

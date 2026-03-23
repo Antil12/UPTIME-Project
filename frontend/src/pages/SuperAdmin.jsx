@@ -223,8 +223,13 @@ alert("User created successfully");
 
     const token = localStorage.getItem("loginToken");
 
-   const oldSites = (editUser.assignedSites || []).map(id => id.toString());
-const newSites = (editAssignedSites || []).map(id => id.toString());
+  const oldSites = (editUser.assignedSites || []).map(site =>
+  site._id.toString()
+);
+
+const newSites = (editAssignedSites || []).map(id =>
+  id.toString()
+);
     // find removed sites
     const removedSites = oldSites.filter(
       (id) => !newSites.includes(id)
@@ -540,8 +545,8 @@ const newSites = (editAssignedSites || []).map(id => id.toString());
                 role: user.role,
               });
 
-              setEditAssignedSites(
-  (user.assignedSites || []).map(id => id.toString())
+      setEditAssignedSites(
+  (user.assignedSites || []).map(site => site._id.toString())
 );
             }}
             className="flex-1 py-2 text-xs rounded-lg bg-blue-500 text-white"
@@ -629,8 +634,8 @@ const newSites = (editAssignedSites || []).map(id => id.toString());
       role: user.role,
     });
 
-    setEditAssignedSites(
-  (user.assignedSites || []).map(id => id.toString())
+  setEditAssignedSites(
+  (user.assignedSites || []).map(site => site._id.toString())
 );
   }}
                           className="px-4 py-2 bg-blue-500 text-white rounded-lg text-xs"
@@ -754,16 +759,16 @@ const newSites = (editAssignedSites || []).map(id => id.toString());
 
                 if(e.target.checked){
 
-                  setEditAssignedSites([
-                    ...editAssignedSites,
-                    site._id
-                  ])
+                 setEditAssignedSites([
+  ...editAssignedSites,
+  site._id.toString()
+])
 
                 }else{
 
                   setEditAssignedSites(
                     editAssignedSites.filter(
-                      id=>id!==site._id
+                     id => id !== site._id.toString()
                     )
                   )
 
