@@ -324,8 +324,23 @@ export const updateSite = async (req, res) => {
       }
     }
 
-    Object.assign(site, updatedData);
+   // 🔥 CHECK IF REAL CHANGE EXISTS
+const hasChanges = Object.keys(updatedData).some(
+  (key) => JSON.stringify(site[key]) !== JSON.stringify(updatedData[key])
+);
+
+if (!hasChanges) {
+  return res.json({
+    success: true,
+    data: site,
+    message: "No changes detected",
+  });
+}
+
+// ✅ ONLY SAVE IF CHANGED
+Object.assign(site, updatedData);
 site.updatedBy = req.user._id;
+site.lastManualUpdateAt = new Date(); // ✅ IMPORTANT
 await site.save();
     if (!site) {
       return res.status(404).json({
@@ -372,6 +387,7 @@ export const deleteSite = async (req, res) => {
 
     site.isActive = 0;
     site.deletedBy = req.user._id;
+    site.deletedAt = new Date(); // ✅ FIX
 
     await site.save();
 
@@ -663,62 +679,79 @@ export const getSlowAlertBatch = async (req, res) => {
 
 export const getDeletedLogs = async (req, res) => {
   try {
+    const { fromDate, toDate } = req.query;
 
-    const logs = await MonitoredSite.find({
+    const sites = await MonitoredSite.find({
       $or: [
-        { isActive: 0 },
-        { updatedBy: { $ne: null } },
-        { createdAt: { $exists: true } }
+        { isActive: 1 },
+        { isActive: 0, deletedBy: { $ne: null } }
       ]
     })
       .populate("owner", "email role")
       .populate("updatedBy", "email role")
-      .populate("deletedBy", "email role")
-      .sort({ updatedAt: -1 });
+      .populate("deletedBy", "email role");
 
-    const formattedLogs = logs.map((site) => {
+    const formattedLogs = [];
 
-      let action = "Created";
-      let user = site.owner?.email || "Unknown";
-      let timestamp = site.createdAt;
+    sites.forEach((site) => {
 
-      if (site.deletedBy) {
-        action = "Deleted";
-        user = site.deletedBy?.email || "Unknown";
-        timestamp = site.updatedAt;
-      } 
-      else if (site.updatedBy) {
-        action = "Updated";
-        user = site.updatedBy?.email || "Unknown";
-        timestamp = site.updatedAt;
+      // ✅ CREATED
+      if (!fromDate || new Date(site.createdAt) >= new Date(fromDate)) {
+        formattedLogs.push({
+          domain: site.domain,
+          url: site.url,
+          action: "Created",
+          user: site.owner?.email || "Unknown",
+          timestamp: site.createdAt,
+        });
       }
 
-      return {
-  domain: site.domain,
-  url: site.url,
-  action,
-  user,
-  timestamp
-};
+      // ✅ UPDATED
+      if (site.lastManualUpdateAt && site.updatedBy) {
+        if (!fromDate || new Date(site.lastManualUpdateAt) >= new Date(fromDate)) {
+          formattedLogs.push({
+            domain: site.domain,
+            url: site.url,
+            action: "Updated",
+            user: site.updatedBy?.email || "Unknown",
+            timestamp: site.lastManualUpdateAt,
+          });
+        }
+      }
+
+      // ✅ DELETED (FIXED)
+      if (site.isActive === 0 && site.deletedBy && site.deletedAt) {
+        if (
+          (!fromDate || new Date(site.deletedAt) >= new Date(fromDate)) &&
+          (!toDate || new Date(site.deletedAt) <= new Date(toDate))
+        ) {
+          formattedLogs.push({
+            domain: site.domain,
+            url: site.url,
+            action: "Deleted",
+            user: site.deletedBy?.email || "Unknown",
+            timestamp: site.deletedAt,
+          });
+        }
+      }
     });
+
+    formattedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     res.json({
       success: true,
-      data: formattedLogs
+      count: formattedLogs.length,
+      data: formattedLogs,
     });
 
   } catch (error) {
     console.error("❌ Logs API error:", error);
-
     res.status(500).json({
       success: false,
-      message: "Failed to fetch logs"
+      message: "Failed to fetch logs",
     });
   }
 };
-
-
-
 export const bulkImportSites = async (req, res) => {
   try {
     if (!req.file) {

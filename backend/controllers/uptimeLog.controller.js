@@ -113,53 +113,94 @@ export const getPaginatedLogs = async (req, res) => {
   /* =====================================================
     GET UPTIME ANALYTICS (24h / 7d / 30d)
   ===================================================== */
-  export const getUptimeAnalytics = async (req, res) => {
+ export const getUptimeAnalytics = async (req, res) => {
   try {
-    const { range } = req.query;
+    const { range = "7d", from, to, siteIds } = req.query;
 
-    let hours = 24;
-    if (range === "7d") hours = 24 * 7;
-    if (range === "30d") hours = 24 * 30;
+    let match = {};
+    const now = new Date();
 
-    const fromDate = new Date(Date.now() - hours * 60 * 60 * 1000);
+    // ================= DATE FILTER =================
+    if (range === "custom" && from && to) {
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
 
-    console.log("Filtering logs from:", fromDate);
+      match.checkedAt = { $gte: fromDate, $lte: toDate };
+    } else {
+      let hours = 24;
+      if (range === "7d") hours = 24 * 7;
+      if (range === "30d") hours = 24 * 30;
 
-    const logs = await UptimeLog.find({
-      checkedAt: { $gte: fromDate },
-    }).lean();
+      match.checkedAt = {
+        $gte: new Date(now - hours * 60 * 60 * 1000),
+        $lte: now,
+      };
+    }
 
-    console.log("Logs found:", logs.length);
+    // ================= SITE FILTER =================
+    if (siteIds) {
+      const idsArray = siteIds.split(",");
+      match.siteId = {
+        $in: idsArray.map((id) => new mongoose.Types.ObjectId(id)),
+      };
+    }
 
-    const totalChecks = logs.length;
+    // ================= AGGREGATION =================
+    const stats = await UptimeLog.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$siteId",
 
-    const upChecks = logs.filter(
-      (log) => log.status === "UP" || log.status === "SLOW"
-    ).length;
+          totalChecks: { $sum: 1 },
 
-    const downChecks = logs.filter(
-      (log) => log.status === "DOWN"
-    ).length;
+          upChecks: {
+            $sum: {
+              $cond: [
+                { $in: ["$status", ["UP", "SLOW"]] },
+                1,
+                0,
+              ],
+            },
+          },
 
-    const uptimePercent =
-      totalChecks === 0
-        ? 0
-        : Math.round((upChecks / totalChecks) * 100);
+          downChecks: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "DOWN"] }, 1, 0],
+            },
+          },
 
-    res.status(200).json({
-      success: true,
-      data: {
-        totalUptime: uptimePercent,
-        downtimeCount: downChecks,
-        totalChecks,
+          avgResponse: { $avg: "$responseTimeMs" },
+          minResponse: { $min: "$responseTimeMs" },
+          maxResponse: { $max: "$responseTimeMs" },
+        },
       },
-    });
+    ]);
 
+    // ================= FORMAT =================
+    const formatted = stats.map((s) => ({
+      siteId: s._id.toString(),
+      totalChecks: s.totalChecks,
+      upChecks: s.upChecks,
+      downChecks: s.downChecks,
+      uptimePercent: s.totalChecks
+        ? Math.round((s.upChecks / s.totalChecks) * 100)
+        : 0,
+      avgResponse: Math.round(s.avgResponse || 0),
+      minResponse: s.minResponse || 0,
+      maxResponse: s.maxResponse || 0,
+    }));
+
+    res.json({
+      success: true,
+      data: formatted,
+    });
   } catch (error) {
-    console.error("❌ getUptimeAnalytics error:", error);
+    console.error("❌ analytics error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to calculate uptime analytics",
+      message: "Failed to calculate analytics",
     });
   }
 };

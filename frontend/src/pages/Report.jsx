@@ -20,6 +20,7 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
   const [customTo, setCustomTo] = useState("");
   const [tempFrom, setTempFrom] = useState("");
   const [tempTo, setTempTo] = useState("");
+  const [statsMap, setStatsMap] = useState({});
   
 
   // ================= FILTERED SITES (FIRST) =================
@@ -58,6 +59,8 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
     setCustomTo(tempTo);
   };
 
+  
+
 useEffect(() => {
   const fetchLogs = async () => {
     try {
@@ -87,52 +90,53 @@ useEffect(() => {
   fetchLogs();
 }, [ range, customFrom, customTo, paginatedSites]);
 
+useEffect(() => {
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem("loginToken");
+      if (!token) return;
+
+      const siteIds = paginatedSites.map((s) => s._id).join(",");
+
+      const res = await axios.get(`${API_URL}/uptime-logs/analytics`, {
+        params: {
+          range,
+          from: customFrom,
+          to: customTo,
+          siteIds,
+        },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const map = {};
+      res.data.data.forEach((s) => {
+        map[s.siteId] = s;
+      });
+
+      setStatsMap(map);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchStats();
+}, [range, customFrom, customTo, paginatedSites]);
+
 
   const logsBySite = useMemo(() => {
   const grouped = {};
   logs.forEach((log) => {
     const key = log.siteId?.toString(); 
-    if (!grouped[log.siteId]) grouped[log.siteId] = [];
-    grouped[log.siteId].push(log);
+    if (!grouped[key]) grouped[key] = [];
+grouped[key].push(log);
   });
   return grouped;
 }, [logs]);
 
   
 
-  // ================= Helper Functions =================
-  const calculateStats = (logs = []) => {
-    const total = logs.length;
-    const up = logs.filter((l) => l.status === "UP").length;
-    const down = logs.filter((l) => l.status === "DOWN").length;
-    const uptimePercent = total ? ((up / total) * 100).toFixed(2) : 0;
-
-    return { total, up, down, uptimePercent };
-  };
-
-  const getResponseStats = (logs = []) => {
-  if (!logs.length) return { avg: 0, min: 0, max: 0 };
-
-  // Extract valid numeric response times
-  const times = logs
-    .map((l) => l.responseTimeMs ?? l.responseTime)
-    .filter(
-      (t) =>
-        typeof t === "number" &&
-        !isNaN(t) &&
-        t > 0
-    );
-
-  if (!times.length) return { avg: 0, min: 0, max: 0 };
-
-  const total = times.reduce((a, b) => a + b, 0);
-
-  return {
-    avg: Math.round(total / times.length),
-    min: Math.min(...times),
-    max: Math.max(...times),
-  };
-};
+  
   // ================= UI =================
   return (
     <div className="mb-6">
@@ -224,8 +228,7 @@ useEffect(() => {
       {/* Site Cards */}
       {paginatedSites.map((site) => {
         const logs = logsBySite[site._id] || [];
-        const stats = calculateStats(logs);
-        const response = getResponseStats(logs);
+        const stats = statsMap[site._id] || {};
         const lastLog = logs.slice(-1)[0];
 
         const isDown =
@@ -268,11 +271,11 @@ useEffect(() => {
                 {/* <p className="font-semibold">
                   Uptime: {stats.uptimePercent}%
                 </p> */}
-                <p>Total Checks: {stats.total}</p>
+                <p>Total Checks: {stats.totalChecks || 0}</p>
               </div>
 
               <div>
-                <p>Failures: {stats.down}</p>
+                <p>Failures: {stats.downChecks || 0}</p>
                 {/* <p>
                   Last Checked:{" "}
                   {lastLog
@@ -282,12 +285,13 @@ useEffect(() => {
               </div>
 
               <div>
-                <p>Avg: {response.avg} ms</p>
-                <p>Fastest: {response.min} ms</p>
+                
+                <p>Avg: {stats.avgResponse || 0} ms</p>
+                <p>Fastest: {stats.minResponse || 0} ms</p>
               </div>
 
               <div>
-                <p>Slowest: {response.max} ms</p>
+                <p>Slowest: {stats.maxResponse || 0} ms</p>
               </div>
             </div>
            <div className="flex justify-center gap-3 mt-6">

@@ -19,7 +19,7 @@ router.get("/hidden-columns", protect, getHiddenColumns);
 router.put("/hidden-columns", protect, updateHiddenColumns);
 router.post("/create", protect, authorizePermission("canCreateUser"), createUser);
 
-router.get("/all", protect, authorizePermission("canCreateUser"), getAllUsers);
+router.get("/users", protect, authorizePermission("canCreateUser"), getAllUsers);
 
 router.delete("/:id", protect, authorizePermission("canEditUser"), deleteUser);
 router.put(

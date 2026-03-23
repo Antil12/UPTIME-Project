@@ -70,11 +70,21 @@ priority: {
    ref: "User",
    default: null },
 
+   deletedAt: {
+  type: Date,
+  default: null
+},
+
    isActive: { 
     type: Number,
      enum: [0, 1],
       default: 1, 
     },
+    lastManualUpdateAt: {
+  type: Date,
+  default: null
+},
+
 
 
 }, { timestamps: true });

@@ -17,36 +17,39 @@ const Logs = () => {
     updated: 0,
     deleted: 0,
 });
-  const filterByDateAndStats = () => {
-  let filtered = logs;
+const getLocalDate = (date) => {
+  return new Date(date).toISOString().split("T")[0];
+};
 
-  // DATE FILTER
-  if (fromDate && toDate) {
-    const from = new Date(fromDate);
-    const to = new Date(toDate);
+const filterByDateAndStats = () => {
+  let filtered = [...logs];
 
-    // include full day
-    to.setHours(23, 59, 59, 999);
-
-    filtered = logs.filter((log) => {
-      const logDate = new Date(log.timestamp);
-      return logDate >= from && logDate <= to;
-    });
-  }
-
-  // SEARCH FILTER (reuse your existing logic)
-  if (searchQuery) {
-    const lowerQuery = searchQuery.toLowerCase();
+  // ✅ DATE FILTER (FIXED)
+  if (fromDate) {
     filtered = filtered.filter(
-      (log) =>
-        log.domain?.toLowerCase().includes(lowerQuery) ||
-        log.url?.toLowerCase().includes(lowerQuery) ||
-        log.action?.toLowerCase().includes(lowerQuery) ||
-        log.user?.toLowerCase().includes(lowerQuery)
+      (log) => getLocalDate(log.timestamp) >= fromDate
     );
   }
 
-  // CALCULATE STATS
+  if (toDate) {
+    filtered = filtered.filter(
+      (log) => getLocalDate(log.timestamp) <= toDate
+    );
+  }
+
+  // ✅ SEARCH
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(
+      (log) =>
+        log.domain?.toLowerCase().includes(q) ||
+        log.url?.toLowerCase().includes(q) ||
+        log.action?.toLowerCase().includes(q) ||
+        log.user?.toLowerCase().includes(q)
+    );
+  }
+
+  // ✅ STATS
   const created = filtered.filter((l) => l.action === "Created").length;
   const updated = filtered.filter((l) => l.action === "Updated").length;
   const deleted = filtered.filter((l) => l.action === "Deleted").length;
@@ -83,25 +86,9 @@ const res = await axios.get(
     }
   };
 
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-    if (!query) {
-      setFilteredLogs(logs);
-      setCurrentPage(1);
-      return;
-    }
-
-    const lowerQuery = query.toLowerCase();
-    const filtered = logs.filter(
-      (log) =>
-        log.domain?.toLowerCase().includes(lowerQuery) ||
-        log.url?.toLowerCase().includes(lowerQuery) ||
-        log.action?.toLowerCase().includes(lowerQuery) ||
-        log.user?.toLowerCase().includes(lowerQuery)
-    );
-    setFilteredLogs(filtered);
-    setCurrentPage(1);
-  };
+const handleSearch = (query) => {
+  setSearchQuery(query);
+};
 
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
@@ -111,8 +98,8 @@ const res = await axios.get(
   );
 
   const totalPages = Math.ceil(
-    (searchQuery ? filteredLogs.length : logs.length) / rowsPerPage
-  );
+  filteredLogs.length / rowsPerPage
+);
 
   return (
     <div className="max-w-7xl mx-auto p-6">
@@ -149,7 +136,7 @@ const res = await axios.get(
     <div className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
       Total:{" "}
       <span className="font-medium text-gray-700 dark:text-gray-200">
-        {searchQuery ? filteredLogs.length : logs.length}
+        {filteredLogs.length}
       </span>
     </div>
 
