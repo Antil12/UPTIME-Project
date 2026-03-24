@@ -204,3 +204,121 @@ export const getPaginatedLogs = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
+
+export const getReportData = async (req, res) => {
+  try {
+    const { range = "7d", from, to, siteIds } = req.query;
+
+    let match = {};
+    const now = new Date();
+
+    // DATE FILTER
+    if (range === "custom" && from && to) {
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+
+      match.checkedAt = { $gte: fromDate, $lte: toDate };
+    } else {
+      let hours = 24;
+      if (range === "7d") hours = 24 * 7;
+      if (range === "30d") hours = 24 * 30;
+
+      match.checkedAt = {
+        $gte: new Date(now - hours * 60 * 60 * 1000),
+        $lte: now,
+      };
+    }
+
+    // SITE FILTER
+    if (siteIds) {
+      const idsArray = siteIds.split(",");
+      match.siteId = {
+        $in: idsArray.map((id) => new mongoose.Types.ObjectId(id)),
+      };
+    }
+
+    // 🔥 ONE QUERY (FULL DATA)
+    const logs = await UptimeLog.find(match)
+      .sort({ checkedAt: 1 })
+      .lean();
+
+    const logsBySite = {};
+    const statsMap = {};
+
+    logs.forEach((log) => {
+      const siteId = log.siteId.toString();
+
+      if (!logsBySite[siteId]) {
+        logsBySite[siteId] = [];
+        statsMap[siteId] = {
+          siteId,
+          totalChecks: 0,
+          upChecks: 0,
+          downChecks: 0,
+          responses: [],
+        };
+      }
+
+      const formattedLog = {
+        _id: log._id,
+        siteId,
+        status: log.status,
+        statusCode: log.StatusCode ?? null,
+        responseTimeMs: log.responseTimeMs ?? null,
+        timestamp: log.checkedAt,
+      };
+
+      logsBySite[siteId].push(formattedLog);
+
+      // stats
+      statsMap[siteId].totalChecks++;
+
+      if (log.status === "DOWN") statsMap[siteId].downChecks++;
+      else statsMap[siteId].upChecks++;
+
+      if (log.responseTimeMs) {
+        statsMap[siteId].responses.push(log.responseTimeMs);
+      }
+    });
+
+    // finalize stats
+    Object.keys(statsMap).forEach((id) => {
+      const s = statsMap[id];
+      const r = s.responses;
+
+      s.uptimePercent = s.totalChecks
+        ? Math.round((s.upChecks / s.totalChecks) * 100)
+        : 0;
+
+      s.avgResponse = r.length
+        ? Math.round(r.reduce((a, b) => a + b, 0) / r.length)
+        : 0;
+
+      s.minResponse = r.length ? Math.min(...r) : 0;
+      s.maxResponse = r.length ? Math.max(...r) : 0;
+
+      delete s.responses;
+    });
+
+    res.json({
+      success: true,
+      data: { logsBySite, statsMap },
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch report data",
+    });
+  }
+};

@@ -752,8 +752,19 @@ export const getDeletedLogs = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
 export const bulkImportSites = async (req, res) => {
+  let filePath = "";
+
   try {
+    // ✅ 1. File check
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -761,70 +772,156 @@ export const bulkImportSites = async (req, res) => {
       });
     }
 
-    const results = [];
+    filePath = req.file.path;
 
-    fs.createReadStream(req.file.path)
-      .pipe(
-        csv({
-          mapHeaders: ({ header }) =>
-            header.trim().toLowerCase(), // 🔥 KEY FIX
-        })
-      )
-      .on("data", (row) => {
-        // Optional debug
-        // console.log("ROW:", row);
+    const rows = [];
+    let headersChecked = false;
 
-        if (!row.url) return;
+    // ✅ REQUIRED HEADERS
+    const requiredHeaders = ["domain", "url", "category", "priority"];
 
-        // Optional URL validation
-        if (!row.url.startsWith("http")) return;
+    // ✅ 2. Read CSV + Validate headers
+    await new Promise((resolve, reject) => {
+      fs.createReadStream(filePath)
+        .pipe(
+          csv({
+            mapHeaders: ({ header }) => header.trim().toLowerCase(),
+          })
+        )
+        .on("headers", (headers) => {
+          headersChecked = true;
 
-        results.push({
-          domain: row.domain || "",
-          url: row.url,
-          category: row.category || "UNCATEGORIZED",
-          owner: req.user._id,
-          priority: Number(row.priority ?? 0),
-        });
-      })
-      .on("end", async () => {
-        try {
-          if (results.length === 0) {
-            return res.status(400).json({
-              success: false,
-              message: "CSV has no valid rows",
-            });
+          const missing = requiredHeaders.filter(
+            (h) => !headers.includes(h)
+          );
+
+          if (missing.length > 0) {
+            return reject(
+              new Error(`Missing required headers: ${missing.join(", ")}`)
+            );
           }
+        })
+        .on("data", (row) => {
+          if (!row.url) return;
 
-          await MonitoredSite.insertMany(results, { ordered: false });
+          const url = row.url.trim();
 
-          fs.unlinkSync(req.file.path);
+          // ✅ URL validation
+          if (!url.startsWith("http")) return;
 
-          res.json({
-            success: true,
-            message: `${results.length} sites imported successfully`,
+          rows.push({
+            domain: row.domain?.trim() || "",
+            url,
+            category: row.category || "UNCATEGORIZED",
+            owner: req.user._id,
+            priority: Number(row.priority ?? 0),
           });
-        } catch (err) {
-          console.error("Insert error:", err);
-          res.status(500).json({
-            success: false,
-            message: "Database insert failed",
-          });
-        }
-      })
-      .on("error", (err) => {
-        console.error("CSV parse error:", err);
-        res.status(500).json({
-          success: false,
-          message: "CSV parsing failed",
-        });
+        })
+        .on("end", () => {
+          if (!headersChecked) {
+            return reject(new Error("CSV headers not found"));
+          }
+          resolve();
+        })
+        .on("error", reject);
+    });
+
+    // ✅ 3. No valid rows
+    if (rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "CSV has no valid rows",
       });
-  } catch (error) {
-    console.error("❌ CSV Import error:", error);
+    }
 
-    res.status(500).json({
+    // ✅ 4. Fetch ALL sites (active + inactive)
+    const existingSites = await MonitoredSite.find(
+      { owner: req.user._id },
+      "domain url isActive"
+    );
+
+    // Separate sets
+    const activeUrls = new Set();
+    const activeDomains = new Set();
+
+    const inactiveMap = new Map(); // url → doc
+
+    existingSites.forEach((s) => {
+      if (s.isActive === 1) {
+        activeUrls.add(s.url?.toLowerCase());
+        activeDomains.add(s.domain?.toLowerCase());
+      } else {
+        inactiveMap.set(s.url?.toLowerCase(), s);
+      }
+    });
+
+    // ✅ 5. Process rows
+    const uniqueSites = [];
+    const skipped = [];
+    const reactivated = [];
+
+    for (const site of rows) {
+      const domain = site.domain?.toLowerCase().trim();
+      const url = site.url?.toLowerCase().trim();
+
+      // ❌ Skip if ACTIVE already exists
+      if (activeUrls.has(url) || activeDomains.has(domain)) {
+        skipped.push(site);
+        continue;
+      }
+
+      // 🔄 Reactivate if exists but inactive
+      if (inactiveMap.has(url)) {
+        const existing = inactiveMap.get(url);
+        existing.isActive = 1;
+        existing.deletedAt = null;
+        existing.deletedBy = null;
+
+        await existing.save();
+        reactivated.push(site);
+
+        // also mark as active now
+        activeUrls.add(url);
+        activeDomains.add(domain);
+
+        continue;
+      }
+
+      // ✅ New site
+      uniqueSites.push(site);
+
+      // prevent CSV duplicates
+      activeUrls.add(url);
+      activeDomains.add(domain);
+    }
+
+    // ✅ 6. Insert new sites
+    if (uniqueSites.length > 0) {
+      await MonitoredSite.insertMany(uniqueSites, { ordered: false });
+    }
+
+    // ✅ 7. Cleanup file
+    fs.unlinkSync(filePath);
+
+    // ✅ 8. Final response
+    return res.status(200).json({
+      success: true,
+      message: "Bulk upload completed",
+      inserted: uniqueSites.length,
+      skipped: skipped.length,
+      reactivated: reactivated.length,
+    });
+
+  } catch (error) {
+    console.error("❌ Bulk import error:", error.message);
+
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    return res.status(400).json({
       success: false,
-      message: "Bulk import failed",
+      message: error.message || "Bulk import failed",
     });
   }
 };

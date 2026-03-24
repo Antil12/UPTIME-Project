@@ -10,17 +10,18 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
   // ================= STATES =================
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [logs, setLogs] = useState([]);
+  
 
-  const LIMIT = 50; // logs per request
+  
   const SITE_PER_PAGE = 5;
-
+  const [logsBySite, setLogsBySite] = useState({});
+  const [statsMap, setStatsMap] = useState({});
   const [range, setRange] = useState("7d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [tempFrom, setTempFrom] = useState("");
   const [tempTo, setTempTo] = useState("");
-  const [statsMap, setStatsMap] = useState({});
+  
   
 
   // ================= FILTERED SITES (FIRST) =================
@@ -59,46 +60,15 @@ export default function Report({ urls, reportSearch, setReportSearch, theme }) {
     setCustomTo(tempTo);
   };
 
-  
-
-useEffect(() => {
-  const fetchLogs = async () => {
+  useEffect(() => {
+  const fetchData = async () => {
     try {
       const token = localStorage.getItem("loginToken");
       if (!token) return;
 
       const siteIds = paginatedSites.map((s) => s._id).join(",");
 
-      const res = await axios.get(`${API_URL}/uptime-logs`, {
-        params: {
-          
-          range,
-          from: customFrom,
-          to: customTo,
-          siteIds,
-        },
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setLogs(res.data.data);
-      
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  fetchLogs();
-}, [ range, customFrom, customTo, paginatedSites]);
-
-useEffect(() => {
-  const fetchStats = async () => {
-    try {
-      const token = localStorage.getItem("loginToken");
-      if (!token) return;
-
-      const siteIds = paginatedSites.map((s) => s._id).join(",");
-
-      const res = await axios.get(`${API_URL}/uptime-logs/analytics`, {
+      const res = await axios.get(`${API_URL}/uptime-logs/report-data`, {
         params: {
           range,
           from: customFrom,
@@ -108,31 +78,22 @@ useEffect(() => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const map = {};
-      res.data.data.forEach((s) => {
-        map[s.siteId] = s;
-      });
-
-      setStatsMap(map);
+      setLogsBySite(res.data.data.logsBySite);
+      setStatsMap(res.data.data.statsMap);
 
     } catch (err) {
       console.error(err);
     }
   };
 
-  fetchStats();
+  fetchData();
 }, [range, customFrom, customTo, paginatedSites]);
 
 
-  const logsBySite = useMemo(() => {
-  const grouped = {};
-  logs.forEach((log) => {
-    const key = log.siteId?.toString(); 
-    if (!grouped[key]) grouped[key] = [];
-grouped[key].push(log);
-  });
-  return grouped;
-}, [logs]);
+
+
+
+
 
   
 
@@ -229,7 +190,7 @@ grouped[key].push(log);
       {paginatedSites.map((site) => {
         const logs = logsBySite[site._id] || [];
         const stats = statsMap[site._id] || {};
-        const lastLog = logs.slice(-1)[0];
+        const lastLog = logs.length ? logs[logs.length - 1] : null;
 
         const isDown =
           lastLog && lastLog.status === "DOWN";
