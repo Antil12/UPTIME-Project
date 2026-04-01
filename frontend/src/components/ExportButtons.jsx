@@ -227,7 +227,7 @@ const ExportButtons = ({
         onClick={() => setOpen(!open)}
         disabled={loading}
         className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow transition
-        ${isDark ? "bg-indigo-700 hover:bg-indigo-600" : "bg-indigo-500 hover:bg-indigo-600"}
+        ${isDark ? "bg-green-700 hover:bg-green-600" : "bg-green-500 hover:bg-green-600"}
         text-white`}
       >
         <Download size={16} />

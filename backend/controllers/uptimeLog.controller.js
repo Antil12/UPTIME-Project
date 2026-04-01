@@ -113,7 +113,7 @@ export const getPaginatedLogs = async (req, res) => {
   /* =====================================================
     GET UPTIME ANALYTICS (24h / 7d / 30d)
   ===================================================== */
- export const getUptimeAnalytics = async (req, res) => {
+export const getUptimeAnalytics = async (req, res) => {
   try {
     const { range = "7d", from, to, siteIds } = req.query;
 
@@ -146,22 +146,18 @@ export const getPaginatedLogs = async (req, res) => {
       };
     }
 
-    // ================= AGGREGATION =================
+    // ================= GLOBAL AGGREGATION =================
     const stats = await UptimeLog.aggregate([
       { $match: match },
       {
         $group: {
-          _id: "$siteId",
+          _id: null, // ✅ global summary
 
           totalChecks: { $sum: 1 },
 
           upChecks: {
             $sum: {
-              $cond: [
-                { $in: ["$status", ["UP", "SLOW"]] },
-                1,
-                0,
-              ],
+              $cond: [{ $in: ["$status", ["UP", "SLOW"]] }, 1, 0],
             },
           },
 
@@ -178,9 +174,16 @@ export const getPaginatedLogs = async (req, res) => {
       },
     ]);
 
-    // ================= FORMAT =================
-    const formatted = stats.map((s) => ({
-      siteId: s._id.toString(),
+    const s = stats[0] || {
+      totalChecks: 0,
+      upChecks: 0,
+      downChecks: 0,
+      avgResponse: 0,
+      minResponse: 0,
+      maxResponse: 0,
+    };
+
+    const formatted = {
       totalChecks: s.totalChecks,
       upChecks: s.upChecks,
       downChecks: s.downChecks,
@@ -190,7 +193,7 @@ export const getPaginatedLogs = async (req, res) => {
       avgResponse: Math.round(s.avgResponse || 0),
       minResponse: s.minResponse || 0,
       maxResponse: s.maxResponse || 0,
-    }));
+    };
 
     res.json({
       success: true,
@@ -204,7 +207,6 @@ export const getPaginatedLogs = async (req, res) => {
     });
   }
 };
-
 
 
 

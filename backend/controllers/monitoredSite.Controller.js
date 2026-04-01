@@ -13,51 +13,51 @@ import csv from "csv-parser";
 ===================================================== */
 export const getMonitoredSites = async (req, res) => {
   try {
-    const { category } = req.query; // optional query param
+    const { category, status } = req.query; // ✅ include status
 
     const matchStage = {
-  isActive: 1 // only active sites
-};
-    
-    if (category) matchStage.category = category;
+      isActive: 1,
+    };
+
+    if (category && category !== "ALL") {
+      matchStage.category = category;
+    }
 
     // RBAC: restrict results for non-admin users to owned or assigned sites
- const role = req.user?.role;
-const userId = req.user?._id;
+    const role = req.user?.role;
+    const userId = req.user?._id;
 
-if (role === "USER" || role === "VIEWER") {
+    if (role === "USER" || role === "VIEWER") {
+      const user = await User.findById(userId).select("assignedSites");
+      const assignedSiteIds = user?.assignedSites || [];
 
-  const user = await User.findById(userId).select("assignedSites");
-
-  const assignedSiteIds = user?.assignedSites || [];
-
-  matchStage.$or = [
-    { owner: userId },
-    { _id: { $in: assignedSiteIds } },   // viewer assigned sites
-    { assignedUsers: userId }            // fallback if assigned via site
-  ];
-}
-
-// SUPERADMIN and ADMIN should see all sites
+      matchStage.$or = [
+        { owner: userId },
+        { _id: { $in: assignedSiteIds } },
+        { assignedUsers: userId },
+      ];
+    }
 
     const pipeline = [
-  { $match: matchStage },
+      { $match: matchStage },
 
-  // ✅ Join owner (User collection)
-{
-  $lookup: {
-    from: "users",
-    localField: "owner",
-    foreignField: "_id",
-    as: "ownerData"
-  }
-},
-{
-  $unwind: {
-    path: "$ownerData",
-    preserveNullAndEmptyArrays: true
-  }
-},
+      // ✅ Join owner
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "ownerData",
+        },
+      },
+      {
+        $unwind: {
+          path: "$ownerData",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // ✅ Current status
       {
         $lookup: {
           from: "sitecurrentstatuses",
@@ -67,8 +67,13 @@ if (role === "USER" || role === "VIEWER") {
         },
       },
       {
-        $unwind: { path: "$uptime", preserveNullAndEmptyArrays: true },
+        $unwind: {
+          path: "$uptime",
+          preserveNullAndEmptyArrays: true,
+        },
       },
+
+      // ✅ SSL status
       {
         $lookup: {
           from: "sslstatuses",
@@ -78,41 +83,57 @@ if (role === "USER" || role === "VIEWER") {
         },
       },
       {
-        $unwind: { path: "$ssl", preserveNullAndEmptyArrays: true },
+        $unwind: {
+          path: "$ssl",
+          preserveNullAndEmptyArrays: true,
+        },
       },
- 
+
+      // ✅ Status filter
+      ...(status && status !== "ALL"
+        ? [
+            {
+              $match: {
+                "uptime.status": status,
+              },
+            },
+          ]
+        : []),
+
       {
         $project: {
           _id: 1,
           domain: 1,
           url: 1,
-          category: 1, // include category
+          category: 1,
           emailContact: 1,
           phoneContact: 1,
           priority: 1,
           responseThresholdMs: 1,
           createdAt: 1,
           ownerEmail: "$ownerData.email",
-ownerRole: "$ownerData.role",
+          ownerRole: "$ownerData.role",
+
           status: { $ifNull: ["$uptime.status", "UNKNOWN"] },
           statusCode: "$uptime.statusCode",
           responseTimeMs: "$uptime.responseTimeMs",
           lastCheckedAt: "$uptime.lastCheckedAt",
+
           sslStatus: "$ssl.sslStatus",
           sslDaysRemaining: "$ssl.daysRemaining",
           sslValidTo: "$ssl.validTo",
+
           statusPriority: { $ifNull: ["$uptime.statusPriority", 4] },
-sslPriority: { $ifNull: ["$ssl.sslPriority", 5] },
-          
+          sslPriority: { $ifNull: ["$ssl.sslPriority", 5] },
         },
       },
       {
-  $sort: {
-    statusPriority: 1,
-    sslPriority: 1,
-    createdAt: -1
-  }
-}
+        $sort: {
+          statusPriority: 1,
+          sslPriority: 1,
+          createdAt: -1,
+        },
+      },
     ];
 
     const data = await MonitoredSite.aggregate(pipeline);
@@ -525,36 +546,29 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
 
   try {
     const site = await MonitoredSite.findOne({
-  _id: siteId,
-  isActive: 1
-});
+      _id: siteId,
+      isActive: 1,
+    });
+
     if (!site) {
       return res.status(404).json({
         success: false,
         message: "Site not found",
       });
     }
+
     let status = "UNKNOWN";
-let statusCode = null;
-let responseTimeMs = null;
-let reason = null;
-let statusPriority = 4;
-
-if (status === "DOWN") statusPriority = 1;
-else if (status === "SLOW") statusPriority = 2;
-else if (status === "UP") statusPriority = 3;
-else statusPriority = 4;
-
-
-    
+    let statusCode = null;
+    let responseTimeMs = null;
+    let reason = null;
 
     const startTime = Date.now();
 
     try {
-      // 🔹 1️⃣ Try HEAD first
       let response;
 
       try {
+        // ✅ HEAD first
         response = await axios.head(site.url, {
           timeout: 10000,
           validateStatus: () => true,
@@ -562,7 +576,7 @@ else statusPriority = 4;
       } catch (headError) {
         console.log("HEAD failed → trying GET fallback");
 
-        // 🔹 2️⃣ Fallback to GET
+        // ✅ GET fallback
         response = await axios.get(site.url, {
           timeout: 10000,
           validateStatus: () => true,
@@ -572,23 +586,31 @@ else statusPriority = 4;
       responseTimeMs = Date.now() - startTime;
       statusCode = response.status;
 
-      // 🔹 3️⃣ Decide Status
+      const SLOW_THRESHOLD = site.responseThresholdMs || 15000;
+
       if (statusCode >= 200 && statusCode < 400) {
-        status = "UP";
+        if (responseTimeMs > SLOW_THRESHOLD) {
+          status = "SLOW";
+          reason = "HIGH RESPONSE TIME";
+        } else {
+          status = "UP";
+        }
       } else if (statusCode >= 400 && statusCode < 500) {
         status = "DOWN";
         reason = "CLIENT ERROR";
       } else if (statusCode >= 500) {
         status = "DOWN";
         reason = "SERVER ERROR";
+      } else {
+        status = "DOWN";
+        reason = "INVALID RESPONSE";
       }
-
     } catch (err) {
       responseTimeMs = null;
       statusCode = null;
 
       if (err.code === "ECONNABORTED") {
-        status = "SLOW";
+        status = "DOWN"; // ✅ timeout should be DOWN, not SLOW
         reason = "TIMEOUT";
       } else {
         status = "DOWN";
@@ -596,26 +618,32 @@ else statusPriority = 4;
       }
     }
 
-    // 🔹 4️⃣ Save in DB
+    // ✅ CALCULATE AFTER FINAL STATUS
+    let statusPriority = 4;
+
+    if (status === "DOWN") statusPriority = 1;
+    else if (status === "SLOW") statusPriority = 2;
+    else if (status === "UP") statusPriority = 3;
+    else statusPriority = 4;
+
     const currentStatus = await SiteCurrentStatus.findOneAndUpdate(
-{ siteId },
-{
-  siteId,
-  status,
-  statusPriority,
-  statusCode,
-  reason,
-  responseTimeMs,
-  lastCheckedAt: new Date()
-},
-{ upsert: true, new: true }
-);
+      { siteId },
+      {
+        siteId,
+        status,
+        statusPriority,
+        statusCode,
+        reason,
+        responseTimeMs,
+        lastCheckedAt: new Date(),
+      },
+      { upsert: true, new: true }
+    );
 
     res.json({
       success: true,
       data: currentStatus,
     });
-
   } catch (error) {
     console.error("❌ checkAndUpdateSiteStatus error:", error);
     res.status(500).json({

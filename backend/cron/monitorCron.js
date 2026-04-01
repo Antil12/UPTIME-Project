@@ -6,7 +6,6 @@ import { checkSsl } from "../services/sslChecker.js";
 import { checkRegions } from "../services/regionChecker.js";
 import { handleStatusAlert } from "../services/alertService.js";
 import sendSlowBatchEmail from "../services/sendSlowBatchEmail.js";
-//import { sendSlowAlertEmail } from "../services/emailService.js";
 import { setSlowBatch } from "../services/slowBatchStore.js";
 import { emailQueue } from "../queue/emailQueue.js";
 
@@ -41,42 +40,62 @@ export const startMonitoringCron = () => {
           let responseTimeMs = null;
           let statusCode = 0;
 
-          /* =========================
-       UPTIME CHECK
-    ========================= */
-          try {
-            const SLOW_THRESHOLD = site.responseThresholdMs || 15000;
+/* =========================
+   UPTIME CHECK
+========================= */
 
-            const start = Date.now();
-            const response = await axios.get(site.url, {
-              timeout: 15000,
-              validateStatus: () => true,
-            });
+try {
+  const SLOW_THRESHOLD = site.responseThresholdMs || 15000;
+  const SHOULD_FALLBACK_TO_GET = [403, 405, 408, 429, 500, 501, 502, 503, 504];
 
-            responseTimeMs = Date.now() - start;
-            statusCode = response.status;
+  let response;
 
-            if (response.status >= 400) {
-              status = "DOWN";
-            } else if (responseTimeMs > SLOW_THRESHOLD) {
-              status = "SLOW";
+  // HEAD check
+  let start = Date.now();
+  response = await axios.head(site.url, {
+    timeout: 15000,
+    validateStatus: () => true,
+  });
+  let measuredTime = Date.now() - start;
 
-              // 🔥 Store in temporary list
-              slowSitesTemp.push({
-                domain: site.domain,
-                url: site.url,
-                responseTimeMs,
-                threshold: SLOW_THRESHOLD,
-                checkedAt,
-                emailContact: site.emailContact || null,
-              });
-            }
-          } catch {
-            status = "DOWN";
-            statusCode = 0;
-            responseTimeMs = null;
-          }
+  // fallback to GET if HEAD is unreliable
+  if (SHOULD_FALLBACK_TO_GET.includes(response.status)) {
+    console.log(`HEAD not reliable for ${site.url} (${response.status}) → trying GET fallback`);
 
+    start = Date.now();
+    response = await axios.get(site.url, {
+      timeout: 15000,
+      validateStatus: () => true,
+    });
+    measuredTime = Date.now() - start;
+  }
+
+  responseTimeMs = measuredTime;
+  statusCode = response.status;
+
+  if (statusCode >= 200 && statusCode < 400) {
+    if (responseTimeMs > SLOW_THRESHOLD) {
+      status = "SLOW";
+
+      slowSitesTemp.push({
+        domain: site.domain,
+        url: site.url,
+        responseTimeMs,
+        threshold: SLOW_THRESHOLD,
+        checkedAt,
+        emailContact: site.emailContact || null,
+      });
+    } else {
+      status = "UP";
+    }
+  } else {
+    status = "DOWN";
+  }
+} catch (err) {
+  status = "DOWN";
+  statusCode = 0;
+  responseTimeMs = null;
+}
           /* =========================
        SAVE CURRENT STATUS
     ========================= */
@@ -131,6 +150,11 @@ else statusPriority = 4;
               if (alertResult.type === "HIGH_PRIORITY") highPriorityTemp.push(entry);
               else downSitesTemp.push(entry);
             }
+          }
+
+          // RECOVERY handling: when a site is UP, reset failureCount and send recovery alert if needed
+          if (status === "UP") {
+            await handleStatusAlert(site, "UP", checkedAt, responseTimeMs);
           }
 
           /* =========================
