@@ -139,6 +139,8 @@ const Header = ({
   />
 )}
 
+              <CrystalButton label="Regions" onClick={() => navigate("/region")} theme={theme}/>
+
               <CrystalButton label="Reports" onClick={() => navigate("/reports")} theme={theme}/>
               {/* <CrystalButton label="Super Admin" onClick={() => navigate("/superadmin")} theme={theme}/> */}
 
@@ -175,6 +177,13 @@ const Header = ({
     className="px-3 py-2 rounded-lg bg-white/10 text-xs"
   >
     📄
+  </button>
+
+  <button
+    onClick={() => navigate("/region")}
+    className="px-3 py-2 rounded-lg bg-white/10 text-xs"
+  >
+    🌎
   </button>
 
   {/* Only SUPERADMIN */}

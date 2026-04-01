@@ -383,7 +383,7 @@ const AddUrl = ({
   </p>
 
   <div className="flex flex-wrap gap-4 mb-6">
-    {["India", "USA", "Germany"].map((region) => {
+              {["South America", "Australia", "North America", "Europe", "Asia", "Africa"].map((region) => {
       const active = regions.includes(region);
 
       return (

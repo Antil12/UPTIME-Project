@@ -11,6 +11,8 @@ import {
   getSiteById,
   checkAndUpdateSiteStatus,
   getCategories,
+  getRegions,
+  getSitesByRegion,
   getSlowAlertBatch,
   getDeletedLogs
 } from "../controllers/monitoredSite.Controller.js";
@@ -27,6 +29,9 @@ const upload = multer({
 router.use(protect);
 
 router.get("/", getMonitoredSites);
+
+router.get("/regions", getRegions);
+router.get("/regions/:region", getSitesByRegion);
 
 router.get("/categories", getCategories);
 

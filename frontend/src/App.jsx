@@ -14,6 +14,8 @@ import SuperAdmin from "./pages/SuperAdmin";
 import Logs from "./pages/Logs";
 import setupaxios from "./api/setupAxios";
 import BulkUpload from "./pages/BulkUpload";
+import Regions from "./pages/Regions";
+import Region from "./pages/Region";
 
 setupaxios();
 const API_BASE = "/monitoredsite";
@@ -412,6 +414,8 @@ if (!isLoggedIn) {
               />
             }
           />
+          <Route path="/region" element={<Regions theme={theme} />} />
+          <Route path="/region/:region" element={<Region theme={theme} />} />
           <Route
 path="/logs"
 element={

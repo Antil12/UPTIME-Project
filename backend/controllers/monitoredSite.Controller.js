@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import axios from "axios";
 import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
+import RegionAssignment from "../models/RegionAssignment.js";
 import { getSlowBatch, clearSlowBatch } from "../services/slowBatchStore.js";
 import User from "../models/User.js";
 import { emailQueue } from "../queue/emailQueue.js";
@@ -277,6 +278,21 @@ export const addSite = async (req, res) => {
 
     });
 
+    // Create RegionAssignment entries for each selected region
+    if (Array.isArray(site.regions) && site.regions.length > 0) {
+      const assignments = site.regions.map((r) => ({
+        siteId: site._id,
+        region: r,
+      }));
+
+      try {
+        // Use insertMany with ordered:false to skip duplicates
+        await RegionAssignment.insertMany(assignments, { ordered: false });
+      } catch (e) {
+        // ignore duplicate key errors
+      }
+    }
+
     res.status(201).json({
       success: true,
       data: site,
@@ -301,6 +317,7 @@ export const updateSite = async (req, res) => {
       domain,
       url,
       category,
+      regions,
       emailContact,
       phoneContact,
       priority,
@@ -311,6 +328,7 @@ export const updateSite = async (req, res) => {
       domain,
       url,
       category,
+      regions: Array.isArray(regions) ? regions : undefined,
       emailContact: emailContact
         ? Array.isArray(emailContact)
           ? emailContact
@@ -363,6 +381,30 @@ Object.assign(site, updatedData);
 site.updatedBy = req.user._id;
 site.lastManualUpdateAt = new Date(); // ✅ IMPORTANT
 await site.save();
+    // Sync RegionAssignment records if regions were provided
+    if (Array.isArray(regions)) {
+      try {
+        const existing = await RegionAssignment.find({ siteId: site._id });
+        const existingRegions = existing.map((e) => e.region);
+
+        // Regions to add
+        const toAdd = regions.filter((r) => !existingRegions.includes(r));
+        const addDocs = toAdd.map((r) => ({ siteId: site._id, region: r }));
+        if (addDocs.length > 0) {
+          try {
+            await RegionAssignment.insertMany(addDocs, { ordered: false });
+          } catch (e) {}
+        }
+
+        // Regions to remove
+        const toRemove = existingRegions.filter((r) => !regions.includes(r));
+        if (toRemove.length > 0) {
+          await RegionAssignment.deleteMany({ siteId: site._id, region: { $in: toRemove } });
+        }
+      } catch (e) {
+        console.error("Region sync error:", e);
+      }
+    }
     if (!site) {
       return res.status(404).json({
         success: false,
@@ -665,6 +707,63 @@ export const getCategories = async (req, res) => {
   } catch (error) {
     console.error("❌ getCategories error:", error);
     res.status(500).json({ success: false, message: "Failed to fetch categories" });
+  }
+};
+
+// =====================================================
+// GET AVAILABLE REGIONS (STATIC LIST)
+// =====================================================
+export const getRegions = async (req, res) => {
+  try {
+    const regions = [
+      "South America",
+      "Australia",
+      "North America",
+      "Europe",
+      "Asia",
+      "Africa",
+    ];
+
+    res.json({ success: true, data: regions });
+  } catch (err) {
+    console.error("getRegions error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch regions" });
+  }
+};
+
+// =====================================================
+// GET SITES FOR A GIVEN REGION
+// =====================================================
+export const getSitesByRegion = async (req, res) => {
+  try {
+    const region = req.params.region;
+
+    if (!region) {
+      return res.status(400).json({ success: false, message: "Region is required" });
+    }
+
+    const role = req.user?.role;
+    const userId = req.user?._id;
+
+    const filter = { isActive: 1, regions: region };
+
+    if (role === "USER" || role === "VIEWER") {
+      const user = await User.findById(userId).select("assignedSites");
+      const assignedSiteIds = user?.assignedSites || [];
+
+      filter.$or = [
+        { owner: userId },
+        { _id: { $in: assignedSiteIds } },
+        { assignedUsers: userId },
+      ];
+    }
+
+    const sites = await MonitoredSite.find(filter).sort({ createdAt: -1 });
+
+    res.json({ success: true, count: sites.length, data: sites });
+  } catch (err) {
+    console.error("getSitesByRegion error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch sites for region" });
   }
 };
 
