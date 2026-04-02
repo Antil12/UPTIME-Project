@@ -1,6 +1,247 @@
-import React, { useState } from "react";
-import ShaderBackground from "../components/ShaderBackground";
+import React, { useState, useEffect } from "react";
+import { motion, useMotionValue, useSpring } from "framer-motion";
+import {
+  Globe2,
+  Link2,
+  Bell,
+  Mail,
+  Phone,
+  MapPin,
+  Zap,
+  Plus,
+  X,
+  CheckCircle2,
+} from "lucide-react";
 
+
+// ─── Font Loader ──────────────────────────────────────────────────────────────
+const FontLoader = () => {
+  useEffect(() => {
+    if (document.getElementById("uptime-fonts")) return;
+    const link = document.createElement("link");
+    link.id = "uptime-fonts";
+    link.href =
+      "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;700&display=swap";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+  }, []);
+  return null;
+};
+
+// ─── Cursor Glow ──────────────────────────────────────────────────────────────
+const CursorGlow = () => {
+  const x = useMotionValue(-400);
+  const y = useMotionValue(-400);
+  const sx = useSpring(x, { stiffness: 90, damping: 24 });
+  const sy = useSpring(y, { stiffness: 90, damping: 24 });
+
+  useEffect(() => {
+    const fn = (e) => { x.set(e.clientX); y.set(e.clientY); };
+    window.addEventListener("mousemove", fn);
+    return () => window.removeEventListener("mousemove", fn);
+  }, [x, y]);
+
+  return (
+    <motion.div
+      className="pointer-events-none fixed inset-0 z-0"
+      style={{
+        left: sx, top: sy,
+        translateX: "-50%", translateY: "-50%",
+        width: 320, height: 320,
+        borderRadius: "50%",
+        background: "radial-gradient(circle, rgba(56,189,248,0.045) 0%, transparent 72%)",
+      }}
+    />
+  );
+};
+
+// ─── Background ───────────────────────────────────────────────────────────────
+const Background = () => (
+  <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+    <div className="absolute inset-0" style={{ background: "#030712" }} />
+    <div className="absolute inset-0" style={{
+      background: "radial-gradient(ellipse 60% 40% at 50% 20%, rgba(56,189,248,0.045) 0%, transparent 100%)",
+    }} />
+    <div className="absolute" style={{
+      top: "62%", left: "16%", width: 320, height: 320,
+      background: "radial-gradient(circle, rgba(129,140,248,0.035) 0%, transparent 68%)",
+      filter: "blur(90px)",
+    }} />
+    <div className="absolute" style={{
+      top: "18%", right: "12%", width: 260, height: 260,
+      background: "radial-gradient(circle, rgba(16,185,129,0.025) 0%, transparent 68%)",
+      filter: "blur(80px)",
+    }} />
+    <div className="absolute inset-0" style={{
+      backgroundImage:
+        "linear-gradient(rgba(148,163,184,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.025) 1px, transparent 1px)",
+      backgroundSize: "42px 42px",
+    }} />
+    <motion.div
+      className="absolute inset-0"
+      style={{
+        background: "linear-gradient(to bottom, transparent 48%, rgba(56,189,248,0.012) 50%, transparent 52%)",
+      }}
+      animate={{ y: ["-100%", "100%"] }}
+      transition={{ duration: 6, repeat: Infinity, ease: "linear", repeatDelay: 2.5 }}
+    />
+  </div>
+);
+
+// ─── HUD Corner ───────────────────────────────────────────────────────────────
+const HUDCorner = ({ pos, delay = 0 }) => {
+  const cls = { tl: "top-4 left-4", tr: "top-4 right-4", bl: "bottom-4 left-4", br: "bottom-4 right-4" };
+  const rot = { tl: "0deg", tr: "90deg", bl: "-90deg", br: "180deg" };
+  return (
+    <motion.div
+      className={`fixed ${cls[pos]} w-7 h-7 z-20 pointer-events-none`}
+      style={{ transform: `rotate(${rot[pos]})` }}
+      initial={{ opacity: 0, scale: 0.3 }}
+      animate={{ opacity: 0.8, scale: 1 }}
+      transition={{ delay, duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}
+    >
+      <motion.div className="absolute top-0 left-0 h-[1.5px] bg-sky-400/80"
+        initial={{ width: 0 }} animate={{ width: "100%" }}
+        transition={{ delay: delay + 0.15, duration: 0.35 }} />
+      <motion.div className="absolute top-0 left-0 w-[1.5px] bg-sky-400/80"
+        initial={{ height: 0 }} animate={{ height: "100%" }}
+        transition={{ delay: delay + 0.15, duration: 0.35 }} />
+    </motion.div>
+  );
+};
+
+// ─── Orbit Ring ───────────────────────────────────────────────────────────────
+const OrbitRing = ({ radius, duration, dotCount, color, delay = 0, tilt = 70 }) => (
+  <motion.div
+    className="fixed pointer-events-none z-[1]"
+    style={{
+      width: radius * 2, height: radius * 2,
+      top: "50%", left: "50%",
+      marginTop: -radius, marginLeft: -radius,
+      transform: `perspective(900px) rotateX(${tilt}deg)`,
+      opacity: 0.4,
+    }}
+    animate={{ rotate: 360 }}
+    transition={{ duration, repeat: Infinity, ease: "linear", delay }}
+  >
+    <div className="absolute inset-0 rounded-full" style={{ border: `1px solid ${color}14` }} />
+    {Array.from({ length: dotCount }, (_, i) => {
+      const angle = (i / dotCount) * 2 * Math.PI;
+      const cx = Math.cos(angle) * radius + radius;
+      const cy = Math.sin(angle) * radius + radius;
+      return (
+        <motion.div key={i} className="absolute rounded-full"
+          style={{
+            width: i === 0 ? 4 : 2, height: i === 0 ? 4 : 2,
+            background: i === 0 ? color : `${color}40`,
+            left: cx - (i === 0 ? 2 : 1), top: cy - (i === 0 ? 2 : 1),
+            boxShadow: i === 0 ? `0 0 8px ${color}` : "none",
+          }}
+          animate={i === 0 ? { opacity: [1, 0.35, 1] } : {}}
+          transition={{ duration: 1.8, repeat: Infinity }}
+        />
+      );
+    })}
+  </motion.div>
+);
+
+// ─── Status Dot ───────────────────────────────────────────────────────────────
+const StatusDot = ({ color = "#34d399", label }) => (
+  <div className="flex items-center gap-2">
+    <div className="relative w-2 h-2">
+      <motion.div className="absolute inset-0 rounded-full" style={{ background: color }}
+        animate={{ scale: [1, 2], opacity: [0.45, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity }} />
+      <div className="absolute inset-0 rounded-full" style={{ background: color }} />
+    </div>
+    {label && (
+      <span style={{
+        fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+        letterSpacing: "0.16em", color: `${color}88`, textTransform: "uppercase",
+      }}>
+        {label}
+      </span>
+    )}
+  </div>
+);
+
+// ─── Section Label ────────────────────────────────────────────────────────────
+const SectionLabel = ({ icon: Icon, label }) => (
+  <div className="flex items-center gap-3 mb-4">
+    <div className="w-7 h-7 rounded-lg flex items-center justify-center border"
+      style={{ borderColor: "rgba(56,189,248,0.12)", background: "rgba(56,189,248,0.04)" }}>
+      <Icon size={13} className="text-sky-400" />
+    </div>
+    <span style={{
+      fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+      letterSpacing: "0.22em", color: "rgba(56,189,248,0.5)", textTransform: "uppercase",
+    }}>
+      {label}
+    </span>
+    <div className="flex-1 h-[1px]" style={{ background: "rgba(56,189,248,0.06)" }} />
+  </div>
+);
+
+// ─── HUD Input ────────────────────────────────────────────────────────────────
+const HudInput = ({ type = "text", placeholder, value, onChange, ...rest }) => (
+  <div className="relative group">
+    <div className="absolute left-0 top-0 bottom-0 w-[2px] rounded-l-full"
+      style={{ background: "rgba(56,189,248,0.0)", transition: "background 0.3s" }}
+    />
+    <input
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      {...rest}
+      className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-300"
+      style={{
+        background: "rgba(255,255,255,0.022)",
+        border: "1px solid rgba(56,189,248,0.09)",
+        color: "white",
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "12px",
+        letterSpacing: "0.02em",
+        backdropFilter: "blur(12px)",
+      }}
+      onFocus={e => {
+        e.target.style.border = "1px solid rgba(56,189,248,0.35)";
+        e.target.style.boxShadow = "0 0 0 3px rgba(56,189,248,0.06), 0 0 20px rgba(56,189,248,0.04)";
+      }}
+      onBlur={e => {
+        e.target.style.border = "1px solid rgba(56,189,248,0.09)";
+        e.target.style.boxShadow = "none";
+      }}
+    />
+  </div>
+);
+
+// ─── Toggle Chip ─────────────────────────────────────────────────────────────
+const ToggleChip = ({ label, active, onClick, activeColor = "#38bdf8" }) => (
+  <motion.button
+    type="button"
+    onClick={onClick}
+    whileHover={{ scale: 1.04 }}
+    whileTap={{ scale: 0.96 }}
+    className="px-5 py-3 rounded-2xl font-medium tracking-wide transition-all duration-300"
+    style={{
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: "11px",
+      letterSpacing: "0.1em",
+      textTransform: "uppercase",
+      border: active ? `1px solid ${activeColor}55` : "1px solid rgba(56,189,248,0.08)",
+      background: active
+        ? `linear-gradient(135deg, ${activeColor}18, ${activeColor}08)`
+        : "rgba(255,255,255,0.018)",
+      color: active ? activeColor : "rgba(148,163,184,0.6)",
+      boxShadow: active ? `0 0 18px ${activeColor}18` : "none",
+    }}
+  >
+    {label}
+  </motion.button>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const AddUrl = ({
   theme,
   domain,
@@ -20,441 +261,417 @@ const AddUrl = ({
   const [emailContacts, setEmailContacts] = useState([]);
   const [emailInput, setEmailInput] = useState("");
   const [phoneContact, setPhoneContact] = useState("");
-  const [priority, setPriority] = useState(0); 
+  const [priority, setPriority] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
 
-  const normalize = (value = "") =>
-    value.trim().toLowerCase().replace(/\/$/, "");
+  const normalize = (v = "") => v.trim().toLowerCase().replace(/\/$/, "");
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setLocalError("");
 
-    const normalizedDomain = normalize(domain);
-    const normalizedUrl = normalize(url);
-
-    if (!normalizedDomain || !normalizedUrl) {
-      setLocalError("❌ Domain and URL are required");
-      return;
-    }
-
-    const duplicateDomain = urls.some(
-      (u) => normalize(u.domain) === normalizedDomain
-    );
-
-    if (duplicateDomain) {
-      setLocalError("❌ Domain name already exists");
-      return;
-    }
-
-    const duplicateUrl = urls.some(
-      (u) => normalize(u.url) === normalizedUrl
-    );
-
-    if (duplicateUrl) {
-      setLocalError("❌ URL already exists");
-      return;
-    }
+    const nd = normalize(domain);
+    const nu = normalize(url);
+    if (!nd || !nu) { setLocalError("Domain and URL are required."); return; }
+    if (urls.some((u) => normalize(u.domain) === nd)) { setLocalError("Domain name already exists."); return; }
+    if (urls.some((u) => normalize(u.url) === nu)) { setLocalError("URL already exists."); return; }
 
     onSave({
-      domain: domain.trim(),
-      url: url.trim(),
+      domain: domain.trim(), url: url.trim(),
       category: category.trim() || null,
-      responseThresholdMs,
-      alertChannels,
-      regions,
+      responseThresholdMs, alertChannels, regions,
       alertIfAllRegionsDown,
-      emailContact: emailContacts,
-      phoneContact,
-      priority,
+      emailContact: emailContacts, phoneContact, priority,
     });
 
-    setCategory("");
-    setEmailContacts([]);
-    setEmailInput("");
-    setPhoneContact("");
-    setAlertChannels([]);
+    setSubmitted(true);
+    setTimeout(() => setSubmitted(false), 2000);
+    setCategory(""); setEmailContacts([]); setEmailInput("");
+    setPhoneContact(""); setAlertChannels([]);
   };
 
-  const isDark = theme === "dark";
+  const toggleChannel = (ch) =>
+    setAlertChannels((p) => p.includes(ch) ? p.filter((c) => c !== ch) : [...p, ch]);
 
-  const containerClass = isDark
-    ? "bg-gray-900 text-white border border-gray-700"
-    : "bg-white text-gray-900 border border-gray-200";
+  const toggleRegion = (r) =>
+    setRegions((p) => p.includes(r) ? p.filter((x) => x !== r) : [...p, r]);
 
-  const inputClass = isDark
-    ? "w-full p-3 rounded-xl border bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-    : "w-full p-3 rounded-xl border bg-gray-50 border-gray-300 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition";
-
-  const chipBase =
-    "px-3 py-2 rounded-xl border text-sm font-medium transition-all duration-200";
-
- return (
-  <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
-
-    {/* 🔥 WebGL Animated Background */}
-    <ShaderBackground />
-
-    {/* Soft Overlay (Improves readability) */}
-    <div
-      className={`
-        absolute inset-0 backdrop-blur-[2px]
-        ${isDark ? "bg-black/40" : "bg-white/40"}
-      `}
-    />
-
-    {/* Main Container */}
-    <div className="relative z-10 w-full max-w-3xl px-6 py-16">
+  return (
+    <>
+      <FontLoader />
 
       <div
-        className={`
-          relative p-12 rounded-3xl
-          backdrop-blur-3xl
-          border
-          shadow-[0_25px_80px_rgba(0,0,0,0.25)]
-          transition-all duration-500
-          ${
-            isDark
-              ? "bg-white/5 border-white/10 text-white"
-              : "bg-white/70 border-gray-200 text-gray-900"
-          }
-        `}
+        className="relative min-h-screen w-full overflow-hidden px-4 sm:px-6 lg:px-8 py-6 text-white"
+        style={{ background: "transparent" }}
       >
+        {/* Backgrounds & effects */}
+       
+        <Background />
+        <CursorGlow />
 
-        {/* Gradient Edge Glow */}
-        <div
-          className="
-            absolute -inset-[1px] rounded-3xl
-            bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-transparent
-            opacity-40 blur-xl
-            pointer-events-none
-          "
-        />
+        <OrbitRing radius={220} duration={20} dotCount={8} color="#38bdf8" tilt={72} />
+        <OrbitRing radius={290} duration={30} dotCount={10} color="#818cf8" tilt={68} delay={1} />
 
-        {/* ================= HEADER ================= */}
-        <div className="mb-14 relative">
-          <h2 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Add Website
-          </h2>
-          <p className="text-sm opacity-60 mt-3">
-            Configure uptime monitoring and alert preferences
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-10">
-
-          {/* ================= INPUTS ================= */}
-          {[{
-              type: "text",
-              placeholder: "Domain Name",
-              value: domain,
-              setter: setDomain,
-            },
-            {
-              type: "url",
-              placeholder: "https://example.com",
-              value: url,
-              setter: setUrl,
-            },
-            {
-              type: "text",
-              placeholder: "Category (optional)",
-              value: category,
-              setter: setCategory,
-            },
-          ].map((field, i) => (
-            <div key={i} className="relative group">
-              <input
-                type={field.type}
-                placeholder={field.placeholder}
-                value={field.value}
-                onChange={(e) => field.setter(e.target.value)}
-                className={`
-                  w-full px-5 py-4 rounded-2xl
-                  bg-transparent border
-                  outline-none
-                  transition-all duration-300
-                  ${
-                    isDark
-                      ? "border-white/10 focus:border-blue-500 placeholder-gray-400"
-                      : "border-gray-300 focus:border-blue-600 placeholder-gray-500"
-                  }
-                  focus:shadow-[0_0_0_3px_rgba(59,130,246,0.25)]
-                `}
-              />
-
-              {/* Hover Glow */}
-              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition bg-white/5 pointer-events-none" />
-            </div>
-          ))}
-
-          {/* Response Time */}
-          <input
-            type="number"
-            placeholder="Max Response Time (ms)"
-            value={responseThresholdMs}
-            onChange={(e) => setResponseThresholdMs(e.target.value)}
-            className={`
-              w-full px-5 py-4 rounded-2xl bg-transparent border
-              transition-all duration-300 outline-none
-              ${
-                isDark
-                  ? "border-white/10 focus:border-blue-500 placeholder-gray-400"
-                  : "border-gray-300 focus:border-blue-600 placeholder-gray-500"
-              }
-              focus:shadow-[0_0_0_3px_rgba(59,130,246,0.25)]
-            `}
-          />
-
-{/* ================= CHANNEL BUTTONS ================= */}
-<div>
-  <div className="flex items-center justify-between mb-4">
-    <p className="text-sm opacity-70">
-      Notification Channels
-    </p>
-
-    {/* 🔴 Priority Dropdown */}
-    <div className="flex items-center gap-3">
-      <span className="text-xs opacity-60">Priority</span>
-
-    {/* 🔴 Priority Checkbox */}
-<div className="flex items-center gap-3">
-  <label className="flex items-center gap-2 text-xs cursor-pointer">
-    
-    <input
-      type="checkbox"
-      checked={priority === 1}
-      onChange={(e) => setPriority(e.target.checked ? 1 : 0)}
-      className="accent-red-600 w-4 h-4"
-    />
-    High Priority
-  </label>
-</div>
-
-    </div>
-  </div>
-
-
-  <div className="flex flex-wrap gap-4 mb-6">
-    {["email", "sms", "whatsapp", "voice"].map((channel) => {
-      const active = alertChannels.includes(channel);
-
-      return (
-        <button
-          key={channel}
-          type="button"
-          onClick={() =>
-            setAlertChannels((prev) =>
-              prev.includes(channel)
-                ? prev.filter((c) => c !== channel)
-                : [...prev, channel]
-            )
-          }
-          className={`
-            px-5 py-3 rounded-2xl
-            transition-all duration-300
-            font-medium tracking-wide
-            backdrop-blur-xl border
-            ${
-              active
-                ? "bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-500/30"
-                : isDark
-                ? "bg-white/5 border-white/10 hover:bg-white/10"
-                : "bg-white/60 border-gray-300 hover:bg-gray-100"
-            }
-            hover:scale-105 active:scale-95
-          `}
-        >
-          {channel.toUpperCase()}
-        </button>
-      );
-    })}
-  </div>
-
-  {/* 🔹 Email Input */}
-  {alertChannels.includes("email") && (
-    <div className="mb-4">
-      <label className="text-sm mb-2 block">Alert Emails</label>
-
-      <div className="flex gap-2 mb-3">
-        <input
-          type="email"
-          placeholder="Add email and press Enter"
-          value={emailInput}
-          onChange={(e) => setEmailInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              const v = (emailInput || "").trim();
-              if (v && !emailContacts.includes(v)) {
-                setEmailContacts((p) => [...p, v]);
-                setEmailInput("");
-              }
-            }
-          }}
-          className={`
-            w-full px-5 py-3 rounded-2xl
-            bg-transparent border
-            transition-all duration-300 outline-none
-            ${
-              isDark
-                ? "border-white/10 focus:border-blue-500 placeholder-gray-400"
-                : "border-gray-300 focus:border-blue-600 placeholder-gray-500"
-            }
-            focus:shadow-[0_0_0_3px_rgba(59,130,246,0.25)]
-          `}
-        />
-        <button
-          type="button"
-          onClick={() => {
-            const v = (emailInput || "").trim();
-            if (v && !emailContacts.includes(v)) {
-              setEmailContacts((p) => [...p, v]);
-              setEmailInput("");
-            }
-          }}
-          className="px-4 py-2 rounded-2xl bg-blue-600 text-white"
-        >
-          Add
-        </button>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {emailContacts.map((e, idx) => (
-          <span
-            key={idx}
-            className={`px-3 py-1 rounded-full border bg-white/5 flex items-center gap-2`}
-          >
-            <span className="text-sm">{e}</span>
-            <button
-              type="button"
-              onClick={() => setEmailContacts((p) => p.filter((x) => x !== e))}
-              className="text-xs text-red-400"
-              aria-label={`Remove ${e}`}
-            >
-              ✕
-            </button>
-          </span>
+        {["tl", "tr", "bl", "br"].map((p, i) => (
+          <HUDCorner key={p} pos={p} delay={0.1 + i * 0.05} />
         ))}
-      </div>
-    </div>
-  )}
 
-  {/* 🔹 Phone Input (SMS / WhatsApp / Voice) */}
-  {(alertChannels.includes("sms") ||
-    alertChannels.includes("whatsapp") ||
-    alertChannels.includes("voice")) && (
-    <div className="relative group">
-      <input
-        type="tel"
-        placeholder="Enter mobile number (e.g. +91 9876543210)"
-        value={phoneContact}
-        onChange={(e) => setPhoneContact(e.target.value)}
-        className={`
-          w-full px-5 py-4 rounded-2xl
-          bg-transparent border
-          transition-all duration-300 outline-none
-          ${
-            isDark
-              ? "border-white/10 focus:border-blue-500 placeholder-gray-400"
-              : "border-gray-300 focus:border-blue-600 placeholder-gray-500"
-          }
-          focus:shadow-[0_0_0_3px_rgba(59,130,246,0.25)]
-        `}
-      />
-      <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition bg-white/5 pointer-events-none" />
-    </div>
-  )}
-</div>
+        {/* ─── Page Content ─── */}
+        <div className="relative z-10 w-full max-w-2xl mx-auto">
 
-
-          {/* ERROR */}
-          {(urlError || localError) && (
-            <div className="p-4 rounded-2xl bg-red-500/10 text-red-400 text-sm border border-red-500/20">
-              {localError || urlError}
-              
-            </div>
-            
-          )}
-          
-          {/* ================= REGIONS ================= */}
-<div>
-  <p className="text-sm mb-4 opacity-70">
-    Monitoring Regions
-  </p>
-
-  <div className="flex flex-wrap gap-4 mb-6">
-              {["South America", "Australia", "North America", "Europe", "Asia", "Africa"].map((region) => {
-      const active = regions.includes(region);
-
-      return (
-        <button
-          key={region}
-          type="button"
-          onClick={() =>
-            setRegions((prev) =>
-              prev.includes(region)
-                ? prev.filter((r) => r !== region)
-                : [...prev, region]
-            )
-          }
-          className={`
-            px-5 py-3 rounded-2xl
-            transition-all duration-300
-            font-medium tracking-wide
-            backdrop-blur-xl border
-            ${
-              active
-                ? "bg-green-600 text-white border-green-500 shadow-lg shadow-green-500/30"
-                : isDark
-                ? "bg-white/5 border-white/10 hover:bg-white/10"
-                : "bg-white/60 border-gray-300 hover:bg-gray-100"
-            }
-            hover:scale-105 active:scale-95
-          `}
-        >
-          {region}
-        </button>
-      );
-    })}
-  </div>
-
-  {/* Alert Condition */}
-  <label className="flex items-center gap-3 text-sm opacity-80 cursor-pointer">
-    <input
-      type="checkbox"
-      checked={alertIfAllRegionsDown}
-      onChange={(e) => setAlertIfAllRegionsDown(e.target.checked)}
-      className="accent-blue-600 w-4 h-4"
-    />
-    Alert only if ALL regions are down
-  </label>
-</div>
-
-
-          {/* SUBMIT BUTTON */}
-          <button
-            type="submit"
-            className={`
-              w-full py-5 rounded-2xl text-lg font-semibold
-              transition-all duration-300
-              ${
-                isDark
-                  ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-xl shadow-blue-500/30"
-                  : "bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg"
-              }
-              hover:scale-[1.02] active:scale-[0.98]
-            `}
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mb-8"
           >
-            Add Website
-          </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-[1px] w-8 bg-sky-400/20" />
+              <span style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+                letterSpacing: "0.28em", color: "rgba(56,189,248,0.42)", textTransform: "uppercase",
+              }}>
+                Monitor Configuration
+              </span>
+              <div className="h-[1px] w-24 bg-sky-400/10" />
+            </div>
 
-        </form>
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl sm:text-4xl" style={{
+                fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
+                letterSpacing: "0.05em", textShadow: "0 0 24px rgba(56,189,248,0.08)",
+              }}>
+                ADD WEBSITE
+              </h1>
+              <StatusDot color="#34d399" label="Ready" />
+            </div>
+
+            <p className="mt-3" style={{
+              fontFamily: "'JetBrains Mono', monospace", fontSize: "11px",
+              color: "rgba(148,163,184,0.52)", letterSpacing: "0.03em",
+            }}>
+              Configure uptime monitoring, alert channels, and regional tracking.
+            </p>
+          </motion.div>
+
+          {/* Top status bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08, duration: 0.45 }}
+            className="mb-6 rounded-2xl px-4 py-3 flex items-center justify-between"
+            style={{
+              background: "rgba(3,7,18,0.64)", border: "1px solid rgba(56,189,248,0.08)",
+              backdropFilter: "blur(14px)", boxShadow: "0 0 18px rgba(56,189,248,0.02)",
+            }}
+          >
+            <div>
+              <div style={{
+                fontFamily: "'Orbitron', sans-serif", fontWeight: 700,
+                fontSize: "12px", letterSpacing: "0.06em", color: "white",
+              }}>
+                SITE CONFIGURATION PANEL
+              </div>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: "10px",
+                color: "rgba(148,163,184,0.48)", marginTop: "3px",
+              }}>
+                Fill all required fields to activate monitoring.
+              </div>
+            </div>
+            <StatusDot color="#38bdf8" label="Input Mode" />
+          </motion.div>
+
+          {/* ─── Form ─── */}
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-6">
+
+              {/* ── Identity ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.12, duration: 0.45 }}
+                className="rounded-2xl p-6 relative overflow-hidden"
+                style={{
+                  background: "rgba(3,7,18,0.72)",
+                  border: "1px solid rgba(56,189,248,0.09)",
+                  backdropFilter: "blur(18px)",
+                  boxShadow: "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                }}
+              >
+                <div className="absolute top-0 left-0 right-0 h-[1px]"
+                  style={{ background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.32) 30%, rgba(129,140,248,0.28) 70%, transparent 100%)" }} />
+
+                <SectionLabel icon={Globe2} label="Site Identity" />
+                <div className="space-y-3">
+                  <HudInput placeholder="Domain Name (e.g. myapp.com)" value={domain} onChange={(e) => setDomain(e.target.value)} />
+                  <HudInput type="url" placeholder="https://example.com" value={url} onChange={(e) => setUrl(e.target.value)} />
+                  <HudInput placeholder="Category (optional)" value={category} onChange={(e) => setCategory(e.target.value)} />
+                </div>
+              </motion.div>
+
+              {/* ── Performance ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.18, duration: 0.45 }}
+                className="rounded-2xl p-6 relative overflow-hidden"
+                style={{
+                  background: "rgba(3,7,18,0.72)",
+                  border: "1px solid rgba(56,189,248,0.09)",
+                  backdropFilter: "blur(18px)",
+                  boxShadow: "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                }}
+              >
+                <div className="absolute top-0 left-0 right-0 h-[1px]"
+                  style={{ background: "linear-gradient(90deg, transparent 0%, rgba(129,140,248,0.32) 30%, rgba(56,189,248,0.28) 70%, transparent 100%)" }} />
+
+                <div className="flex items-center justify-between mb-4">
+                  <SectionLabel icon={Zap} label="Performance Threshold" />
+                  <label className="flex items-center gap-2 cursor-pointer -mt-4" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: priority === 1 ? "#f87171" : "rgba(148,163,184,0.5)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    <div
+                      className="relative w-8 h-4 rounded-full cursor-pointer transition-all duration-300"
+                      style={{ background: priority === 1 ? "rgba(248,113,113,0.3)" : "rgba(255,255,255,0.06)", border: priority === 1 ? "1px solid rgba(248,113,113,0.4)" : "1px solid rgba(255,255,255,0.08)" }}
+                      onClick={() => setPriority(priority === 1 ? 0 : 1)}
+                    >
+                      <motion.div
+                        className="absolute top-0.5 w-3 h-3 rounded-full"
+                        animate={{ left: priority === 1 ? "17px" : "2px" }}
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                        style={{ background: priority === 1 ? "#f87171" : "rgba(148,163,184,0.4)", boxShadow: priority === 1 ? "0 0 6px rgba(248,113,113,0.6)" : "none" }}
+                      />
+                    </div>
+                    HIGH PRIORITY
+                  </label>
+                </div>
+
+                <HudInput
+                  type="number"
+                  placeholder="Max Response Time (ms)"
+                  value={responseThresholdMs}
+                  onChange={(e) => setResponseThresholdMs(e.target.value)}
+                />
+              </motion.div>
+
+              {/* ── Notification Channels ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.24, duration: 0.45 }}
+                className="rounded-2xl p-6 relative overflow-hidden"
+                style={{
+                  background: "rgba(3,7,18,0.72)",
+                  border: "1px solid rgba(56,189,248,0.09)",
+                  backdropFilter: "blur(18px)",
+                  boxShadow: "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                }}
+              >
+                <div className="absolute top-0 left-0 right-0 h-[1px]"
+                  style={{ background: "linear-gradient(90deg, transparent 0%, rgba(16,185,129,0.32) 30%, rgba(56,189,248,0.28) 70%, transparent 100%)" }} />
+
+                <SectionLabel icon={Bell} label="Notification Channels" />
+
+                <div className="flex flex-wrap gap-3 mb-5">
+                  {["email", "sms", "whatsapp", "voice"].map((ch) => (
+                    <ToggleChip key={ch} label={ch} active={alertChannels.includes(ch)} onClick={() => toggleChannel(ch)} />
+                  ))}
+                </div>
+
+                {/* Email inputs */}
+                {alertChannels.includes("email") && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mb-4">
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.4)", textTransform: "uppercase", marginBottom: "10px" }}>
+                      <Mail size={10} style={{ display: "inline", marginRight: "6px" }} />
+                      Alert Emails
+                    </div>
+                    <div className="flex gap-2 mb-3">
+                      <HudInput
+                        type="email"
+                        placeholder="Add email and press Enter"
+                        value={emailInput}
+                        onChange={(e) => setEmailInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const v = emailInput.trim();
+                            if (v && !emailContacts.includes(v)) { setEmailContacts((p) => [...p, v]); setEmailInput(""); }
+                          }
+                        }}
+                      />
+                      <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        onClick={() => { const v = emailInput.trim(); if (v && !emailContacts.includes(v)) { setEmailContacts((p) => [...p, v]); setEmailInput(""); } }}
+                        className="px-4 rounded-2xl flex items-center justify-center"
+                        style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "48px" }}>
+                        <Plus size={16} />
+                      </motion.button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {emailContacts.map((em, idx) => (
+                        <motion.span key={idx} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                          className="flex items-center gap-2 px-3 py-1 rounded-full"
+                          style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)", fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(148,163,184,0.8)" }}>
+                          {em}
+                          <button type="button" onClick={() => setEmailContacts((p) => p.filter((x) => x !== em))}
+                            className="text-red-400/60 hover:text-red-400 transition-colors">
+                            <X size={10} />
+                          </button>
+                        </motion.span>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Phone input */}
+                {(alertChannels.includes("sms") || alertChannels.includes("whatsapp") || alertChannels.includes("voice")) && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.4)", textTransform: "uppercase", marginBottom: "10px" }}>
+                      <Phone size={10} style={{ display: "inline", marginRight: "6px" }} />
+                      Mobile Contact
+                    </div>
+                    <HudInput type="tel" placeholder="+91 9876543210" value={phoneContact} onChange={(e) => setPhoneContact(e.target.value)} />
+                  </motion.div>
+                )}
+              </motion.div>
+
+              {/* ── Monitoring Regions ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.45 }}
+                className="rounded-2xl p-6 relative overflow-hidden"
+                style={{
+                  background: "rgba(3,7,18,0.72)",
+                  border: "1px solid rgba(56,189,248,0.09)",
+                  backdropFilter: "blur(18px)",
+                  boxShadow: "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                }}
+              >
+                <div className="absolute top-0 left-0 right-0 h-[1px]"
+                  style={{ background: "linear-gradient(90deg, transparent 0%, rgba(129,140,248,0.32) 50%, transparent 100%)" }} />
+
+                <SectionLabel icon={MapPin} label="Monitoring Regions" />
+
+                <div className="flex flex-wrap gap-3 mb-5">
+                  {["South America", "Australia", "North America", "Europe", "Asia", "Africa"].map((r) => (
+                    <ToggleChip key={r} label={r} active={regions.includes(r)} onClick={() => toggleRegion(r)} activeColor="#34d399" />
+                  ))}
+                </div>
+
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div
+                    className="relative w-8 h-4 rounded-full transition-all duration-300"
+                    style={{
+                      background: alertIfAllRegionsDown ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.04)",
+                      border: alertIfAllRegionsDown ? "1px solid rgba(56,189,248,0.35)" : "1px solid rgba(255,255,255,0.07)",
+                    }}
+                    onClick={() => setAlertIfAllRegionsDown(!alertIfAllRegionsDown)}
+                  >
+                    <motion.div
+                      className="absolute top-0.5 w-3 h-3 rounded-full"
+                      animate={{ left: alertIfAllRegionsDown ? "17px" : "2px" }}
+                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                      style={{
+                        background: alertIfAllRegionsDown ? "#38bdf8" : "rgba(148,163,184,0.3)",
+                        boxShadow: alertIfAllRegionsDown ? "0 0 6px rgba(56,189,248,0.6)" : "none",
+                      }}
+                    />
+                  </div>
+                  <span style={{
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: "10px",
+                    letterSpacing: "0.1em", color: alertIfAllRegionsDown ? "rgba(56,189,248,0.7)" : "rgba(148,163,184,0.45)",
+                    textTransform: "uppercase",
+                  }}>
+                    Alert only if ALL regions are down
+                  </span>
+                </label>
+              </motion.div>
+
+              {/* ─── Error ─── */}
+              {(urlError || localError) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-2xl px-5 py-4 flex items-center gap-3"
+                  style={{
+                    background: "rgba(239,68,68,0.06)",
+                    border: "1px solid rgba(239,68,68,0.18)",
+                    backdropFilter: "blur(12px)",
+                  }}
+                >
+                  <X size={14} className="text-red-400 shrink-0" />
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(248,113,113,0.85)", letterSpacing: "0.02em" }}>
+                    {localError || urlError}
+                  </span>
+                </motion.div>
+              )}
+
+              {/* ─── Submit ─── */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.36, duration: 0.45 }}
+              >
+                <motion.button
+                  type="submit"
+                  whileHover={{ scale: 1.015 }}
+                  whileTap={{ scale: 0.985 }}
+                  className="w-full py-5 rounded-2xl relative overflow-hidden"
+                  style={{
+                    background: submitted
+                      ? "linear-gradient(135deg, rgba(52,211,153,0.2), rgba(16,185,129,0.1))"
+                      : "linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(129,140,248,0.1) 100%)",
+                    border: submitted
+                      ? "1px solid rgba(52,211,153,0.35)"
+                      : "1px solid rgba(56,189,248,0.2)",
+                    boxShadow: submitted
+                      ? "0 0 28px rgba(52,211,153,0.1)"
+                      : "0 0 28px rgba(56,189,248,0.06)",
+                    transition: "all 0.4s ease",
+                  }}
+                >
+                  {/* Shimmer */}
+                  <motion.div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%)",
+                    }}
+                    animate={{ x: ["-100%", "100%"] }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                  />
+
+                  <div className="relative flex items-center justify-center gap-3">
+                    {submitted ? (
+                      <>
+                        <CheckCircle2 size={17} className="text-emerald-400" />
+                        <span style={{
+                          fontFamily: "'Orbitron', sans-serif", fontWeight: 700,
+                          fontSize: "13px", letterSpacing: "0.12em", color: "#34d399",
+                        }}>
+                          SITE ADDED
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Link2 size={16} className="text-sky-400" />
+                        <span style={{
+                          fontFamily: "'Orbitron', sans-serif", fontWeight: 700,
+                          fontSize: "13px", letterSpacing: "0.12em", color: "white",
+                        }}>
+                          ACTIVATE MONITORING
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </motion.button>
+              </motion.div>
+
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
-  </div>
-);
-
-
+    </>
+  );
 };
 
 export default AddUrl;

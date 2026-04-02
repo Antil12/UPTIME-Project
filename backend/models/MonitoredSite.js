@@ -10,7 +10,7 @@ const monitoredSiteSchema = new mongoose.Schema({
     },
   timeoutMs: { type: Number, default: 5000 },
   slowThresholdMs: { type: Number, default: 3000 },
-  expectedStatusCodes: { type: [Number], default: [200, 301, 302] },
+  
  // alertEmails: { type: [String], default: [] },
   sslMonitoringEnabled: { type: Boolean, default: false },
   sslAlertBeforeDays: { type: Number, default: 7 },
