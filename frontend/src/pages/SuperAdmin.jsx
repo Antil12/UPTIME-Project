@@ -60,7 +60,8 @@ const SuperAdmin = ({ theme }) => {
     try {
       const token = localStorage.getItem("loginToken");
 
-      const res = await axios.get(`${API_URL}/monitoredsite`, {
+      // Request all sites (no pagination) so SuperAdmin can assign across entire dashboard
+      const res = await axios.get(`${API_URL}/monitoredsite?noPagination=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -105,7 +106,7 @@ const SuperAdmin = ({ theme }) => {
           email: form.email,
           password: form.password,
           role: form.role,
-          assignedSites: form.role === "VIEWER" ? assignedSites : [],
+          assignedSites: form.role !== "SUPERADMIN" ? assignedSites : [],
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -181,7 +182,7 @@ const SuperAdmin = ({ theme }) => {
           name: editForm.name,
           email: editForm.email,
           role: editForm.role,
-          assignedSites: editForm.role === "VIEWER" ? newSites : [],
+        assignedSites: editForm.role !== "SUPERADMIN" ? newSites : [],
         },
         {
           headers: { Authorization: `Bearer ${token}` },

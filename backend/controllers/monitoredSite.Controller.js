@@ -14,11 +14,24 @@ import csv from "csv-parser";
 ===================================================== */
 export const getMonitoredSites = async (req, res) => {
   try {
-    const { category, status } = req.query; // ✅ include status
+    const { category, status, q, page = 1, limit = 20, noPagination } = req.query; // include pagination
+
+    const NO_PAGINATION = noPagination === "1" || noPagination === "true";
+    const PAGE = Math.max(1, parseInt(page, 10) || 1);
+    const LIMIT = Math.max(1, parseInt(limit, 10) || 20);
+    const skip = (PAGE - 1) * LIMIT;
 
     const matchStage = {
       isActive: 1,
     };
+
+    // If a search query provided, prepare regex match for domain or url (case-insensitive)
+    const searchOr = q
+      ? [
+          { domain: { $regex: q, $options: "i" } },
+          { url: { $regex: q, $options: "i" } },
+        ]
+      : null;
 
     if (category && category !== "ALL") {
       matchStage.category = category;
@@ -32,11 +45,21 @@ export const getMonitoredSites = async (req, res) => {
       const user = await User.findById(userId).select("assignedSites");
       const assignedSiteIds = user?.assignedSites || [];
 
-      matchStage.$or = [
+      const roleOr = [
         { owner: userId },
         { _id: { $in: assignedSiteIds } },
         { assignedUsers: userId },
       ];
+
+      // If a search condition exists, require both search and role constraints
+      if (searchOr) {
+        matchStage.$and = [{ $or: searchOr }, { $or: roleOr }];
+      } else {
+        matchStage.$or = roleOr;
+      }
+    } else if (searchOr) {
+      // only search constraint
+      matchStage.$or = searchOr;
     }
 
     const pipeline = [
@@ -137,12 +160,43 @@ export const getMonitoredSites = async (req, res) => {
       },
     ];
 
-    const data = await MonitoredSite.aggregate(pipeline);
+    if (NO_PAGINATION) {
+      // return all matching results
+      const data = await MonitoredSite.aggregate(pipeline);
+      const totalCount = data.length;
+      return res.json({
+        success: true,
+        count: data.length,
+        data,
+        totalCount,
+        totalPages: 1,
+        page: 1,
+        limit: totalCount,
+      });
+    }
+
+    // paginated response
+    pipeline.push({
+      $facet: {
+        data: [{ $skip: skip }, { $limit: LIMIT }],
+        totalCount: [{ $count: "count" }],
+      },
+    });
+
+    const agg = await MonitoredSite.aggregate(pipeline);
+    const result = agg[0] || { data: [], totalCount: [] };
+    const data = result.data || [];
+    const totalCount = (result.totalCount[0] && result.totalCount[0].count) || 0;
+    const totalPages = Math.ceil(totalCount / LIMIT);
 
     res.json({
       success: true,
       count: data.length,
       data,
+      totalCount,
+      totalPages,
+      page: PAGE,
+      limit: LIMIT,
     });
   } catch (error) {
     console.error("❌ getMonitoredSites error:", error);
@@ -806,8 +860,9 @@ export const getSlowAlertBatch = async (req, res) => {
 
 export const getDeletedLogs = async (req, res) => {
   try {
-    const { fromDate, toDate } = req.query;
+    const { fromDate, toDate, q, page = 1, limit = 10 } = req.query;
 
+    // fetch candidate sites (created/updated/deleted info)
     const sites = await MonitoredSite.find({
       $or: [
         { isActive: 1 },
@@ -818,11 +873,11 @@ export const getDeletedLogs = async (req, res) => {
       .populate("updatedBy", "email role")
       .populate("deletedBy", "email role");
 
+    // build flattened logs
     const formattedLogs = [];
 
     sites.forEach((site) => {
-
-      // ✅ CREATED
+      // CREATED
       if (!fromDate || new Date(site.createdAt) >= new Date(fromDate)) {
         formattedLogs.push({
           domain: site.domain,
@@ -833,7 +888,7 @@ export const getDeletedLogs = async (req, res) => {
         });
       }
 
-      // ✅ UPDATED
+      // UPDATED
       if (site.lastManualUpdateAt && site.updatedBy) {
         if (!fromDate || new Date(site.lastManualUpdateAt) >= new Date(fromDate)) {
           formattedLogs.push({
@@ -846,7 +901,7 @@ export const getDeletedLogs = async (req, res) => {
         }
       }
 
-      // ✅ DELETED (FIXED)
+      // DELETED
       if (site.isActive === 0 && site.deletedBy && site.deletedAt) {
         if (
           (!fromDate || new Date(site.deletedAt) >= new Date(fromDate)) &&
@@ -863,12 +918,47 @@ export const getDeletedLogs = async (req, res) => {
       }
     });
 
+    // sort newest first
     formattedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    // optional server-side search (q applies to domain, url, action, user)
+    const qStr = q ? String(q).trim().toLowerCase() : "";
+    let filtered = formattedLogs;
+    if (qStr) {
+      filtered = formattedLogs.filter((l) => {
+        return (
+          (l.domain || "").toLowerCase().includes(qStr) ||
+          (l.url || "").toLowerCase().includes(qStr) ||
+          (l.action || "").toLowerCase().includes(qStr) ||
+          (l.user || "").toLowerCase().includes(qStr)
+        );
+      });
+    }
+
+    // compute stats over filtered set
+    const stats = {
+      created: filtered.filter((l) => l.action === "Created").length,
+      updated: filtered.filter((l) => l.action === "Updated").length,
+      deleted: filtered.filter((l) => l.action === "Deleted").length,
+    };
+
+    // pagination
+    const PAGE = Math.max(1, parseInt(page, 10) || 1);
+    const LIMIT = Math.max(1, parseInt(limit, 10) || 10);
+    const totalCount = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / LIMIT));
+    const start = (PAGE - 1) * LIMIT;
+    const paged = filtered.slice(start, start + LIMIT);
 
     res.json({
       success: true,
-      count: formattedLogs.length,
-      data: formattedLogs,
+      count: paged.length,
+      data: paged,
+      totalCount,
+      totalPages,
+      page: PAGE,
+      limit: LIMIT,
+      stats,
     });
 
   } catch (error) {

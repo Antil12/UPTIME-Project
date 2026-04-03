@@ -366,11 +366,12 @@ const getActionStyles = (action) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const Logs = () => {
   const [logs, setLogs] = useState([]);
-  const [filteredLogs, setFilteredLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [fromDate, setFromDate] = useState("");
@@ -385,65 +386,32 @@ const Logs = () => {
   const getLocalDate = (date) => {
     return new Date(date).toISOString().split("T")[0];
   };
-
-  const filterByDateAndStats = () => {
-    let filtered = [...logs];
-
-    // DATE FILTER
-    if (fromDate) {
-      filtered = filtered.filter(
-        (log) => getLocalDate(log.timestamp) >= fromDate
-      );
-    }
-
-    if (toDate) {
-      filtered = filtered.filter(
-        (log) => getLocalDate(log.timestamp) <= toDate
-      );
-    }
-
-    // SEARCH
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (log) =>
-          log.domain?.toLowerCase().includes(q) ||
-          log.url?.toLowerCase().includes(q) ||
-          log.action?.toLowerCase().includes(q) ||
-          log.user?.toLowerCase().includes(q)
-      );
-    }
-
-    // STATS
-    const created = filtered.filter((l) => l.action === "Created").length;
-    const updated = filtered.filter((l) => l.action === "Updated").length;
-    const deleted = filtered.filter((l) => l.action === "Deleted").length;
-
-    setStats({ created, updated, deleted });
-    setFilteredLogs(filtered);
-    setCurrentPage(1);
-  };
-
   useEffect(() => {
     fetchLogs();
-  }, []);
-
-  useEffect(() => {
-    filterByDateAndStats();
-  }, [logs, searchQuery, fromDate, toDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, rowsPerPage, searchQuery, fromDate, toDate]);
 
   const fetchLogs = async () => {
     try {
       const token = localStorage.getItem("loginToken");
       const API = import.meta.env.VITE_API_URL;
+      const params = {
+        page: currentPage,
+        limit: rowsPerPage,
+      };
+      if (searchQuery) params.q = searchQuery;
+      if (fromDate) params.fromDate = fromDate;
+      if (toDate) params.toDate = toDate;
 
       const res = await axios.get(`${API}/monitoredsite/logs`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
+        params,
       });
 
       setLogs(res.data.data || []);
+      setTotalCount(res.data.totalCount || 0);
+      setTotalPages(res.data.totalPages || 1);
+      setStats(res.data.stats || { created: 0, updated: 0, deleted: 0 });
     } catch (error) {
       console.error("Failed to load logs:", error);
     } finally {
@@ -455,11 +423,8 @@ const Logs = () => {
     setSearchQuery(query);
   };
 
-  const indexOfLastRow = currentPage * rowsPerPage;
-  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentLogs = filteredLogs.slice(indexOfFirstRow, indexOfLastRow);
-
-  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / rowsPerPage));
+  const indexOfFirstRow = (currentPage - 1) * rowsPerPage;
+  const currentLogs = logs;
 
   return (
     <>
@@ -587,14 +552,14 @@ const Logs = () => {
                   color: "white",
                 }}
               >
-                {filteredLogs.length}
+                {totalCount}
               </span>
             </div>
           </motion.div>
 
           {/* ───────────────── Stats ───────────────── */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-            <StatCard icon={FileClock} label="Total Logs" value={filteredLogs.length} />
+            <StatCard icon={FileClock} label="Total Logs" value={totalCount} />
             <StatCard icon={PlusCircle} label="Created" value={stats.created} color="text-emerald-400" />
             <StatCard icon={RefreshCcw} label="Updated" value={stats.updated} color="text-sky-400" />
             <StatCard icon={Trash2} label="Deleted" value={stats.deleted} color="text-red-400" />
@@ -733,7 +698,7 @@ const Logs = () => {
                   Fetching monitored website audit timeline...
                 </p>
               </div>
-            ) : filteredLogs.length === 0 ? (
+            ) : totalCount === 0 ? (
               <div className="p-10 sm:p-14 text-center">
                 <div
                   className="mx-auto mb-4 w-14 h-14 rounded-2xl flex items-center justify-center border"

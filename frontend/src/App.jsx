@@ -22,19 +22,26 @@ const API_BASE = "/monitoredsite";
 
 function App() {
   
-const [currentUser, setCurrentUser] = useState(() => {
-  const stored = localStorage.getItem("user");
-  return stored ? JSON.parse(stored) : null;
-});
-const userRole = currentUser?.role?.toUpperCase();
+  const [currentUser, setCurrentUser] = useState(() => {
+    const stored = localStorage.getItem("user");
+    return stored ? JSON.parse(stored) : null;
+  });
+  const userRole = currentUser?.role?.toUpperCase();
+
   const [isLoggedIn, setIsLoggedIn] = useState(
-  !!localStorage.getItem("loginToken")
-);
+    !!localStorage.getItem("loginToken")
+  );
   const navigate = useNavigate();
   const [authPage, setAuthPage] = useState("login"); 
   const [activePage, setActivePage] = useState("dashboard");
   const [message, setMessage] = useState("");
+
+  // ─── Paginated URLs (for the table) ───────────────────────────────────────
   const [urls, setUrls] = useState([]);
+
+  // ─── ALL URLs unpaginated (for stat cards + popups) ───────────────────────
+  const [allUrls, setAllUrls] = useState([]);
+
   const [tableUrls, setTableUrls] = useState([]); 
   const [domain, setDomain] = useState("");
   const [url, setUrl] = useState("");
@@ -52,115 +59,150 @@ const userRole = currentUser?.role?.toUpperCase();
   const [popupData, setPopupData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const logoutTimerRef = useRef(null);
 
   /* ================= EFFECTS ================= */
-useEffect(() => {
-  let interval;
-
-  if (isLoggedIn) {
-    interval = startSlowAlertListener();
-  }
-
-  return () => {
-    if (interval) clearInterval(interval);
-  };
-}, [isLoggedIn]);
+  useEffect(() => {
+    let interval;
+    if (isLoggedIn) {
+      interval = startSlowAlertListener();
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLoggedIn]);
 
   useEffect(() => {
-  document.documentElement.classList.toggle("dark", theme === "dark");
-  localStorage.setItem("theme", theme);
-}, [theme]);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
-  // Fetch sites
-const fetchSites = async (status = "ALL") => {
-  try {
-    const token = localStorage.getItem("loginToken");
-    if (!token) return;
+  // ─── Fetch paginated sites (for the table) ────────────────────────────────
+  const fetchSites = async (status = "ALL", searchQuery = "", pageNum = 1) => {
+    try {
+      const token = localStorage.getItem("loginToken");
+      if (!token) return;
 
-    const res = await axios.get(`${API_BASE}?status=${status}`);
-    const data = res.data?.data || [];
+      let url = `${API_BASE}?status=${status}&page=${pageNum}&limit=20`;
+      if (searchQuery) url += `&q=${encodeURIComponent(searchQuery)}`;
 
-    setTableUrls(data); 
-    if (status === "ALL") {
+      const res = await axios.get(url);
+      const data = res.data?.data || [];
+
+      setTableUrls(data);
       setUrls(data);
+
+      setTotalCount(res.data?.totalCount || 0);
+      setTotalPages(res.data?.totalPages || 1);
+      setPage(res.data?.page || pageNum);
+    } catch (err) {
+      console.error("Fetch sites failed", err);
+      setTableUrls([]);
+      setUrls([]);
     }
+  };
 
-  } catch (err) {
-    console.error("Fetch sites failed", err);
-    setTableUrls([]);
-  }
-};
+  // ─── Fetch ALL sites unpaginated (for stat cards + popups) ───────────────
+  const fetchAllSites = async () => {
+    try {
+      const token = localStorage.getItem("loginToken");
+      if (!token) return;
 
- useEffect(() => {
-  if (!isLoggedIn) return;
-  fetchSites(selectedStatus);
-}, [selectedStatus, isLoggedIn]);
+      // Request a very large limit to get everything, or use a dedicated endpoint
+      // if your backend supports ?limit=all or similar
+      const res = await axios.get(`${API_BASE}?status=ALL&page=1&limit=10000`);
+      const data = res.data?.data || [];
+      setAllUrls(data);
+    } catch (err) {
+      console.error("Fetch all sites failed", err);
+      setAllUrls([]);
+    }
+  };
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetchSites(selectedStatus, search, page);
+  }, [selectedStatus, isLoggedIn, search, page]);
+
+  // Fetch all sites once on login and whenever sites change
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetchAllSites();
+  }, [isLoggedIn]);
+
+  // Reset to first page when search or status changes
+  useEffect(() => {
+    setPage(1);
+  }, [search, selectedStatus]);
 
   /* ================= HANDLERS ================= */
+
   // ADD SITE
-const handleAddUrl = async (data) => {
-  const {
-    domain,
-    url,
-    category,
-    responseThresholdMs,
-    alertChannels,
-    regions,
-    alertIfAllRegionsDown,
-    emailContact,
-    phoneContact,
+  const handleAddUrl = async (data) => {
+    const {
+      domain,
+      url,
+      category,
+      responseThresholdMs,
+      alertChannels,
+      regions,
+      alertIfAllRegionsDown,
+      emailContact,
+      phoneContact,
       priority, 
-  } = data;
+    } = data;
 
-  if (!domain || !url) {
-    setUrlError("Domain and URL are required");
-    return;
-  }
+    if (!domain || !url) {
+      setUrlError("Domain and URL are required");
+      return;
+    }
 
-  if (!isValidUrl(url)) {
-    setUrlError("Please enter a valid URL (https://example.com)");
-    return;
-  }
+    if (!isValidUrl(url)) {
+      setUrlError("Please enter a valid URL (https://example.com)");
+      return;
+    }
 
-  try {
-    const token = localStorage.getItem("loginToken");
+    try {
+      const token = localStorage.getItem("loginToken");
 
- await axios.post(API_BASE, {
-  domain,
-  url,
-  category,
-  responseThresholdMs,
-  alertChannels,
-  regions,
-  alertIfAllRegionsDown,
-  emailContact,
-  phoneContact,
-  priority,
-});
+      await axios.post(API_BASE, {
+        domain,
+        url,
+        category,
+        responseThresholdMs,
+        alertChannels,
+        regions,
+        alertIfAllRegionsDown,
+        emailContact,
+        phoneContact,
+        priority,
+      });
 
-    setDomain("");
-    setUrl("");
-    setUrlError("");
-    setActivePage("dashboard");
-    fetchSites();
-  } catch (err) {
-    console.error(err);
-    setUrlError(err.response?.data?.message || "Failed to add site");
-  }
-};
+      setDomain("");
+      setUrl("");
+      setUrlError("");
+      setActivePage("dashboard");
+      setPage(1);
+      fetchSites(selectedStatus, search, 1);
+      fetchAllSites(); // refresh global stats too
+    } catch (err) {
+      console.error(err);
+      setUrlError(err.response?.data?.message || "Failed to add site");
+    }
+  };
 
   // DELETE SITE
   const handleDelete = async (id) => {
     if (!confirm("Delete this website?")) return;
 
     try {
-    
       const token = localStorage.getItem("loginToken");
-
-await axios.delete(`${API_BASE}/${id}`);
-
-      fetchSites();
+      await axios.delete(`${API_BASE}/${id}`);
+      fetchSites(selectedStatus, search, page);
+      fetchAllSites(); // refresh global stats too
     } catch (err) {
       console.error(err);
       alert("Failed to delete site");
@@ -181,7 +223,8 @@ await axios.delete(`${API_BASE}/${id}`);
           })
         )
       );
-      fetchSites();
+      fetchSites(selectedStatus, search, page);
+      fetchAllSites(); // refresh global stats too
     } catch (err) {
       console.error("Bulk delete failed", err);
       alert("Failed to delete selected sites");
@@ -221,111 +264,112 @@ await axios.delete(`${API_BASE}/${id}`);
   };
 
   const handleSaveEdit = async (category) => {
-  if (!editDomain.trim() || !editUrl.trim()) {
-    setUrlError("Domain and URL are required");
-    return;
-  }
+    if (!editDomain.trim() || !editUrl.trim()) {
+      setUrlError("Domain and URL are required");
+      return;
+    }
 
-  if (!isValidUrl(editUrl)) {
-    setUrlError("Please enter a valid URL");
-    return;
-  }
+    if (!isValidUrl(editUrl)) {
+      setUrlError("Please enter a valid URL");
+      return;
+    }
 
-  try {
-    const token = localStorage.getItem("loginToken");
+    try {
+      const token = localStorage.getItem("loginToken");
 
-    await axios.put(
-  `${API_BASE}/${editItem._id}`,
-  {
-    domain: editDomain.trim(),
-    url: editUrl.trim(),
-    category: category?.trim() || null,
-    emailContact: Array.isArray(editEmail) ? editEmail : editEmail ? [editEmail] : [],
-    phoneContact: editPhone?.trim() || null,
-    priority: Number(editPriority || 0),
-    responseThresholdMs:
-      editResponseThresholdMs !== "" && editResponseThresholdMs !== null
-        ? Number(editResponseThresholdMs)
-        : null,
-  },
-  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  }
-);
-    setEditItem(null);
-    setUrlError("");
-    setEditEmail([]);
-    setEditPhone("");
-    setEditPriority(0);
-    setEditResponseThresholdMs("");
-    fetchSites();
-  } catch (err) {
-    console.error(err);
-    alert("Failed to update site");
-  }
-};
+      await axios.put(
+        `${API_BASE}/${editItem._id}`,
+        {
+          domain: editDomain.trim(),
+          url: editUrl.trim(),
+          category: category?.trim() || null,
+          emailContact: Array.isArray(editEmail) ? editEmail : editEmail ? [editEmail] : [],
+          phoneContact: editPhone?.trim() || null,
+          priority: Number(editPriority || 0),
+          responseThresholdMs:
+            editResponseThresholdMs !== "" && editResponseThresholdMs !== null
+              ? Number(editResponseThresholdMs)
+              : null,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setEditItem(null);
+      setUrlError("");
+      setEditEmail([]);
+      setEditPhone("");
+      setEditPriority(0);
+      setEditResponseThresholdMs("");
+      fetchSites(selectedStatus, search, page);
+      fetchAllSites(); // refresh global stats too
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update site");
+    }
+  };
 
   const handleRefresh = async () => {
-  try {
-    setIsRefreshing(true);
-    await fetchSites(selectedStatus);
-
-    setTimeout(() => {
+    try {
+      setIsRefreshing(true);
+      await Promise.all([
+        fetchSites(selectedStatus, search, page),
+        fetchAllSites(),
+      ]);
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 600);
+    } catch (err) {
       setIsRefreshing(false);
-    }, 600);
-  } catch (err) {
-    setIsRefreshing(false);
-  }
-};
+    }
+  };
 
-const handleLogout = async () => {
-  try {
-    await axios.post("/auth/logout");
-  } catch (err) {
-    console.error("Logout error:", err);
-  }
+  const handleLogout = async () => {
+    try {
+      await axios.post("/auth/logout");
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
 
-  localStorage.removeItem("loginToken");
-  localStorage.removeItem("user");
+    localStorage.removeItem("loginToken");
+    localStorage.removeItem("user");
 
-  setIsLoggedIn(false);
-  setCurrentUser(null);
-  setUrls([]);
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    setUrls([]);
+    setAllUrls([]);
 
-  navigate("/login");
-};
+    navigate("/login");
+  };
+
   /* ================= DERIVED ================= */
 
   const safeUrls = Array.isArray(urls) ? urls : [];
+  const safeAllUrls = Array.isArray(allUrls) ? allUrls : [];
 
-  const filteredUrls = [...safeUrls]
-    .sort((a, b) => (b.pinned === true) - (a.pinned === true))
-    .filter(
-      (u) =>
-        (u.domain || "").toLowerCase().includes(search.toLowerCase()) ||
-        (u.url || "").toLowerCase().includes(search.toLowerCase())
-    );
+  const filteredUrls = [...safeUrls].sort(
+    (a, b) => (b.pinned === true) - (a.pinned === true)
+  );
 
-  const statusMap = safeUrls.reduce((acc, u) => {
+  // Global status maps computed from ALL sites (not paginated)
+  const allStatusMap = safeAllUrls.reduce((acc, u) => {
     const s = u.status || "UNKNOWN";
     if (!acc[s]) acc[s] = [];
     acc[s].push(u);
     return acc;
   }, {});
 
-  const upSites = [...(statusMap["UP"] || []), ...(statusMap["SLOW"] || [])];
-  const downSites = [...(statusMap["DOWN"] || [])];
-  const reportData = safeUrls
+  const upSites = [...(allStatusMap["UP"] || []), ...(allStatusMap["SLOW"] || [])];
+  const downSites = [...(allStatusMap["DOWN"] || [])];
+
+  const reportData = safeAllUrls
     .filter(
       (u) =>
-        (u.domain || "")
-          .toLowerCase()
-          .includes(reportSearch.toLowerCase()) ||
-        (u.url || "")
-          .toLowerCase()
-          .includes(reportSearch.toLowerCase())
+        (u.domain || "").toLowerCase().includes(reportSearch.toLowerCase()) ||
+        (u.url || "").toLowerCase().includes(reportSearch.toLowerCase())
     )
     .map((u) => ({
       name: u.domain,
@@ -333,30 +377,25 @@ const handleLogout = async () => {
       downTime: u.downTime || 0,
     }));
   
-if (!isLoggedIn) {
-  return (
-    <Routes>
-      {/* SPLASH SCREEN */}
-      <Route path="/" element={<PreLoginSplash />} />
-      
-      {/* LOGIN */}
-      <Route
-        path="/login"
-        element={
-          <Login
-            onLogin={(userData) => {
-              setCurrentUser(userData);
-              setIsLoggedIn(true);
-            }}
-          />
-        }
-      />
-  
-      {/* DEFAULT REDIRECT */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
-}
+  if (!isLoggedIn) {
+    return (
+      <Routes>
+        <Route path="/" element={<PreLoginSplash />} />
+        <Route
+          path="/login"
+          element={
+            <Login
+              onLogin={(userData) => {
+                setCurrentUser(userData);
+                setIsLoggedIn(true);
+              }}
+            />
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
 
   return (
     <div id="main-container" className="min-h-screen">
@@ -380,10 +419,12 @@ if (!isLoggedIn) {
             path="/dashboard"
             element={
               <Dashboard
-                urls={urls}
+                // allUrls powers the stat cards and popups (all sites, no pagination)
+                urls={safeAllUrls}
                 theme={theme}
                 search={search}
                 setSearch={setSearch}
+                // filteredUrls powers the table (paginated)
                 filteredUrls={filteredUrls}
                 upSites={upSites}
                 downSites={downSites}
@@ -395,6 +436,10 @@ if (!isLoggedIn) {
                 setPopupData={setPopupData}
                 selectedStatus={selectedStatus}
                 setSelectedStatus={setSelectedStatus}
+                page={page}
+                setPage={setPage}
+                totalPages={totalPages}
+                totalCount={totalCount}
               />
             }
           />
@@ -417,29 +462,28 @@ if (!isLoggedIn) {
           <Route path="/region" element={<Regions theme={theme} />} />
           <Route path="/region/:region" element={<Region theme={theme} />} />
           <Route
-path="/logs"
-element={
-userRole === "SUPERADMIN"
-? <Logs theme={theme}/>
-: <Navigate to="/dashboard"/>
-}
-/>
-<Route
-  path="/bulk-import"
-  element={
-    userRole !== "VIEWER" ? (
-      <BulkUpload />
-    ) : (
-      <Navigate to="/dashboard" replace />
-    )
-  }
-/>
-
+            path="/logs"
+            element={
+              userRole === "SUPERADMIN"
+                ? <Logs theme={theme}/>
+                : <Navigate to="/dashboard"/>
+            }
+          />
+          <Route
+            path="/bulk-import"
+            element={
+              userRole !== "VIEWER" ? (
+                <BulkUpload />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )
+            }
+          />
           <Route
             path="/reports"
             element={
               <Report
-                urls={safeUrls}
+                urls={safeAllUrls}
                 reportData={reportData}
                 reportSearch={reportSearch}
                 setReportSearch={setReportSearch}
@@ -447,43 +491,42 @@ userRole === "SUPERADMIN"
               />
             }
           />
- 
-
-  <Route
-  path="/superadmin"
-  element={
-    userRole === "SUPERADMIN" ? (
-      <SuperAdmin theme={theme} />
-    ) : (
-      <Navigate to="/dashboard" replace />
-    )
-  }
-/><Route path="*" element={<Navigate to="/dashboard" />} />
+          <Route
+            path="/superadmin"
+            element={
+              userRole === "SUPERADMIN" ? (
+                <SuperAdmin theme={theme} />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )
+            }
+          />
+          <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
-        
       </main>
+
       {/* EDIT MODAL */}
       {editItem && (
-  <EditModal
-    item={editItem}
-    theme={theme}
-    editDomain={editDomain}
-    editUrl={editUrl}
-    setEditDomain={setEditDomain}
-    setEditUrl={setEditUrl}
-    editEmail={editEmail}
-    editPhone={editPhone}
-    editPriority={editPriority}
-    editResponseThresholdMs={editResponseThresholdMs}
-    setEditEmail={setEditEmail}
-    setEditPhone={setEditPhone}
-    setEditPriority={setEditPriority}
-    setEditResponseThresholdMs={setEditResponseThresholdMs}
-    urlError={urlError}
-    onClose={() => setEditItem(null)}
-    onSave={handleSaveEdit}
-  />
-)}
+        <EditModal
+          item={editItem}
+          theme={theme}
+          editDomain={editDomain}
+          editUrl={editUrl}
+          setEditDomain={setEditDomain}
+          setEditUrl={setEditUrl}
+          editEmail={editEmail}
+          editPhone={editPhone}
+          editPriority={editPriority}
+          editResponseThresholdMs={editResponseThresholdMs}
+          setEditEmail={setEditEmail}
+          setEditPhone={setEditPhone}
+          setEditPriority={setEditPriority}
+          setEditResponseThresholdMs={setEditResponseThresholdMs}
+          urlError={urlError}
+          onClose={() => setEditItem(null)}
+          onSave={handleSaveEdit}
+        />
+      )}
     </div>
   );
 }
