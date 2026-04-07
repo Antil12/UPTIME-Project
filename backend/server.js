@@ -13,7 +13,12 @@ import uptimeLogRoutes from "./routes/uptimeLog.routes.js";
 import authRoutes from "./routes/auth.Routes.js";
 import userRoutes from "./routes/user.routes.js";
 import emailRoutes from "./routes/email.Routes.js";
+import regionReportRoutes from "./routes/regionReport.routes.js";
 import "./workers/emailWorker.js";
+
+// Import models to ensure they're registered with MongoDB
+import RegionUptimeLog from "./models/RegionUptimeLog.js";
+import RegionCurrentStatus from "./models/RegionCurrentStatus.js";
 
 import rateLimit from "express-rate-limit";
 
@@ -102,6 +107,11 @@ app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/refresh-token", authLimiter);
 app.use("/api/auth/signup", authLimiter);
 
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", message: "Backend is running" });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/monitoredsite", monitoredSiteRoutes);
 app.use("/api/site-current-status", siteCurrentStatusRoutes);
@@ -109,6 +119,7 @@ app.use("/api/uptime-logs", uptimeLogRoutes);
 app.use("/api", checkUrlRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/email", emailRoutes);
+app.use("/api/region-report", regionReportRoutes);
 
 /* ======================
    START SERVER

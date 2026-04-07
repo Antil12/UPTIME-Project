@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 import {
   Globe2,
@@ -7,6 +7,9 @@ import {
   Link2,
   Radar,
   ShieldCheck,
+  Plus,
+  X,
+  RefreshCw,
 } from "lucide-react";
 
 // ─── Font Loader ──────────────────────────────────────────────────────────────
@@ -292,161 +295,208 @@ const StatCard = ({ icon: Icon, label, value }) => (
   </motion.div>
 );
 
-// ─── Site Card ────────────────────────────────────────────────────────────────
-const SiteCard = ({ site, index }) => {
+// ─── Status Badge ─────────────────────────────────────────────────────────────
+const StatusBadge = ({ status }) => {
+  const map = {
+    UP: { color: "#34d399", bg: "rgba(52,211,153,0.08)", border: "rgba(52,211,153,0.22)" },
+    SLOW: { color: "#fbbf24", bg: "rgba(251,191,36,0.08)", border: "rgba(251,191,36,0.22)" },
+    DOWN: { color: "#f87171", bg: "rgba(248,113,113,0.08)", border: "rgba(248,113,113,0.22)" },
+  };
+  const s =
+    map[status] || {
+      color: "rgba(148,163,184,0.5)",
+      bg: "rgba(255,255,255,0.04)",
+      border: "rgba(255,255,255,0.08)",
+    };
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.45 }}
-      whileHover={{ y: -3 }}
-      className="group relative overflow-hidden rounded-2xl"
-      style={{
-        background: "rgba(3,7,18,0.72)",
-        border: "1px solid rgba(56,189,248,0.09)",
-        backdropFilter: "blur(18px)",
-        boxShadow:
-          "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
-      }}
+    <span
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+      style={{ background: s.bg, border: `1px solid ${s.border}` }}
     >
-      <div
-        className="absolute top-0 left-0 right-0 h-[1px]"
-        style={{
-          background:
-            "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.32) 30%, rgba(129,140,248,0.28) 70%, transparent 100%)",
-        }}
+      <motion.span
+        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+        style={{ background: s.color, boxShadow: `0 0 5px ${s.color}` }}
+        animate={status === "DOWN" ? { opacity: [1, 0.3, 1] } : {}}
+        transition={{ duration: 0.9, repeat: Infinity }}
       />
-
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(circle at top right, rgba(56,189,248,0.04), transparent 45%)",
-          }}
-        />
-      </div>
-
-      <div className="relative z-10 p-5">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-3">
-              <div
-                className="inline-flex items-center gap-2 px-2 py-1 rounded-full border"
-                style={{
-                  borderColor: "rgba(56,189,248,0.1)",
-                  background: "rgba(56,189,248,0.035)",
-                }}
-              >
-                <Server size={12} className="text-sky-400" />
-                <span
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: "9px",
-                    letterSpacing: "0.14em",
-                    color: "rgba(56,189,248,0.62)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Monitored Site
-                </span>
-              </div>
-            </div>
-
-            <h3
-              className="text-white text-base sm:text-lg break-all"
-              style={{
-                fontFamily: "'Orbitron', sans-serif",
-                letterSpacing: "0.03em",
-                fontWeight: 700,
-              }}
-            >
-              {site.domain || "Unknown Domain"}
-            </h3>
-
-            <div className="mt-3 flex items-start gap-3">
-              <Link2 size={14} className="text-sky-400 mt-0.5 shrink-0" />
-              <p
-                className="break-all"
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: "11px",
-                  color: "rgba(148,163,184,0.64)",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                {site.url}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <div
-              className="rounded-xl px-4 py-3 min-w-[120px]"
-              style={{
-                background: "rgba(255,255,255,0.018)",
-                border: "1px solid rgba(255,255,255,0.045)",
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: "9px",
-                  color: "rgba(148,163,184,0.48)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.14em",
-                }}
-              >
-                Priority
-              </div>
-              <div
-                className="mt-2 text-white"
-                style={{
-                  fontFamily: "'Orbitron', sans-serif",
-                  fontWeight: 700,
-                  fontSize: "17px",
-                }}
-              >
-                {site.priority ?? 0}
-              </div>
-            </div>
-
-            <div
-              className="rounded-xl px-4 py-3 min-w-[145px]"
-              style={{
-                background: "rgba(255,255,255,0.018)",
-                border: "1px solid rgba(255,255,255,0.045)",
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: "9px",
-                  color: "rgba(148,163,184,0.48)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.14em",
-                }}
-              >
-                Status
-              </div>
-              <div className="mt-2">
-                <StatusDot color="#34d399" label="Tracking Active" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
+      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: s.color }}>{status || "CHECKING"}</span>
+    </span>
   );
 };
+
+// ─── Table Header Cell ───────────────────────────────────────────────────────
+const Th = ({ children, style = {} }) => (
+  <th
+    className="px-4 py-3 text-left whitespace-nowrap"
+    style={{
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: "9px",
+      letterSpacing: "0.18em",
+      textTransform: "uppercase",
+      color: "rgba(56,189,248,0.5)",
+      position: "sticky",
+      top: 0,
+      zIndex: 40,
+      background: "rgba(3,7,18,0.97)",
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      borderBottom: "1px solid rgba(56,189,248,0.13)",
+      fontWeight: 400,
+      ...style,
+    }}
+  >
+    <div style={{ position: "relative", display: "inline-block" }}>{children}</div>
+  </th>
+);
+
+// ─── Table Data Cell ───────────────────────────────────────────────────────
+const Td = ({ children, style = {} }) => (
+  <td
+    className="px-4 py-3"
+    style={{
+      borderBottom: "1px solid rgba(56,189,248,0.06)",
+      color: "rgba(148,163,184,0.8)",
+      ...style,
+    }}
+  >
+    {children}
+  </td>
+);
 
 // ─── Main UI Component ────────────────────────────────────────────────────────
 const RegionPageUI = ({
   decodedRegion,
   sites,
   loading,
+  error,
   onBack,
+  onAddSite,
+  onRefreshSites,
 }) => {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [isCheckingManual, setIsCheckingManual] = useState(false);
+  const [formData, setFormData] = useState({
+    domain: "",
+    url: "",
+    category: "",
+  });
+
+  const handleAddClick = () => {
+    setShowAddForm(true);
+  };
+
+  const handleManualCheck = async () => {
+    if (!decodedRegion) {
+      console.error("❌ Region not available");
+      return;
+    }
+
+    setIsCheckingManual(true);
+    console.log(`\n📤 [handleManualCheck] Sending request for region: ${decodedRegion}`);
+
+    try {
+      const token = localStorage.getItem("loginToken");
+      console.log(`🔑 Token available: ${token ? "YES" : "NO"}`);
+
+      if (!token) {
+        throw new Error("No authentication token found. Please login first.");
+      }
+
+      const url = `http://localhost:5000/api/region-report/manual/${encodeURIComponent(decodedRegion)}`;
+      console.log(`🌐 URL: ${url}`);
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      console.log(`📥 Response Status: ${response.status}`);
+
+      // Read response text first to debug
+      const responseText = await response.text();
+      console.log(`📋 Response Text: ${responseText}`);
+
+      if (!responseText) {
+        throw new Error("Empty response from server");
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        console.error(`❌ JSON Parse Error: ${parseErr.message}`);
+        console.error(`Response was: ${responseText}`);
+        throw new Error(`Invalid JSON response: ${parseErr.message}`);
+      }
+
+      console.log(`✅ Parsed Response:`, data);
+
+      if (!response.ok) {
+        throw new Error(
+          data.details || data.error || `HTTP ${response.status}`
+        );
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || "Check failed");
+      }
+
+      console.log(`✅ Manual check initiated successfully`);
+
+      // Wait 3 seconds then stop checking animation
+      setTimeout(() => {
+        setIsCheckingManual(false);
+        console.log(`✨ Check animation ended`);
+      }, 3000);
+
+      // Fetch updated site data after check completes (without page reload)
+      setTimeout(async () => {
+        try {
+          console.log(`🔄 Fetching updated site data...`);
+          if (onRefreshSites) {
+            await onRefreshSites();
+            console.log(`✅ Site data refreshed with latest status`);
+          }
+        } catch (err) {
+          console.error(`❌ Failed to refresh site data:`, err);
+        }
+      }, 3500);
+    } catch (error) {
+      console.error(`\n❌ Manual check error:`, error.message);
+      console.error(`Full error:`, error);
+      setIsCheckingManual(false);
+      alert(`Manual Check Failed:\n${error.message}`);
+    }
+  };
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    if (onAddSite) {
+      onAddSite({
+        ...formData,
+        regions: [decodedRegion],
+      });
+    }
+    setFormData({ domain: "", url: "", category: "" });
+    setShowAddForm(false);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "—";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   return (
     <>
       <FontLoader />
@@ -527,14 +577,39 @@ const RegionPageUI = ({
                     letterSpacing: "0.03em",
                   }}
                 >
-                  Websites monitored from this region with active region-level
-                  tracking and availability inspection.
+                  Websites monitored from this region with active region-level tracking and availability inspection.
                 </p>
               </div>
             </div>
 
             <StatusDot color="#34d399" label="Region Active" />
           </motion.div>
+
+          {/* Error Alert */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-6 rounded-2xl px-4 py-3 border-l-4"
+              style={{
+                background: "rgba(248, 113, 113, 0.1)",
+                borderColor: "#f87171",
+                border: "1px solid rgba(248, 113, 113, 0.3)",
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "12px",
+                  color: "#fca5a5",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                ⚠️ {error}
+              </div>
+            </motion.div>
+          )}
 
           {/* Top Status Bar */}
           <motion.div
@@ -660,7 +735,7 @@ const RegionPageUI = ({
               </h3>
 
               <p
-                className="max-w-xl mx-auto"
+                className="max-w-xl mx-auto mb-6"
                 style={{
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: "11px",
@@ -670,14 +745,120 @@ const RegionPageUI = ({
                 No websites are currently assigned to the{" "}
                 <span className="text-sky-400">{decodedRegion}</span> monitoring region.
               </p>
+
+             
             </motion.div>
           ) : (
             <div className="space-y-4">
-              {sites.map((site, index) => (
-                <SiteCard key={site._id} site={site} index={index} />
-              ))}
+              <div className="flex justify-end gap-3 mb-4">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleManualCheck}
+                  disabled={isCheckingManual}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg disabled:opacity-60"
+                  style={{
+                    background: isCheckingManual
+                      ? "rgba(34,197,94,0.15)"
+                      : "rgba(59,130,246,0.15)",
+                    border: isCheckingManual
+                      ? "1px solid rgba(34,197,94,0.3)"
+                      : "1px solid rgba(59,130,246,0.3)",
+                    color: isCheckingManual ? "#22c55e" : "#3b82f6",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "11px",
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  <motion.div
+                    animate={isCheckingManual ? { rotate: 360 } : { rotate: 0 }}
+                    transition={{
+                      duration: 1.2,
+                      repeat: isCheckingManual ? Infinity : 0,
+                      ease: "linear",
+                    }}
+                  >
+                    <RefreshCw size={14} />
+                  </motion.div>
+                  {isCheckingManual ? "Checking..." : "Manual Check"}
+                </motion.button>
+
+             
+              </div>
+
+              {/* Table */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.45 }}
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  background: "rgba(3,7,18,0.72)",
+                  border: "1px solid rgba(56,189,248,0.09)",
+                  backdropFilter: "blur(18px)",
+                  boxShadow: "0 0 22px rgba(56,189,248,0.03)",
+                }}
+              >
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr>
+                        <Th>S.NO</Th>
+                        <Th>Domain</Th>
+                        <Th>URL</Th>
+                        <Th>Region</Th>
+                        <Th>Status</Th>
+                        <Th>Last Checked</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sites.map((site, index) => (
+                        <tr key={site._id}>
+                          <Td style={{ color: "rgba(56,189,248,0.6)" }}>{index + 1}</Td>
+                          <Td style={{ fontWeight: 500, color: "white" }}>{site.domain}</Td>
+                          <Td style={{ maxWidth: "250px", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            <a
+                              href={site.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: "#38bdf8", textDecoration: "none" }}
+                            >
+                              {site.url}
+                            </a>
+                          </Td>
+                          <Td>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "4px 8px",
+                                borderRadius: "6px",
+                                background: "rgba(56,189,248,0.12)",
+                                border: "1px solid rgba(56,189,248,0.3)",
+                                color: "#38bdf8",
+                                fontFamily: "'JetBrains Mono', monospace",
+                                fontSize: "9px",
+                              }}
+                            >
+                              {decodedRegion}
+                            </span>
+                          </Td>
+                          <Td>
+                            <StatusBadge status={site.currentStatus?.status || "UP"} />
+                          </Td>
+                          <Td style={{ fontSize: "10px" }}>
+                            {formatDate(site.currentStatus?.lastCheckedAt)}
+                          </Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </motion.div>
             </div>
           )}
+
+         
         </div>
       </div>
     </>

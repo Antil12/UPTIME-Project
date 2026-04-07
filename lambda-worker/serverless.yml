@@ -1,0 +1,34 @@
+# lambda-worker/serverless.yml
+service: uptime-region-checker
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${param:awsRegion, "ap-south-1"}   # default: India
+  memorySize: 256                              # MB — plenty for HTTP checks
+  timeout: 60                                  # seconds (well under Lambda's 900s max)
+
+  environment:
+    BACKEND_URL:   ${param:backendUrl}
+    REGION_NAME:   ${param:regionName}
+    LAMBDA_SECRET: ${param:lambdaSecret}
+
+functions:
+  checker:
+    handler: index.handler
+    name: uptime-checker-${param:regionName}
+    description: "Uptime checker for ${param:regionName}"
+    events:
+      - schedule:
+          rate: rate(2 minutes)
+          enabled: true
+
+# Serverless v3+ package syntax — exclude dev/config files from the ZIP
+package:
+  patterns:
+    - "!.gitignore"
+    - "!serverless.yml"
+    - "!*.md"
+    - "!*.yml"
+    - "!*.yaml"
+    - "!.env*"

@@ -25,7 +25,7 @@ alertChannels: {
 },
 
 regions: {
-  type: [String], // ["India", "USA"]
+  type: [String], // ["North America", "Europe", "Asia", ...]
   default: [],
 },
 

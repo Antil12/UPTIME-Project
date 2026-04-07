@@ -2,6 +2,7 @@ import AlertState from "../models/AlertState.js";
 import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import emailService, { formatToIST } from "./emailService.js";
+import { emailQueue } from "../queue/emailQueue.js";
 
 
 /* =========================================
@@ -94,20 +95,36 @@ export const handleStatusAlert = async (site, newStatus, checkedAt = null, respo
 /* =========================================
    REGION ALERT CHECK
 ========================================= */
-export const handleRegionAlert = async (site, regionResults) => {
-  if (!regionResults) return;
+export const handleRegionAlert = async (siteId, downRegions) => {
+  try {
+    const site = await MonitoredSite.findById(siteId).lean();
+    if (!site) return;
 
-  const downCount = Object.values(regionResults).filter(
-    (status) => status === "DOWN"
-  ).length;
+    // Respect the site's alertIfAllRegionsDown setting
+    if (site.alertIfAllRegionsDown) {
+      // Only alert if ALL configured regions are currently down
+      const allDown = site.regions.every((r) => downRegions.includes(r));
+      if (!allDown) return; // at least one region still up
+    }
 
-  const shouldAlert =
-    (!site.alertIfAllRegionsDown && downCount > 0) ||
-    (site.alertIfAllRegionsDown &&
-      downCount === site.regions.length);
+    // Push a job to the existing email queue
+    await emailQueue.add("region-alert", {
+      type: "REGION_DOWN",
+      siteId: siteId,
+      siteName: site.name || site.domain,
+      siteUrl: site.url,
+      downRegions: downRegions, // e.g. ["India", "USA"]
+      alertEmail: site.emailContact && site.emailContact.length > 0 
+        ? site.emailContact 
+        : (process.env.ALERT_RECIPIENTS || "").split(",").filter(Boolean),
+      timestamp: new Date().toISOString(),
+    });
 
-  if (shouldAlert) {
-    await triggerAlert(site, "REGION_DOWN");
+    console.log(
+      `[regionAlert] queued alert for ${site.name || site.domain} — down in: ${downRegions.join(", ")}`
+    );
+  } catch (err) {
+    console.error("[handleRegionAlert]", err);
   }
 };
 

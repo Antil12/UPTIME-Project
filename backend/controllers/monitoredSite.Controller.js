@@ -3,6 +3,7 @@ import axios from "axios";
 import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import RegionAssignment from "../models/RegionAssignment.js";
+import RegionCurrentStatus from "../models/RegionCurrentStatus.js";
 import { getSlowBatch, clearSlowBatch } from "../services/slowBatchStore.js";
 import User from "../models/User.js";
 import { emailQueue } from "../queue/emailQueue.js";
@@ -814,10 +815,25 @@ export const getSitesByRegion = async (req, res) => {
 
     const sites = await MonitoredSite.find(filter).sort({ createdAt: -1 });
 
-    res.json({ success: true, count: sites.length, data: sites });
+    // Fetch region-specific status for each site
+    const sitesWithStatus = await Promise.all(
+      sites.map(async (site) => {
+        const regionStatus = await RegionCurrentStatus.findOne({
+          siteId: site._id,
+          region: region,
+        });
+
+        return {
+          ...site.toObject(),
+          currentStatus: regionStatus || { status: "UNKNOWN", lastCheckedAt: null },
+        };
+      })
+    );
+
+    res.json({ success: true, count: sitesWithStatus.length, data: sitesWithStatus });
   } catch (err) {
     console.error("getSitesByRegion error:", err);
-    res.status(500).json({ success: false, message: "Failed to fetch sites for region" });
+    res.status(500).json({ success: false, message: "Failed to fetch sites for region", details: err.message });
   }
 };
 
