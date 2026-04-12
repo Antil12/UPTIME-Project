@@ -262,3 +262,116 @@ export const updateHiddenColumns = async (req, res) => {
 
   }
 };
+
+// ================= GET PINNED SITES =================
+export const getPinnedSites = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+
+    const user = await User.findById(userId)
+      .select("pinnedSites")
+      .populate("pinnedSites", "_id domain url category status responseThresholdMs priority");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      pinnedSites: user.pinnedSites || []
+    });
+
+  } catch (error) {
+    console.error("Get pinned sites error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch pinned sites"
+    });
+  }
+};
+
+// ================= PIN SITE =================
+export const pinSite = async (req, res) => {
+  try {
+    const { siteId } = req.params;
+    const userId = req.user._id;
+
+    // Verify site exists
+    const site = await MonitoredSite.findById(siteId);
+    if (!site) {
+      return res.status(404).json({
+        success: false,
+        message: "Site not found"
+      });
+    }
+
+    // Add site to pinned list if not already there
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $addToSet: { pinnedSites: siteId }
+      },
+      { new: true }
+    ).populate("pinnedSites", "_id domain url category priority");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Site pinned successfully",
+      pinnedSites: user.pinnedSites
+    });
+
+  } catch (error) {
+    console.error("Pin site error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to pin site"
+    });
+  }
+};
+
+// ================= UNPIN SITE =================
+export const unpinSite = async (req, res) => {
+  try {
+    const { siteId } = req.params;
+    const userId = req.user._id;
+
+    // Remove site from pinned list
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $pull: { pinnedSites: siteId }
+      },
+      { new: true }
+    ).populate("pinnedSites", "_id domain url category priority");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Site unpinned successfully",
+      pinnedSites: user.pinnedSites
+    });
+
+  } catch (error) {
+    console.error("Unpin site error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to unpin site"
+    });
+  }
+};

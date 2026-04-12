@@ -1,7 +1,7 @@
 import {
   Pin, PinOff, Trash2, Filter, Settings2, Search,
 } from "lucide-react";
-import { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -17,7 +17,36 @@ const monoLabel = {
   textTransform: "uppercase",
 };
 
-// ─── Portal Dropdown Wrapper ─────────────────────────────────────────────────
+// ─── Module-level deduplication for /user/hidden-columns ─────────────────────
+// Mirrors the same pattern used for pinned-sites in App.jsx.
+// Only one HTTP GET is ever in-flight at a time; concurrent callers share the
+// same promise and all receive the same resolved value.
+let hiddenColumnsFlight = null;
+
+const fetchHiddenColumnsOnce = async () => {
+  if (hiddenColumnsFlight) return hiddenColumnsFlight;
+
+  hiddenColumnsFlight = (async () => {
+    try {
+      const token = localStorage.getItem("loginToken");
+      if (!token) return [];
+      const res = await axios.get(`${API_BASE}/user/hidden-columns`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data.hiddenColumns || [];
+    } catch (err) {
+      console.error("Failed to fetch hidden columns:", err);
+      return [];
+    } finally {
+      // Clear so that an explicit save/refresh can re-fetch fresh data
+      hiddenColumnsFlight = null;
+    }
+  })();
+
+  return hiddenColumnsFlight;
+};
+
+// ─── Portal Dropdown Wrapper ──────────────────────────────────────────────────
 const PortalDropdown = ({ anchorRef, open, children, align = "left" }) => {
   const [pos, setPos] = useState({ top: 0, left: 0 });
 
@@ -61,7 +90,7 @@ const PortalDropdown = ({ anchorRef, open, children, align = "left" }) => {
   );
 };
 
-// ─── HUD Filter Dropdown (SSL / Status / Role) ───────────────────────────────
+// ─── HUD Filter Dropdown (SSL / Status / Role) ────────────────────────────────
 const FilterDropdown = ({ anchorRef, open, options, value, onSelect, onClear }) => (
   <PortalDropdown anchorRef={anchorRef} open={open}>
     <motion.div
@@ -114,17 +143,9 @@ const FilterDropdown = ({ anchorRef, open, options, value, onSelect, onClear }) 
 
 // ─── Domain Filter Dropdown (with category + sort) ────────────────────────────
 const DomainFilterDropdown = ({
-  anchorRef,
-  open,
-  onClose,
-  categories,
-  selectedCategories,
-  toggleCategory,
-  removeCategory,
-  sortOrder,
-  setSortOrder,
-  setSelectedCategories,
-  chipStyle,
+  anchorRef, open, onClose, categories, selectedCategories,
+  toggleCategory, removeCategory, sortOrder, setSortOrder,
+  setSelectedCategories, chipStyle,
 }) => (
   <PortalDropdown anchorRef={anchorRef} open={open}>
     <motion.div
@@ -333,7 +354,7 @@ const Th = ({ children, className = "", style = {}, ...rest }) => (
   </th>
 );
 
-// ─── Filter Button ────────────────────────────────────────────────────────────
+// ─── Filter Button ─────────────────────────────────────────────────────────────
 const FilterBtn = ({ active, onClick, btnRef }) => (
   <button
     ref={btnRef}
@@ -349,7 +370,7 @@ const FilterBtn = ({ active, onClick, btnRef }) => (
   </button>
 );
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
+// ─── Status Badge ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
   const map = {
     UP: { color: "#34d399", bg: "rgba(52,211,153,0.08)", border: "rgba(52,211,153,0.22)" },
@@ -370,7 +391,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// ─── SSL Badge ────────────────────────────────────────────────────────────────
+// ─── SSL Badge ─────────────────────────────────────────────────────────────────
 const SslBadge = ({ item }) => {
   const getText = () => {
     if (!item.sslStatus) return "Checking";
@@ -384,7 +405,7 @@ const SslBadge = ({ item }) => {
   return <span style={{ ...monoLabel, fontSize: "10px", color }}>{getText()}</span>;
 };
 
-// ─── Action Button ────────────────────────────────────────────────────────────
+// ─── Action Button ─────────────────────────────────────────────────────────────
 const ActionBtn = ({ onClick, title, children, danger = false }) => (
   <motion.button
     whileHover={{ scale: 1.14, y: -1 }}
@@ -402,7 +423,7 @@ const ActionBtn = ({ onClick, title, children, danger = false }) => (
   </motion.button>
 );
 
-// ─── Row Expand Icon ──────────────────────────────────────────────────────────
+// ─── Row Expand Icon ───────────────────────────────────────────────────────────
 const ExpandChevron = ({ expanded }) => (
   <motion.span
     animate={{ rotate: expanded ? 180 : 0 }}
@@ -413,8 +434,8 @@ const ExpandChevron = ({ expanded }) => (
   </motion.span>
 );
 
-// ─── Main UrlTable ────────────────────────────────────────────────────────────
-const UrlTable = ({
+// ─── Main UrlTable ─────────────────────────────────────────────────────────────
+const UrlTable = forwardRef(({
   urls,
   allUrls,
   theme,
@@ -432,18 +453,20 @@ const UrlTable = ({
   setSelectedCategories,
   selectedStatus,
   setSelectedStatus,
-}) => {
+}, ref) => {
   const isViewer = currentUser?.role?.toUpperCase() === "VIEWER";
   const isSuperAdmin = currentUser?.role?.toUpperCase() === "SUPERADMIN";
 
-  const BASE_COLUMNS = ["sno", "domain", "url", "ssl", "status", "statusCode", "lastCheckedAt", "actions"];
+  const BASE_COLUMNS = ["sno", "domain", "url", "ssl", "status", "globalStatus", "statusCode", "lastCheckedAt", "actions"];
   const ADMIN_COLUMNS = ["userEmail", "userRole"];
   const DEFAULT_COLUMNS = isSuperAdmin
     ? [...BASE_COLUMNS.slice(0, 5), ...ADMIN_COLUMNS, ...BASE_COLUMNS.slice(5)]
     : BASE_COLUMNS;
 
-  // ── Column state ────────────────────────────────────────────────────────────
+  // ── Column state ──────────────────────────────────────────────────────────────
   const [searchColumn, setSearchColumn] = useState("");
+  const [globalCheckLoading, setGlobalCheckLoading] = useState(null);
+  const [globalCheckModalData, setGlobalCheckModalData] = useState(null); // Store regional breakdown for modal
   const visibleColumnsForRole = DEFAULT_COLUMNS.filter((col) => {
     if (!isSuperAdmin && (col === "userEmail" || col === "userRole")) return false;
     if (isViewer && col === "actions") return false;
@@ -453,17 +476,15 @@ const UrlTable = ({
     col.toLowerCase().includes(searchColumn.toLowerCase())
   );
 
-  // ── Button refs (portals anchor to these) ───────────────────────────────────
+  // ── Button refs (portals anchor to these) ─────────────────────────────────────
   const columnBtnRef = useRef(null);
   const domainBtnRef = useRef(null);
   const sslBtnRef = useRef(null);
   const statusBtnRef = useRef(null);
   const roleBtnRef = useRef(null);
-
-  // Column menu still needs a ref for outside-click detection
   const columnMenuRef = useRef(null);
 
-  // ── UI state ────────────────────────────────────────────────────────────────
+  // ── UI state ──────────────────────────────────────────────────────────────────
   const [hiddenColumns, setHiddenColumns] = useState([]);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [selectedRole, setSelectedRole] = useState("ALL");
@@ -476,7 +497,14 @@ const UrlTable = ({
   const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [showRoleFilter, setShowRoleFilter] = useState(false);
 
-  // ── Derived options ─────────────────────────────────────────────────────────
+  // ── Expose column button ref/toggle to parent ─────────────────────────────────
+  useImperativeHandle(ref, () => ({
+    getColumnBtnRef: () => columnBtnRef,
+    toggleColumnMenu: () => setShowColumnMenu((v) => !v),
+    isColumnMenuOpen: () => showColumnMenu,
+  }));
+
+  // ── Derived options ───────────────────────────────────────────────────────────
   const roleOptions = useMemo(() => {
     const roles = allUrls.map((u) => u.ownerRole).filter(Boolean);
     return ["ALL", ...Array.from(new Set(roles))];
@@ -492,7 +520,7 @@ const UrlTable = ({
     return ["ALL", ...Array.from(new Set(statuses))];
   }, [allUrls]);
 
-  // ── Filtered + sorted data ──────────────────────────────────────────────────
+  // ── Filtered + sorted data ────────────────────────────────────────────────────
   const filteredData = urls.filter((u) => {
     const categoryMatch = selectedCategories.includes("ALL") || selectedCategories.includes(u.category);
     const statusMatch = selectedStatus === "ALL" || u.status === selectedStatus;
@@ -512,30 +540,24 @@ const UrlTable = ({
     return sortOrder === "ASC" ? a.domain.localeCompare(b.domain) : b.domain.localeCompare(a.domain);
   });
 
-  // ── Fetch hidden columns on mount ───────────────────────────────────────────
+  // ── Load hidden columns once (deduplicated at module level) ──────────────────
+  // The module-level `fetchHiddenColumnsOnce` guarantees that no matter how many
+  // times UrlTable mounts or re-renders in quick succession, only one HTTP
+  // request is ever sent. Subsequent mounts reuse the cached/in-flight promise.
   useEffect(() => {
-    const fetchHiddenColumns = async () => {
-      try {
-        const token = localStorage.getItem("loginToken");
-        const res = await axios.get(`${API_BASE}/user/hidden-columns`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setHiddenColumns(res.data.hiddenColumns || []);
-      } catch (err) {
-        console.error("Failed to fetch hidden columns");
-      }
-    };
-    fetchHiddenColumns();
+    let cancelled = false;
+    fetchHiddenColumnsOnce().then((cols) => {
+      if (!cancelled) setHiddenColumns(cols);
+    });
+    return () => { cancelled = true; };
   }, []);
 
-  // ── Close all dropdowns on outside click ────────────────────────────────────
+  // ── Close all dropdowns on outside click ──────────────────────────────────────
   useEffect(() => {
     const handleClickOutside = (e) => {
-      // Column menu: handled separately since it's still relatively-positioned
       if (showColumnMenu && columnMenuRef.current && !columnMenuRef.current.contains(e.target) && !columnBtnRef.current?.contains(e.target)) {
         setShowColumnMenu(false);
       }
-      // For portal dropdowns: close when clicking outside any of the trigger buttons
       if (showDomainFilter && !domainBtnRef.current?.contains(e.target)) setShowDomainFilter(false);
       if (showSslFilter && !sslBtnRef.current?.contains(e.target)) setShowSslFilter(false);
       if (showStatusFilter && !statusBtnRef.current?.contains(e.target)) setShowStatusFilter(false);
@@ -545,13 +567,18 @@ const UrlTable = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showColumnMenu, showDomainFilter, showSslFilter, showStatusFilter, showRoleFilter]);
 
-  // ── Toggle column visibility ────────────────────────────────────────────────
+  // ── Toggle column visibility ──────────────────────────────────────────────────
+  // After a successful save we reset the module-level flight so the next mount
+  // (e.g. navigation away and back) picks up the freshly persisted value.
   const toggleColumn = async (column) => {
     if (!isSuperAdmin && (column === "userEmail" || column === "userRole")) return;
     const updated = hiddenColumns.includes(column)
       ? hiddenColumns.filter((c) => c !== column)
       : [...hiddenColumns, column];
+
+    // Optimistic update
     setHiddenColumns(updated);
+
     try {
       const token = localStorage.getItem("loginToken");
       await axios.put(
@@ -559,12 +586,16 @@ const UrlTable = ({
         { hiddenColumns: updated },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      // Invalidate the cache so a fresh fetch is made next time
+      hiddenColumnsFlight = null;
     } catch (err) {
-      console.error("Save hidden column failed");
+      console.error("Save hidden column failed:", err);
+      // Roll back optimistic update on error
+      setHiddenColumns(hiddenColumns);
     }
   };
 
-  // ── Expand / collapse site report row ──────────────────────────────────────
+  // ── Expand / collapse site report row ────────────────────────────────────────
   const handleToggleSite = async (item) => {
     const next = expandedSite === item._id ? null : item._id;
     setExpandedSite(next);
@@ -579,6 +610,26 @@ const UrlTable = ({
         console.error("Failed to fetch site logs", err);
         setSiteLogs((prev) => ({ ...prev, [item._id]: [] }));
       }
+    }
+  };
+
+  const handleGlobalCheck = async (siteId) => {
+    setGlobalCheckLoading(siteId);
+    try {
+      const token = localStorage.getItem("loginToken");
+      const res = await axios.post(
+        `${API_BASE}/monitoredsite/global-check/${siteId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      console.log("✅ Global check completed:", res.data.data);
+      // Open modal with regional breakdown
+      setGlobalCheckModalData(res.data.data);
+    } catch (err) {
+      console.error("Failed to perform global check:", err);
+      alert("Global check failed. Please try again.");
+    } finally {
+      setGlobalCheckLoading(null);
     }
   };
 
@@ -620,42 +671,192 @@ const UrlTable = ({
 
   return (
     <div className="w-full">
-      {/* ─── Column Settings (Desktop) ─── */}
-      <div className="hidden lg:flex justify-end mb-3 relative">
-        <motion.button
-          ref={columnBtnRef}
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={() => setShowColumnMenu(!showColumnMenu)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all duration-300"
-          style={{
-            fontFamily: "'JetBrains Mono', monospace", fontSize: "10px",
-            letterSpacing: "0.1em", textTransform: "uppercase",
-            background: showColumnMenu ? "rgba(56,189,248,0.1)" : "rgba(255,255,255,0.04)",
-            border: showColumnMenu ? "1px solid rgba(56,189,248,0.28)" : "1px solid rgba(255,255,255,0.08)",
-            color: showColumnMenu ? "#38bdf8" : "rgba(148,163,184,0.6)",
-          }}
-        >
-          <Settings2 size={13} />
-          Columns
-        </motion.button>
+      {/* ─── Global Check Modal ─── */}
+      <AnimatePresence>
+        {globalCheckModalData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setGlobalCheckModalData(null)}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0,0,0,0.7)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 9999,
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "rgba(3,7,18,0.95)",
+                border: "1px solid rgba(56,189,248,0.2)",
+                borderRadius: "20px",
+                backdropFilter: "blur(20px)",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(56,189,248,0.1)",
+                padding: "32px",
+                maxWidth: "600px",
+                maxHeight: "80vh",
+                overflowY: "auto",
+              }}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-6 gap-4">
+                <div>
+                  <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "4px" }}>
+                    🌍 Global Status Check
+                  </h2>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>
+                    {globalCheckModalData.domain}
+                  </p>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setGlobalCheckModalData(null)}
+                  style={{
+                    background: "rgba(56,189,248,0.1)",
+                    border: "1px solid rgba(56,189,248,0.2)",
+                    borderRadius: "8px",
+                    padding: "8px 12px",
+                    color: "#38bdf8",
+                    cursor: "pointer",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "18px",
+                  }}
+                >
+                  ✕
+                </motion.button>
+              </div>
 
-        <AnimatePresence>
-          {showColumnMenu && (
-            <ColumnMenu
-              anchorRef={columnBtnRef}
-              open={showColumnMenu}
-              menuRef={columnMenuRef}
-              filteredColumns={filteredColumns}
-              hiddenColumns={hiddenColumns}
-              toggleColumn={toggleColumn}
-              searchColumn={searchColumn}
-              setSearchColumn={setSearchColumn}
-              DEFAULT_COLUMNS={DEFAULT_COLUMNS}
-            />
-          )}
-        </AnimatePresence>
-      </div>
+              {/* Global Status */}
+              <div className="mb-6 p-4 rounded-xl" style={{ background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.15)" }}>
+                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(56,189,248,0.5)", marginBottom: "8px", letterSpacing: "0.06em" }}>
+                  GLOBAL STATUS
+                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <StatusBadge status={globalCheckModalData.globalStatus} />
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>
+                    {new Date(globalCheckModalData.checkTimestamp).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Regional Breakdown */}
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(56,189,248,0.5)", marginBottom: "12px", letterSpacing: "0.06em" }}>
+                REGIONAL BREAKDOWN
+              </p>
+              <div className="space-y-2">
+                {globalCheckModalData.regionalBreakdown.map((region, idx) => {
+                  const statusColors = { UP: "#34d399", DOWN: "#f87171", SLOW: "#fbbf24", UNKNOWN: "#94a3b8" };
+                  const color = statusColors[region.status] || "#94a3b8";
+                  return (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="p-3 rounded-lg transition-all"
+                      style={{
+                        background: `${color}12`,
+                        border: `1px solid ${color}30`,
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div
+                            style={{
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "50%",
+                              background: color,
+                              boxShadow: `0 0 8px ${color}`,
+                              flexShrink: 0,
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", fontWeight: 600, color: color }}>
+                              {region.region}
+                            </p>
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>
+                              {region.lastCheckedAt ? new Date(region.lastCheckedAt).toLocaleTimeString() : "Never"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color, fontWeight: 600 }}>
+                            {region.status}
+                          </p>
+                          {region.responseTimeMs && (
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>
+                              {region.responseTimeMs}ms
+                            </p>
+                          )}
+                          {region.statusCode && (
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>
+                              HTTP {region.statusCode}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Close Button */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setGlobalCheckModalData(null)}
+                style={{
+                  width: "100%",
+                  marginTop: "24px",
+                  padding: "12px",
+                  borderRadius: "12px",
+                  background: "rgba(56,189,248,0.12)",
+                  border: "1px solid rgba(56,189,248,0.2)",
+                  color: "#38bdf8",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                Close
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Column Menu Portal ─── */}
+      <AnimatePresence>
+        {showColumnMenu && (
+          <ColumnMenu
+            anchorRef={columnBtnRef}
+            open={showColumnMenu}
+            menuRef={columnMenuRef}
+            filteredColumns={filteredColumns}
+            hiddenColumns={hiddenColumns}
+            toggleColumn={toggleColumn}
+            searchColumn={searchColumn}
+            setSearchColumn={setSearchColumn}
+            DEFAULT_COLUMNS={DEFAULT_COLUMNS}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ─── Desktop Table ─── */}
       <div className="hidden lg:block">
@@ -670,7 +871,6 @@ const UrlTable = ({
         >
           <div className="h-[1px]" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.4) 30%, rgba(129,140,248,0.32) 70%, transparent 100%)", flexShrink: 0 }} />
 
-          {/* KEY CHANGE: overflow visible on the wrapper, scroll only on the inner div */}
           <div
             style={{
               overflowX: "auto",
@@ -679,7 +879,6 @@ const UrlTable = ({
               borderRadius: "0 0 16px 16px",
               position: "relative",
               paddingBottom: "8px",
-              
             }}
           >
             <table className="w-full text-sm" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
@@ -773,6 +972,13 @@ const UrlTable = ({
                     </Th>
                   )}
 
+                  {/* ── Global Status column ── */}
+                  {!hiddenColumns.includes("globalStatus") && (
+                    <Th>
+                      <span>Global Status</span>
+                    </Th>
+                  )}
+
                   {/* ── SuperAdmin columns ── */}
                   {isSuperAdmin && (
                     <>
@@ -830,6 +1036,8 @@ const UrlTable = ({
                     siteLogs={siteLogs}
                     theme={theme}
                     colSpan={visibleColsCount}
+                    handleGlobalCheck={handleGlobalCheck}
+                    globalCheckLoading={globalCheckLoading}
                   />
                 ))}
               </tbody>
@@ -960,13 +1168,15 @@ const UrlTable = ({
       </div>
     </div>
   );
-};
+});
+
+UrlTable.displayName = "UrlTable";
 
 // ─── Row Component ─────────────────────────────────────────────────────────────
 const FragmentRow = ({
   item, i, selectionMode, selectedIds, setSelectedIds, hiddenColumns,
   isSuperAdmin, isViewer, expandedSite, handleToggleSite, onPin, onEdit,
-  onDelete, siteLogs, theme, colSpan,
+  onDelete, siteLogs, theme, colSpan, handleGlobalCheck, globalCheckLoading,
 }) => {
   return (
     <>
@@ -989,7 +1199,9 @@ const FragmentRow = ({
                 border: selectedIds.includes(item._id) ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.1)",
                 background: selectedIds.includes(item._id) ? "rgba(56,189,248,0.15)" : "transparent",
               }}
-              onClick={() => setSelectedIds((prev) => prev.includes(item._id) ? prev.filter((id) => id !== item._id) : [...prev, item._id])}
+              onClick={() => setSelectedIds((prev) =>
+                prev.includes(item._id) ? prev.filter((id) => id !== item._id) : [...prev, item._id]
+              )}
             >
               {selectedIds.includes(item._id) && <span style={{ color: "#38bdf8", fontSize: "8px" }}>✓</span>}
             </div>
@@ -1032,6 +1244,40 @@ const FragmentRow = ({
 
         {!hiddenColumns.includes("status") && (
           <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
+        )}
+
+        {!hiddenColumns.includes("globalStatus") && (
+          <td className="px-4 py-3">
+            <div className="flex items-center gap-2">
+              <StatusBadge status={item.globalStatus || "UNKNOWN"} />
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleGlobalCheck(item._id)}
+                disabled={globalCheckLoading === item._id}
+                title="Manual Global Check"
+                className="w-5 h-5 flex items-center justify-center rounded transition-all"
+                style={{
+                  background: globalCheckLoading === item._id ? "rgba(56,189,248,0.2)" : "rgba(56,189,248,0.08)",
+                  border: "1px solid rgba(56,189,248,0.2)",
+                  color: globalCheckLoading === item._id ? "#38bdf8" : "rgba(56,189,248,0.6)",
+                  cursor: globalCheckLoading === item._id ? "wait" : "pointer",
+                }}
+              >
+                {globalCheckLoading === item._id ? (
+                  <motion.span
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    style={{ fontSize: "10px" }}
+                  >
+                    ⟳
+                  </motion.span>
+                ) : (
+                  <span style={{ fontSize: "10px" }}>🌍</span>
+                )}
+              </motion.button>
+            </div>
+          </td>
         )}
 
         {isSuperAdmin && (

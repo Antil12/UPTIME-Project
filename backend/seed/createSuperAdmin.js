@@ -5,15 +5,14 @@ import User from "../models/User.js";
 
 dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URL || `mongodb://${process.env.MONGO_ROOT_USERNAME}:${process.env.MONGO_ROOT_PASSWORD}@mongodb:27017/${process.env.MONGO_DATABASE}?authSource=admin`;
-
-const name = process.env.SUPERADMIN_NAME || "Super Admin";
-const email = process.env.SUPERADMIN_EMAIL || "admi1n@local";
-const password = process.env.SUPERADMIN_PASSWORD || "admin123";
+const MONGODB_URI = process.env.MONGODB_URI;
+const name = process.env.SUPERADMIN_NAME;
+const email = process.env.SUPERADMIN_EMAIL;
+const password = process.env.SUPERADMIN_PASSWORD;
 
 const connect = async () => {
   try {
-    await mongoose.connect(MONGODB_URI, { dbName: process.env.MONGO_DATABASE || undefined });
+    await mongoose.connect(MONGODB_URI);
     console.log("✅ Seeder connected to MongoDB");
   } catch (err) {
     console.error("Failed to connect to MongoDB:", err);

@@ -16,7 +16,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
+const SettingsMenu = ({ onLogout }) => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -308,80 +308,8 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
                     </div>
                   </div>
 
-                  {/* THEME TOGGLE */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.08 }}
-                    className="rounded-2xl px-4 py-4"
-                    style={menuButtonStyle}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-                          style={{
-                            background: "rgba(56,189,248,0.08)",
-                            border: "1px solid rgba(56,189,248,0.10)",
-                          }}
-                        >
-                          {theme === "light" ? (
-                            <Moon size={18} className="text-sky-300" />
-                          ) : (
-                            <Sun size={18} className="text-amber-300" />
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p
-                            className="text-white text-sm"
-                            style={{
-                              fontFamily: "'Orbitron', sans-serif",
-                              fontWeight: 700,
-                              letterSpacing: "0.03em",
-                            }}
-                          >
-                            Appearance Mode
-                          </p>
-                          <p
-                            style={{
-                              fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: "10px",
-                              color: "rgba(148,163,184,0.6)",
-                            }}
-                          >
-                            Switch dashboard theme
-                          </p>
-                        </div>
-                      </div>
-
-                      <motion.button
-                        whileTap={{ scale: 0.96 }}
-                        onClick={toggleTheme}
-                        className="relative w-14 h-8 rounded-full shrink-0"
-                        style={{
-                          background:
-                            theme === "dark"
-                              ? "linear-gradient(90deg, rgba(56,189,248,0.9), rgba(129,140,248,0.9))"
-                              : "rgba(148,163,184,0.28)",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          boxShadow:
-                            theme === "dark"
-                              ? "0 0 18px rgba(56,189,248,0.18)"
-                              : "none",
-                        }}
-                      >
-                        <motion.span
-                          layout
-                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                          className="absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-md"
-                          style={{
-                            x: theme === "dark" ? 24 : 0,
-                          }}
-                        />
-                      </motion.button>
-                    </div>
-                  </motion.div>
+                  
+                
 
                   {/* NAVIGATION / ACTIONS */}
                   <div className="space-y-3">
@@ -470,7 +398,7 @@ const SettingsMenu = ({ theme, toggleTheme, onLogout }) => {
                             className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
                             style={{
                               background: "rgba(129,140,248,0.08)",
-                              border: "1px solid rgba(129,140,248,0.10)",
+                              border: "1px solid rgba(129,140,248,0.10)", 
                             }}
                           >
                             <Upload size={18} className="text-indigo-300" />

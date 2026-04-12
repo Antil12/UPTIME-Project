@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import SuperAdminUI from "../components/SuperAdminUI";
 
-const SuperAdmin = ({ theme }) => {
+const SuperAdmin = () => {
   const API_URL = import.meta.env.VITE_API_URL;
 
   const [form, setForm] = useState({
@@ -238,7 +238,6 @@ const SuperAdmin = ({ theme }) => {
 
   return (
     <SuperAdminUI
-      theme={theme}
       form={form}
       handleChange={handleChange}
       passwordStrength={passwordStrength}

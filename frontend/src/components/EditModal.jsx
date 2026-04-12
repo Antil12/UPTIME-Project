@@ -1,9 +1,29 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  X,
+  Globe2,
+  Link2,
+  Tag,
+  ShieldAlert,
+  Mail,
+  Phone,
+  TimerReset,
+  MapPin,
+  Check,
+} from "lucide-react";
+
+const REGIONS = [
+  "South America",
+  "Australia",
+  "North America",
+  "Europe",
+  "Asia",
+  "Africa",
+];
 
 export default function EditModal({
   item,
-  theme,
   editDomain,
   editUrl,
   setEditDomain,
@@ -12,205 +32,592 @@ export default function EditModal({
   editPhone,
   editPriority,
   editResponseThresholdMs,
+  editRegions,
   setEditEmail,
   setEditPhone,
   setEditPriority,
   setEditResponseThresholdMs,
+  setEditRegions,
   urlError,
   onClose,
   onSave,
   initialCategory,
 }) {
-  if (!item) return null;
-
-  const [category, setCategory] = useState(item.category || "");
+  const [category, setCategory] = useState(item?.category || "");
   const [emailInput, setEmailInput] = useState("");
 
   useEffect(() => {
-    if (initialCategory !== undefined) setCategory(initialCategory);
+    if (item?.category !== undefined) {
+      setCategory(item.category || "");
+    }
+  }, [item]);
+
+  useEffect(() => {
+    if (initialCategory !== undefined) {
+      setCategory(initialCategory || "");
+    }
   }, [initialCategory]);
 
-  const isDark = theme === "dark";
+  if (!item) return null;
 
-  const modalClass = isDark
-    ? "bg-gray-900 text-gray-100 border border-gray-800"
-    : "bg-white text-gray-800 border border-gray-200";
+  const normalizedEmails = Array.isArray(editEmail)
+    ? editEmail
+    : editEmail
+    ? [editEmail]
+    : [];
 
-  const labelClass = "text-sm font-medium mb-1 block";
+  const toggleRegion = (region) => {
+    setEditRegions((prev) =>
+      prev.includes(region)
+        ? prev.filter((r) => r !== region)
+        : [...prev, region]
+    );
+  };
 
-  const inputClass = isDark
-    ? "w-full px-4 py-2.5 rounded-2xl border border-gray-700 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-    : "w-full px-4 py-2.5 rounded-2xl border border-gray-300 bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
+  const removeRegion = (region) => {
+    setEditRegions((prev) => prev.filter((r) => r !== region));
+  };
 
-  const cancelBtnClass = isDark
-    ? "px-5 py-2.5 rounded-2xl bg-gray-800 hover:bg-gray-700 text-white font-medium transition"
-    : "px-5 py-2.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium transition";
+  const handleAddEmail = () => {
+    const value = (emailInput || "").trim();
+    if (!value) return;
 
-  const saveBtnClass =
-    "px-6 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md hover:shadow-lg transition";
+    if (!normalizedEmails.includes(value)) {
+      setEditEmail([...normalizedEmails, value]);
+    }
+    setEmailInput("");
+  };
+
+  const handleRemoveEmail = (email) => {
+    setEditEmail((prev) =>
+      Array.isArray(prev) ? prev.filter((e) => e !== email) : []
+    );
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-      <div
-        className={`w-full max-w-lg rounded-3xl p-7 shadow-2xl ${modalClass}`}
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center px-4 py-6">
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 18, scale: 0.98 }}
+        transition={{ duration: 0.25 }}
+        className="relative w-full max-w-4xl max-h-[92vh] rounded-[28px] overflow-hidden"
+        style={{
+          background: "rgba(3,7,18,0.88)",
+          border: "1px solid rgba(56,189,248,0.10)",
+          backdropFilter: "blur(22px)",
+          WebkitBackdropFilter: "blur(22px)",
+          boxShadow:
+            "0 0 30px rgba(56,189,248,0.05), 0 0 80px rgba(129,140,248,0.03)",
+        }}
       >
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              Edit Website
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Update monitoring details below
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-          >
-            <X size={18} />
-          </button>
-        </div>
+        {/* Ambient Glow */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at top right, rgba(56,189,248,0.08) 0%, transparent 30%), radial-gradient(circle at bottom left, rgba(129,140,248,0.06) 0%, transparent 28%)",
+          }}
+        />
 
-        {/* Form */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className={labelClass}>Domain Name</label>
-            <input
-              value={editDomain}
-              onChange={(e) => setEditDomain(e.target.value)}
-              placeholder="example.com"
-              className={inputClass}
-            />
-          </div>
+        {/* Grid Overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-40"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(148,163,184,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.03) 1px, transparent 1px)",
+            backgroundSize: "34px 34px",
+          }}
+        />
 
-          <div className="md:col-span-2">
-            <label className={labelClass}>Website URL</label>
-            <input
-              value={editUrl}
-              onChange={(e) => setEditUrl(e.target.value)}
-              placeholder="https://example.com"
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <label className={labelClass}>Category</label>
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="E-commerce, Blog, SaaS..."
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <label className={labelClass}>Priority</label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={Number(editPriority) === 1}
-                onChange={(e) => setEditPriority(e.target.checked ? 1 : 0)}
-                className="accent-red-600 w-4 h-4"
-              />
-              <span className="text-sm">High Priority</span>
-            </label>
-          </div>
-
-          <div>
-            <label className={labelClass}>Contact Emails</label>
-
-            <div className="flex gap-2 mb-2">
-              <input
-                type="email"
-                placeholder="Add email"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    const v = (emailInput || "").trim();
-                    if (v) {
-                      // ensure editEmail is an array
-                      const current = Array.isArray(editEmail) ? editEmail : editEmail ? [editEmail] : [];
-                      if (!current.includes(v)) setEditEmail([...current, v]);
-                      setEmailInput("");
-                    }
-                  }
-                }}
-                className={inputClass}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const v = (emailInput || "").trim();
-                  if (v) {
-                    const current = Array.isArray(editEmail) ? editEmail : editEmail ? [editEmail] : [];
-                    if (!current.includes(v)) setEditEmail([...current, v]);
-                    setEmailInput("");
-                  }
-                }}
-                className="px-4 py-2 rounded-2xl bg-blue-600 text-white"
-              >
-                Add
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {(Array.isArray(editEmail) ? editEmail : editEmail ? [editEmail] : []).map((e, i) => (
-                <span key={i} className="px-3 py-1 rounded-full border bg-white/5 flex items-center gap-2">
-                  <span className="text-sm">{e}</span>
-                  <button
-                    type="button"
-                    onClick={() => setEditEmail((p) => (Array.isArray(p) ? p.filter((x) => x !== e) : []))}
-                    className="text-xs text-red-400"
+        <div className="relative z-10 flex flex-col max-h-[92vh]">
+          {/* Sticky Header */}
+          <div className="sticky top-0 z-20 px-6 sm:px-8 pt-6 sm:pt-8 pb-5 border-b border-sky-400/10 backdrop-blur-xl bg-[rgba(3,7,18,0.72)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-[1px] w-8 bg-sky-400/20" />
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "9px",
+                      letterSpacing: "0.28em",
+                      color: "rgba(56,189,248,0.42)",
+                      textTransform: "uppercase",
+                    }}
                   >
-                    ✕
-                  </button>
-                </span>
-              ))}
+                    Edit Monitor
+                  </span>
+                  <div className="h-[1px] w-16 bg-sky-400/10" />
+                </div>
+
+                <h2
+                  className="text-2xl sm:text-3xl text-white"
+                  style={{
+                    fontFamily: "'Orbitron', sans-serif",
+                    fontWeight: 800,
+                    letterSpacing: "0.05em",
+                    textShadow: "0 0 24px rgba(56,189,248,0.08)",
+                  }}
+                >
+                  EDIT WEBSITE
+                </h2>
+
+                <p
+                  className="mt-2"
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "11px",
+                    color: "rgba(148,163,184,0.52)",
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  Update monitoring details and response behavior.
+                </p>
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.04, rotate: 90 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onClose}
+                className="inline-flex items-center justify-center rounded-xl w-10 h-10 shrink-0"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(129,140,248,0.08) 100%)",
+                  border: "1px solid rgba(56,189,248,0.16)",
+                }}
+              >
+                <X size={16} className="text-white" />
+              </motion.button>
             </div>
           </div>
 
-          <div>
-            <label className={labelClass}>Contact Phone</label>
-            <input
-              value={editPhone}
-              onChange={(e) => setEditPhone(e.target.value)}
-              placeholder="+91 9876543210"
-              className={inputClass}
-            />
+          {/* Scrollable Body */}
+          <div className="overflow-y-auto px-6 sm:px-8 py-6 custom-scroll">
+            <div className="space-y-8">
+              {/* Section: Basic Info */}
+              <SectionTitle title="Basic Details" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <FieldWrapper label="Domain Name" icon={Globe2}>
+                  <input
+                    value={editDomain}
+                    onChange={(e) => setEditDomain(e.target.value)}
+                    placeholder="example.com"
+                    className={inputClass}
+                  />
+                </FieldWrapper>
+
+                <FieldWrapper label="Category" icon={Tag}>
+                  <input
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    placeholder="E-commerce, Blog, SaaS..."
+                    className={inputClass}
+                  />
+                </FieldWrapper>
+
+                <FieldWrapper label="Website URL" icon={Link2} full>
+                  <input
+                    value={editUrl}
+                    onChange={(e) => setEditUrl(e.target.value)}
+                    placeholder="https://example.com"
+                    className={inputClass}
+                  />
+                </FieldWrapper>
+              </div>
+
+              {/* Section: Monitoring */}
+              <SectionTitle title="Monitoring Settings" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Priority */}
+                <div>
+                  <FieldLabel icon={ShieldAlert} text="Priority" />
+                  <label
+                    className="flex items-center gap-3 cursor-pointer px-4 rounded-2xl h-[50px]"
+                    style={cardFieldStyle}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Number(editPriority) === 1}
+                      onChange={(e) =>
+                        setEditPriority(e.target.checked ? 1 : 0)
+                      }
+                      className="accent-red-500 w-4 h-4 shrink-0"
+                    />
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "11px",
+                        color:
+                          Number(editPriority) === 1
+                            ? "#f87171"
+                            : "rgba(148,163,184,0.70)",
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      High Priority Monitor
+                    </span>
+                  </label>
+                </div>
+
+                {/* Response Threshold */}
+                <div>
+                  <FieldLabel icon={TimerReset} text="Max Response (ms)" />
+                  <input
+                    type="number"
+                    value={editResponseThresholdMs}
+                    onChange={(e) =>
+                      setEditResponseThresholdMs(e.target.value)
+                    }
+                    placeholder="2000"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              {/* Regions */}
+              <div>
+                <FieldLabel icon={MapPin} text="Regions" />
+                <div
+                  className="rounded-2xl p-4"
+                  style={cardFieldStyle}
+                >
+                  <div className="flex flex-wrap gap-3">
+                    {REGIONS.map((region) => {
+                      const selected = editRegions.includes(region);
+
+                      return (
+                        <button
+                          key={region}
+                          type="button"
+                          onClick={() => toggleRegion(region)}
+                          className="group inline-flex items-center gap-2 px-4 py-2.5 rounded-full transition-all duration-200"
+                          style={{
+                            background: selected
+                              ? "rgba(52,211,153,0.14)"
+                              : "rgba(255,255,255,0.03)",
+                            border: selected
+                              ? "1px solid rgba(52,211,153,0.30)"
+                              : "1px solid rgba(56,189,248,0.12)",
+                            boxShadow: selected
+                              ? "0 0 20px rgba(52,211,153,0.06)"
+                              : "none",
+                          }}
+                        >
+                          <div
+                            className="w-4 h-4 rounded-md flex items-center justify-center"
+                            style={{
+                              background: selected
+                                ? "rgba(52,211,153,0.18)"
+                                : "rgba(255,255,255,0.04)",
+                              border: selected
+                                ? "1px solid rgba(52,211,153,0.35)"
+                                : "1px solid rgba(56,189,248,0.10)",
+                            }}
+                          >
+                            {selected && <Check size={10} className="text-emerald-400" />}
+                          </div>
+
+                          <span
+                            style={{
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: "10px",
+                              letterSpacing: "0.05em",
+                              textTransform: "uppercase",
+                              color: selected
+                                ? "#86efac"
+                                : "rgba(148,163,184,0.70)",
+                            }}
+                          >
+                            {region}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <AnimatePresence>
+                    {editRegions.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 6 }}
+                        className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-sky-400/10"
+                      >
+                        {editRegions.map((region) => (
+                          <motion.span
+                            key={region}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                            style={{
+                              background: "rgba(52,211,153,0.12)",
+                              border: "1px solid rgba(52,211,153,0.22)",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontFamily: "'JetBrains Mono', monospace",
+                                fontSize: "10px",
+                                letterSpacing: "0.04em",
+                                textTransform: "uppercase",
+                                color: "#6ee7b7",
+                              }}
+                            >
+                              {region}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeRegion(region)}
+                              className="hover:text-red-400 transition-colors"
+                              style={{ color: "rgba(110,231,183,0.55)" }}
+                            >
+                              <X size={10} />
+                            </button>
+                          </motion.span>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Section: Notifications */}
+              <SectionTitle title="Alert Contacts" />
+
+              <div className="space-y-5">
+                <FieldWrapper label="Contact Emails" icon={Mail}>
+                  <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                    <input
+                      type="email"
+                      placeholder="Add email"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddEmail();
+                        }
+                      }}
+                      className={inputClass}
+                    />
+
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={handleAddEmail}
+                      className="px-5 py-3 rounded-2xl text-white shrink-0"
+                      style={primaryButtonStyle}
+                    >
+                      Add
+                    </motion.button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {normalizedEmails.length > 0 ? (
+                      normalizedEmails.map((email, i) => (
+                        <span
+                          key={i}
+                          className="px-3 py-2 rounded-full flex items-center gap-2"
+                          style={{
+                            background: "rgba(56,189,248,0.08)",
+                            border: "1px solid rgba(56,189,248,0.18)",
+                            color: "#7dd3fc",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: "11px",
+                            }}
+                          >
+                            {email}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveEmail(email)}
+                            className="text-red-400 text-xs hover:text-red-300 transition"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-slate-500 text-sm font-mono">
+                        No emails added yet
+                      </span>
+                    )}
+                  </div>
+                </FieldWrapper>
+
+                <FieldWrapper label="Contact Phone" icon={Phone}>
+                  <input
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="+91 9876543210"
+                    className={inputClass}
+                  />
+                </FieldWrapper>
+              </div>
+
+              {/* Error */}
+              <AnimatePresence>
+                {urlError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="rounded-2xl px-4 py-3"
+                    style={{
+                      background: "rgba(248,113,113,0.08)",
+                      border: "1px solid rgba(248,113,113,0.24)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "11px",
+                        color: "#fca5a5",
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      ⚠️ {urlError}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
-          <div className="md:col-span-2">
-            <label className={labelClass}>Max Response Time (ms)</label>
-            <input
-              type="number"
-              value={editResponseThresholdMs}
-              onChange={(e) => setEditResponseThresholdMs(e.target.value)}
-              placeholder="2000"
-              className={inputClass}
-            />
+          {/* Sticky Footer */}
+          <div className="sticky bottom-0 z-20 px-6 sm:px-8 py-5 border-t border-sky-400/10 backdrop-blur-xl bg-[rgba(3,7,18,0.72)]">
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={onClose}
+                className="px-5 py-3 rounded-2xl text-white"
+                style={secondaryButtonStyle}
+              >
+                Cancel
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => onSave(category)}
+                className="px-6 py-3 rounded-2xl text-white"
+                style={primaryButtonStyle}
+              >
+                Save Changes
+              </motion.button>
+            </div>
           </div>
         </div>
-
-        {urlError && (
-          <p className="text-sm text-red-500 mt-4">{urlError}</p>
-        )}
-
-        {/* Buttons */}
-        <div className="flex justify-end gap-3 mt-8">
-          <button onClick={onClose} className={cancelBtnClass}>
-            Cancel
-          </button>
-          <button
-            onClick={() => onSave(category)}
-            className={saveBtnClass}
-          >
-            Save Changes
-          </button>
-        </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
+
+/* ─────────────────────── Section Title ─────────────────────── */
+function SectionTitle({ title }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-[1px] w-8 bg-sky-400/20" />
+      <h3
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "11px",
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          color: "rgba(56,189,248,0.62)",
+        }}
+      >
+        {title}
+      </h3>
+      <div className="h-[1px] flex-1 bg-sky-400/10" />
+    </div>
+  );
+}
+
+/* ─────────────────────── Compact field label ─────────────────────── */
+function FieldLabel({ icon: Icon, text }) {
+  return (
+    <div
+      className="flex items-center gap-1.5 mb-2"
+      style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "10px",
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        color: "rgba(56,189,248,0.55)",
+      }}
+    >
+      <Icon size={12} className="text-sky-400 shrink-0" />
+      <span>{text}</span>
+    </div>
+  );
+}
+
+/* ─────────────────────── Field Wrapper ─────────────────────── */
+function FieldWrapper({ label, icon: Icon, children, full = false }) {
+  return (
+    <div className={full ? "md:col-span-2" : ""}>
+      <label
+        className="flex items-center gap-2 mb-2"
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "10px",
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "rgba(56,189,248,0.55)",
+        }}
+      >
+        <Icon size={13} className="text-sky-400" />
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+/* ─────────────────────── Shared Styles ─────────────────────── */
+const inputClass = `
+  w-full px-4 py-3 rounded-2xl
+  bg-[rgba(255,255,255,0.02)]
+  border border-[rgba(56,189,248,0.10)]
+  text-white placeholder:text-slate-500
+  focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/30
+  transition-all duration-200
+  font-mono text-sm
+`;
+
+const cardFieldStyle = {
+  background: "rgba(255,255,255,0.02)",
+  border: "1px solid rgba(56,189,248,0.10)",
+};
+
+const primaryButtonStyle = {
+  background:
+    "linear-gradient(135deg, rgba(14,165,233,0.18) 0%, rgba(59,130,246,0.18) 100%)",
+  border: "1px solid rgba(56,189,248,0.22)",
+  boxShadow: "0 0 20px rgba(56,189,248,0.06)",
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: "11px",
+  letterSpacing: "0.10em",
+  textTransform: "uppercase",
+};
+
+const secondaryButtonStyle = {
+  background: "rgba(255,255,255,0.03)",
+  border: "1px solid rgba(148,163,184,0.12)",
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: "11px",
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+};

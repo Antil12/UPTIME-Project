@@ -9,7 +9,7 @@ const siteCurrentStatusSchema = new mongoose.Schema(
       unique: true, // 👈 one row per site
     },
 
-    // 🔥 HTTP monitoring
+    // 🔥 HTTP monitoring (local/primary check)
     status: {
       type: String,
       enum: ["UP", "DOWN", "SLOW"],
@@ -20,12 +20,12 @@ const siteCurrentStatusSchema = new mongoose.Schema(
       type: Number,
       default: null, // 0 = no response
     },
-  // 🔥 NEW PRIORITY FIELD
-  statusPriority: {
-    type: Number,
-    enum: [1,2,3,4],
-    default: 4
-  },
+    // 🔥 NEW PRIORITY FIELD
+    statusPriority: {
+      type: Number,
+      enum: [1,2,3,4],
+      default: 4
+    },
     responseTimeMs: {
       type: Number,
       default: null,
@@ -36,10 +36,36 @@ const siteCurrentStatusSchema = new mongoose.Schema(
       default: Date.now,
     },
     reason: {
-  type: String,
-  default: null,
-},
+      type: String,
+      default: null,
+    },
 
+    // 🌍 GLOBAL STATUS (aggregated from all regions)
+    globalStatus: {
+      type: String,
+      enum: ["UP", "DOWN", "SLOW", "UNKNOWN"],
+      default: "UNKNOWN",
+    },
+
+    globalLastCheckedAt: {
+      type: Date,
+      default: null,
+    },
+
+    // Track which regions the site is DOWN in
+    downRegions: {
+      type: [String],
+      default: [],
+    },
+
+    // Track regional statuses breakdown
+    regionalStatuses: {
+      type: [{
+        region: String,
+        status: { type: String, enum: ["UP", "DOWN", "SLOW", "UNKNOWN"] }
+      }],
+      default: [],
+    },
   },
   { timestamps: true }
 );

@@ -243,7 +243,6 @@ const ToggleChip = ({ label, active, onClick, activeColor = "#38bdf8" }) => (
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const AddUrl = ({
-  theme,
   domain,
   url,
   setDomain,

@@ -20,6 +20,15 @@ const userSchema = new mongoose.Schema(
       ref: "MonitoredSite",
     }
   ],
+
+  // ✅ NEW: Pinned sites for this user
+  pinnedSites: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MonitoredSite",
+    }
+  ],
+
   hiddenColumns: {
   type: [String],
   default: [],

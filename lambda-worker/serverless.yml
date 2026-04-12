@@ -4,14 +4,14 @@ service: uptime-region-checker
 provider:
   name: aws
   runtime: nodejs20.x
-  region: ${param:awsRegion, "ap-south-1"}   # default: India
-  memorySize: 256                              # MB — plenty for HTTP checks
-  timeout: 60                                  # seconds (well under Lambda's 900s max)
-
+  region: ${param:awsRegion, "ap-south-1"}  # default: India (ap-south-1)
+  memorySize: 256                             # MB — plenty for HTTP checks
+  timeout: 60                                 # seconds (well under Lambda's 900s max)
   environment:
-    BACKEND_URL:   ${param:backendUrl}
-    REGION_NAME:   ${param:regionName}
-    LAMBDA_SECRET: ${param:lambdaSecret}
+    # ⚠️  Env var names MUST match what index.js reads via process.env.*
+    BACKEND_API_URL: ${param:backendUrl}      # process.env.BACKEND_API_URL
+    REGION: ${param:regionName}               # process.env.REGION
+    LAMBDA_SECRET: ${param:lambdaSecret}      # process.env.LAMBDA_SECRET
 
 functions:
   checker:

@@ -8,7 +8,10 @@ import {
   updateUserPassword,
   updateUser,  
   getHiddenColumns,
-  updateHiddenColumns
+  updateHiddenColumns,
+  getPinnedSites,
+  pinSite,
+  unpinSite,
 } from "../controllers/user.controller.js";
 
 const router = express.Router();
@@ -17,6 +20,12 @@ const router = express.Router();
 router.get("/hidden-columns", protect, getHiddenColumns);
 
 router.put("/hidden-columns", protect, updateHiddenColumns);
+
+// Pinned sites routes
+router.get("/pinned-sites", protect, getPinnedSites);
+router.post("/pin-site/:siteId", protect, pinSite);
+router.delete("/unpin-site/:siteId", protect, unpinSite);
+
 router.post("/create", protect, authorizePermission("canCreateUser"), createUser);
 
 router.get("/users", protect, authorizePermission("canCreateUser"), getAllUsers);

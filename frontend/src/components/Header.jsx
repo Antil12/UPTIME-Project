@@ -513,8 +513,6 @@ const RefreshOverlay = ({ visible, progress = 0, phaseText = "SYNCING DATA" }) =
 // ─────────────────────────────────────────────────────────────────────────────
 
 const Header = ({
-  theme,
-  setTheme,
   handleRefresh,
   isRefreshing,
   handleLogout,
@@ -611,145 +609,74 @@ const Header = ({
       <header className="sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shadow-sm">
         <div className="w-full flex items-center justify-between px-4 md:px-10 py-3">
           <div className="w-full flex items-center justify-between px-3 md:px-8 py-2 md:py-4">
+
             {/* LOGO */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3">
-                {/* Icon */}
-                <div
-                  className="w-9 h-9 flex items-center justify-center rounded-lg text-base font-semibold"
-                  style={{
-                    background: "hsl(var(--chart-4) / 0.12)",
-                    color: "hsl(var(--chart-4))",
-                  }}
-                >
-                  ⏱️
-                </div>
-
-                {/* Title */}
-                <div className="hidden md:flex flex-col leading-tight">
-                  <span className="text-base font-semibold text-gray-900 dark:text-white">
-                    Uptime Monitor
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    Real-time Monitoring
-                  </span>
-                </div>
+              {/* Icon */}
+              <div
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-base font-semibold"
+                style={{
+                  background: "hsl(var(--chart-4) / 0.12)",
+                  color: "hsl(var(--chart-4))",
+                }}
+              >
+                ⏱️
               </div>
 
-              {/* INTERNAL CSS */}
-              <style>{`
-                .watch-logo { position: relative; }
-
-                .dial {
-                  position: absolute;
-                  width: 100%;
-                  height: 100%;
-                  border-radius: 50%;
-                  background: hsl(var(--card));
-                  border: 2px solid hsl(var(--border));
-                  box-shadow: 0 4px 12px hsl(0 0% 0% / 0.15);
-                }
-
-                .marker { position: absolute; background: hsl(var(--muted)); }
-
-                .marker-12 { width: 2px; height: 6px; top: 4px; left: 50%; transform: translateX(-50%); }
-                .marker-3 { width: 6px; height: 2px; right: 4px; top: 50%; transform: translateY(-50%); }
-                .marker-6 { width: 2px; height: 6px; bottom: 4px; left: 50%; transform: translateX(-50%); }
-                .marker-9 { width: 6px; height: 2px; left: 4px; top: 50%; transform: translateY(-50%); }
-
-                .hand {
-                  position: absolute;
-                  bottom: 50%;
-                  left: 50%;
-                  transform-origin: bottom;
-                  transform: translateX(-50%);
-                  border-radius: 2px;
-                }
-
-                .hour {
-                  width: 3px;
-                  height: 10px;
-                  background: hsl(var(--foreground));
-                  animation: rotateHour 60s linear infinite;
-                }
-
-                .minute {
-                  width: 2px;
-                  height: 14px;
-                  background: hsl(var(--chart-4));
-                  animation: rotateMinute 20s linear infinite;
-                }
-
-                .second {
-                  width: 1px;
-                  height: 16px;
-                  background: hsl(var(--chart-3));
-                  animation: rotateSecond 4s linear infinite;
-                }
-
-                .center-dot {
-                  position: absolute;
-                  width: 6px;
-                  height: 6px;
-                  background: hsl(var(--foreground));
-                  border-radius: 50%;
-                  z-index: 10;
-                }
-
-                @keyframes rotateSecond {
-                  from { transform: translateX(-50%) rotate(0deg); }
-                  to { transform: translateX(-50%) rotate(360deg); }
-                }
-
-                @keyframes rotateMinute {
-                  from { transform: translateX(-50%) rotate(0deg); }
-                  to { transform: translateX(-50%) rotate(360deg); }
-                }
-
-                @keyframes rotateHour {
-                  from { transform: translateX(-50%) rotate(0deg); }
-                  to { transform: translateX(-50%) rotate(360deg); }
-                }
-              `}</style>
+              {/* Title — Orbitron + JetBrains Mono */}
+              <div className="hidden md:flex flex-col leading-tight">
+                <span
+                  style={{
+                    fontFamily: "'Orbitron', sans-serif",
+                    fontWeight: 800,
+                    fontSize: "14px",
+                    letterSpacing: "0.05em",
+                  }}
+                  className="text-gray-900 dark:text-white"
+                >
+                  Uptime Monitor
+                </span>
+                <span
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "9px",
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: "rgba(56,189,248,0.6)",
+                  }}
+                >
+                  Real-time Monitoring
+                </span>
+              </div>
             </div>
 
             {/* RIGHT SIDE */}
-            <div className="flex items-center gap-2 md:gap-4">
-              <div className="hidden md:flex gap-2">
-                <CrystalButton
-                  label="Dashboard"
-                  onClick={() => navigate("/dashboard")}
-                  theme={theme}
-                />
+   <div className="flex items-center gap-2 md:gap-4">
+  <div className="hidden md:flex items-center gap-2">
+    <CrystalButton
+      label="Dashboard"
+      onClick={() => navigate("/dashboard")}
+    />
 
-                {currentUser?.role !== "VIEWER" && (
-                  <CrystalButton
-                    label="Add URL"
-                    onClick={() => navigate("/add")}
-                    theme={theme}
-                  />
-                )}
+    {currentUser?.role !== "VIEWER" && (
+      <CrystalButton
+        label="Add URL"
+        onClick={() => navigate("/add")}
+      />
+    )}
 
-                <CrystalButton
-                  label="Regions"
-                  onClick={() => navigate("/region")}
-                  theme={theme}
-                />
+    <CrystalButton
+      label="Reports"
+      onClick={() => navigate("/reports")}
+    />
 
-                <CrystalButton
-                  label="Reports"
-                  onClick={() => navigate("/reports")}
-                  theme={theme}
-                />
-
-                {currentUser?.role?.toUpperCase() === "SUPERADMIN" && (
-                  <CrystalButton
-                    label="Super Admin"
-                    onClick={() => navigate("/superadmin")}
-                    theme={theme}
-                  />
-                )}
-              </div>
+    {currentUser?.role?.toUpperCase() === "SUPERADMIN" && (
+      <CrystalButton
+        label="Super Admin"
+        onClick={() => navigate("/superadmin")}
+      />
+    )}
+  </div>
 
               <div className="flex md:hidden gap-2">
                 <button
@@ -773,13 +700,6 @@ const Header = ({
                   className="px-3 py-2 rounded-lg bg-white/10 text-xs"
                 >
                   📄
-                </button>
-
-                <button
-                  onClick={() => navigate("/region")}
-                  className="px-3 py-2 rounded-lg bg-white/10 text-xs"
-                >
-                  🌎
                 </button>
 
                 {currentUser?.role?.toUpperCase() === "SUPERADMIN" && (
@@ -826,11 +746,9 @@ const Header = ({
                 </motion.span>
               </motion.button>
 
-              {/* SETTINGS MENU — restored exactly like previous */}
+              {/* SETTINGS MENU */}
               <div className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/10">
                 <SettingsMenu
-                  theme={theme}
-                  toggleTheme={() => setTheme(theme === "light" ? "dark" : "light")}
                   onLogout={handleLogout}
                 />
               </div>

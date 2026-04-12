@@ -14,7 +14,9 @@ import {
   getRegions,
   getSitesByRegion,
   getSlowAlertBatch,
-  getDeletedLogs
+  getDeletedLogs,
+  computeGlobalStatus,
+  globalCheckSite
 } from "../controllers/monitoredSite.Controller.js";
 
 import { assignUsersToSite } from "../controllers/monitoredSite.Controller.js";
@@ -36,6 +38,10 @@ router.get("/regions/:region", getSitesByRegion);
 router.get("/categories", getCategories);
 
 router.get("/check/:siteId", checkAndUpdateSiteStatus);
+
+// ✅ Global status endpoints (must come before "/:id")
+router.post("/compute-global-status", computeGlobalStatus);
+router.post("/global-check/:siteId", globalCheckSite);
 
 // ✅ MUST come before "/:id"
 router.get("/logs", getDeletedLogs);

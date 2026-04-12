@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   motion,
   useMotionValue,
@@ -21,6 +21,7 @@ import {
   X,
   Wifi,
   ShieldCheck,
+  Settings2,
 } from "lucide-react";
 
 // ─── Font Loader ──────────────────────────────────────────────────────────────
@@ -200,11 +201,10 @@ const LiveTicker = ({ urls }) => {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = ({
-  urls,          // ALL sites unpaginated — stat cards, popups, ticker, filter logic
-  theme,
+  urls,
   search,
   setSearch,
-  filteredUrls,  // server-paginated current page — used only when no filters active
+  filteredUrls,
   upSites,
   downSites,
   onPin,
@@ -235,6 +235,10 @@ const Dashboard = ({
   const [uptimeData, setUptimeData] = useState(null);
   const [selectedSslStatus, setSelectedSslStatus] = useState("ALL");
 
+  const [showColumnMenu, setShowColumnMenu] = useState(false);
+  const columnBtnRef = useRef(null);
+  const urlTableRef = useRef(null);
+
   useEffect(() => {
     if (!popupOpen) return;
     const fetchUptimeAnalytics = async () => {
@@ -248,7 +252,6 @@ const Dashboard = ({
     fetchUptimeAnalytics();
   }, [filter, popupOpen]);
 
-  // Categories always derived from the FULL dataset — not the paginated slice
   useEffect(() => {
     const uniqueCategories = [
       "ALL",
@@ -262,10 +265,16 @@ const Dashboard = ({
     if (user) setCurrentUser(user);
   }, []);
 
-  // ─── KEY FIX: filter-aware table rows ────────────────────────────────────
-  // When any filter is active, apply it against the FULL `urls` dataset so the
-  // result is never capped to the current page's 20 rows.
-  // When no filters are active, fall back to the server-paginated `filteredUrls`.
+  useEffect(() => {
+    if (urlTableRef.current) {
+      const handle = urlTableRef.current;
+      if (handle.getColumnBtnRef) {
+        const internalRef = handle.getColumnBtnRef();
+        internalRef.current = columnBtnRef.current;
+      }
+    }
+  }, [showColumnMenu]);
+
   const filtersActive =
     !selectedCategories.includes("ALL") ||
     selectedStatus !== "ALL" ||
@@ -273,7 +282,6 @@ const Dashboard = ({
 
   let tableRows;
   if (filtersActive) {
-    // Filter against ALL sites
     tableRows = urls.filter((u) => {
       const categoryMatch =
         selectedCategories.includes("ALL") ||
@@ -282,17 +290,21 @@ const Dashboard = ({
       const sslMatch = selectedSslStatus === "ALL" || u.sslStatus === selectedSslStatus;
       return categoryMatch && statusMatch && sslMatch;
     });
-    // Pinned always bubble to top
     tableRows = [...tableRows].sort((a, b) => (b.pinned === true) - (a.pinned === true));
   } else {
-    // No filters — show server-paginated data as-is
     tableRows = filteredUrls;
   }
 
-  // Global stats always from the full dataset — never from a paginated slice
   const globalUpSites = urls.filter((u) => u.status === "UP" || u.status === "SLOW");
   const globalDownSites = urls.filter((u) => u.status === "DOWN");
   const sslIssues = urls.filter((u) => u.sslStatus === "EXPIRING" || u.sslStatus === "ERROR");
+
+  const handleColumnBtnClick = () => {
+    if (urlTableRef.current) {
+      urlTableRef.current.toggleColumnMenu();
+      setShowColumnMenu((v) => !v);
+    }
+  };
 
   return (
     <>
@@ -451,6 +463,7 @@ const Dashboard = ({
           transition={{ delay: 0.28, duration: 0.45 }}
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
         >
+          {/* Search */}
           <div className="relative w-full max-w-sm group">
             <Search size={13} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "rgba(56,189,248,0.4)" }} />
             <input
@@ -465,24 +478,26 @@ const Dashboard = ({
             />
           </div>
 
-          {!isViewer && (
-            <div className="flex items-center gap-3 flex-wrap justify-end">
-              <motion.button
-                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                onClick={() => { setSelectionMode((v) => !v); if (selectionMode) setSelectedIds([]); }}
-                aria-pressed={selectionMode}
-                className="flex items-center gap-2 px-4 py-2 rounded-2xl transition-all duration-300"
-                style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", background: selectionMode ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.04)", border: selectionMode ? "1px solid rgba(56,189,248,0.28)" : "1px solid rgba(255,255,255,0.08)", color: selectionMode ? "#38bdf8" : "rgba(148,163,184,0.7)" }}
-              >
-                {selectionMode ? <X size={12} /> : <CheckSquare size={12} />}
-                {selectionMode ? "Cancel" : "Select"}
-              </motion.button>
+          {/* ─── Right controls ───────────────────────────────────────────────
+               Order (left → right): [Select All] [Delete] [Select/Cancel] [Columns]
+               • [Select/Cancel] and [Columns] are always present — they never move.
+               • [Select All] and [Delete] slide in from the right, pushing nothing —
+                 they appear to the LEFT of [Select/Cancel] via AnimatePresence.
+               • overflow:hidden on the wrapper clips the entrance animation cleanly.
+          ──────────────────────────────────────────────────────────────────── */}
+          <div className="flex items-center gap-3 justify-end">
 
-              <AnimatePresence>
-                {selectionMode && (
+            {/* Dynamic selection buttons — animate in/out without shifting siblings */}
+            <div className="flex items-center gap-3 overflow-hidden">
+              <AnimatePresence initial={false}>
+                {selectionMode && !isViewer && (
                   <>
                     <motion.button
-                      initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }}
+                      key="select-all"
+                      initial={{ opacity: 0, width: 0, marginRight: 0 }}
+                      animate={{ opacity: 1, width: "auto", marginRight: 0 }}
+                      exit={{ opacity: 0, width: 0, marginRight: 0 }}
+                      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                       whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                       onClick={() => {
                         const allIds = tableRows.map((u) => u._id);
@@ -490,15 +505,19 @@ const Dashboard = ({
                         setSelectedIds(allSelected ? [] : allIds);
                       }}
                       disabled={tableRows.length === 0}
-                      className="flex items-center gap-2 px-4 py-2 rounded-2xl transition-all duration-300 disabled:opacity-40"
-                      style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(148,163,184,0.7)" }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-2xl transition-colors duration-200 disabled:opacity-40"
+                      style={{ overflow: "hidden", whiteSpace: "nowrap", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(148,163,184,0.7)" }}
                     >
                       <Square size={12} />
                       {tableRows.length > 0 && tableRows.every((u) => selectedIds.includes(u._id)) ? "Deselect All" : "Select All"}
                     </motion.button>
 
                     <motion.button
-                      initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }}
+                      key="bulk-delete"
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: "auto" }}
+                      exit={{ opacity: 0, width: 0 }}
+                      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                       whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                       onClick={async () => {
                         if (selectedIds.length === 0) return;
@@ -516,8 +535,8 @@ const Dashboard = ({
                       }}
                       disabled={selectedIds.length === 0}
                       aria-label={`Delete selected ${selectedIds.length} websites`}
-                      className="flex items-center gap-2 px-4 py-2 rounded-2xl transition-all duration-300 disabled:opacity-40"
-                      style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.23)", color: "#f87171" }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-2xl transition-colors duration-200 disabled:opacity-40"
+                      style={{ overflow: "hidden", whiteSpace: "nowrap", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.23)", color: "#f87171" }}
                     >
                       <Trash2 size={12} />
                       Delete ({selectedIds.length})
@@ -526,7 +545,41 @@ const Dashboard = ({
                 )}
               </AnimatePresence>
             </div>
-          )}
+
+            {/* Select / Cancel — always in place */}
+            {!isViewer && (
+              <motion.button
+                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                onClick={() => { setSelectionMode((v) => !v); if (selectionMode) setSelectedIds([]); }}
+                aria-pressed={selectionMode}
+                className="flex items-center gap-2 px-4 py-2 rounded-2xl transition-all duration-300 flex-shrink-0"
+                style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", background: selectionMode ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.04)", border: selectionMode ? "1px solid rgba(56,189,248,0.28)" : "1px solid rgba(255,255,255,0.08)", color: selectionMode ? "#38bdf8" : "rgba(148,163,184,0.7)" }}
+              >
+                {selectionMode ? <X size={12} /> : <CheckSquare size={12} />}
+                {selectionMode ? "Cancel" : "Select"}
+              </motion.button>
+            )}
+
+            {/* Columns — always rightmost, always in place, desktop only */}
+            <motion.button
+              ref={columnBtnRef}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleColumnBtnClick}
+              className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-2xl transition-all duration-300 flex-shrink-0"
+              style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+                letterSpacing: "0.1em", textTransform: "uppercase",
+                background: showColumnMenu ? "rgba(56,189,248,0.1)" : "rgba(255,255,255,0.04)",
+                border: showColumnMenu ? "1px solid rgba(56,189,248,0.28)" : "1px solid rgba(255,255,255,0.08)",
+                color: showColumnMenu ? "#38bdf8" : "rgba(148,163,184,0.6)",
+              }}
+            >
+              <Settings2 size={13} />
+              Columns
+            </motion.button>
+
+          </div>
         </motion.div>
 
         {/* ─── Table / Empty State ─── */}
@@ -541,11 +594,9 @@ const Dashboard = ({
             </div>
           ) : (
             <UrlTable
-              // tableRows: full-dataset-filtered when any filter active, else paginated page
+              ref={urlTableRef}
               urls={tableRows}
-              // allUrls: ALWAYS the complete dataset — powers filter option dropdowns
               allUrls={urls}
-              theme={theme}
               currentUser={currentUser}
               selectionMode={selectionMode}
               selectedIds={selectedIds}
@@ -564,7 +615,7 @@ const Dashboard = ({
           )}
         </motion.div>
 
-        {/* ─── Pagination — suppressed while filters are active ─── */}
+        {/* ─── Pagination ─── */}
         {!filtersActive && totalPages > 1 && (
           <div className="mt-4 flex items-center justify-center gap-3">
             <button

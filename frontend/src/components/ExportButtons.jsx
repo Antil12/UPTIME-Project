@@ -9,7 +9,6 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 const ExportButtons = ({
   urls = [],
-  theme = "light",
   range,
   customFrom,
   customTo,
@@ -17,8 +16,6 @@ const ExportButtons = ({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const wrapperRef = useRef(null);
-
-  const isDark = theme === "dark";
 
   // ================= FETCH LOGS =================
   const fetchAllLogs = async () => {
@@ -226,9 +223,7 @@ const ExportButtons = ({
       <button
         onClick={() => setOpen(!open)}
         disabled={loading}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow transition
-        ${isDark ? "bg-green-700 hover:bg-green-600" : "bg-green-500 hover:bg-green-600"}
-        text-white`}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg shadow transition bg-green-700 hover:bg-green-600 text-white"
       >
         <Download size={16} />
         {loading ? "Exporting..." : "Export"}
@@ -237,8 +232,7 @@ const ExportButtons = ({
       {/* DROPDOWN */}
       {open && (
         <div
-          className={`absolute right-0 mt-2 w-52 rounded-lg shadow-lg border z-50
-          ${isDark ? "bg-gray-900 text-white border-gray-700" : "bg-white text-gray-800"}`}
+          className="absolute right-0 mt-2 w-52 rounded-lg shadow-lg border z-50 bg-gray-900 text-white border-gray-700"
         >
           <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 w-full hover:bg-gray-100 dark:hover:bg-gray-800">
             <File size={16} /> CSV
