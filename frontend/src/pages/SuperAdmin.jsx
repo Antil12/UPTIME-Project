@@ -14,7 +14,9 @@ const SuperAdmin = () => {
 
   const [users, setUsers] = useState([]);
   const [availableSites, setAvailableSites] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
   const [assignedSites, setAssignedSites] = useState([]);
+  const [assignedCategories, setAssignedCategories] = useState([]);
 
   const [editUser, setEditUser] = useState(null);
   const [newPassword, setNewPassword] = useState("");
@@ -24,6 +26,7 @@ const SuperAdmin = () => {
     role: "",
   });
   const [editAssignedSites, setEditAssignedSites] = useState([]);
+  const [editAssignedCategories, setEditAssignedCategories] = useState([]);
 
   /* ================= FORM CHANGE ================= */
   const handleChange = (e) => {
@@ -60,7 +63,6 @@ const SuperAdmin = () => {
     try {
       const token = localStorage.getItem("loginToken");
 
-      // Request all sites (no pagination) so SuperAdmin can assign across entire dashboard
       const res = await axios.get(`${API_URL}/monitoredsite?noPagination=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -72,6 +74,16 @@ const SuperAdmin = () => {
       else if (Array.isArray(res.data.data?.sites)) sites = res.data.data.sites;
 
       setAvailableSites(sites);
+
+      // Derive unique categories from sites (exclude null/undefined/ALL/UNCATEGORIZED)
+      const cats = [
+        ...new Set(
+          sites
+            .map((s) => s.category)
+            .filter((c) => c && c !== "ALL" && c !== "UNCATEGORIZED")
+        ),
+      ].sort();
+      setAvailableCategories(cats);
     } catch (err) {
       console.error("Failed to fetch sites", err);
     }
@@ -83,13 +95,36 @@ const SuperAdmin = () => {
     fetchSites();
   }, []);
 
+  /* ================= OPEN EDIT MODAL ================= */
+  // Centralised helper so both mobile-card and desktop-table buttons use
+  // exactly the same logic — and assignedCategories is always seeded correctly.
+  const openEditModal = (user) => {
+    setEditUser(user);
+    setNewPassword("");
+    setEditForm({
+      name:  user.name  || "",
+      email: user.email || "",
+      role:  user.role  || "USER",
+    });
+
+    // Seed assigned sites (populated array → extract _id strings)
+    const siteIds = (user.assignedSites || []).map((site) =>
+      typeof site === "object" ? site._id.toString() : site.toString()
+    );
+    setEditAssignedSites(siteIds);
+
+    // ✅ FIX: always seed assigned categories from the user object
+    setEditAssignedCategories(
+      Array.isArray(user.assignedCategories) ? [...user.assignedCategories] : []
+    );
+  };
+
   /* ================= CREATE USER ================= */
   const handleSubmit = async () => {
     if (!form.username || !form.email || !form.password) {
       alert("All fields are required");
       return;
     }
-
 
     if (form.role === "VIEWER" && assignedSites.length === 0) {
       alert("Assign at least one site for the viewer");
@@ -102,11 +137,12 @@ const SuperAdmin = () => {
       const res = await axios.post(
         `${API_URL}/user/create`,
         {
-          name: form.username,
-          email: form.email,
-          password: form.password,
-          role: form.role,
-          assignedSites: form.role !== "SUPERADMIN" ? assignedSites : [],
+          name:               form.username,
+          email:              form.email,
+          password:           form.password,
+          role:               form.role,
+          assignedSites:      form.role !== "SUPERADMIN" ? assignedSites      : [],
+          assignedCategories: form.role !== "SUPERADMIN" ? assignedCategories : [],
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -129,18 +165,14 @@ const SuperAdmin = () => {
         }
       }
 
-      setUsers((prev) => [createdUser, ...prev]);
+      // Re-fetch so the new user has fully-populated assignedSites + assignedCategories
+      await fetchUsers();
 
       alert("User created successfully");
 
-      setForm({
-        username: "",
-        password: "",
-        
-        email: "",
-        role: "USER",
-      });
+      setForm({ username: "", password: "", email: "", role: "USER" });
       setAssignedSites([]);
+      setAssignedCategories([]);
     } catch (err) {
       alert(err.response?.data?.message || "Failed to create user");
     }
@@ -168,21 +200,21 @@ const SuperAdmin = () => {
       const token = localStorage.getItem("loginToken");
 
       const oldSites = (editUser.assignedSites || []).map((site) =>
-        site._id.toString()
+        typeof site === "object" ? site._id.toString() : site.toString()
       );
 
-      const newSites = (editAssignedSites || []).map((id) => id.toString());
-
+      const newSites    = (editAssignedSites  || []).map((id) => id.toString());
       const removedSites = oldSites.filter((id) => !newSites.includes(id));
-      const addedSites = newSites.filter((id) => !oldSites.includes(id));
+      const addedSites   = newSites.filter((id) => !oldSites.includes(id));
 
       await axios.put(
         `${API_URL}/user/${editUser._id}`,
         {
-          name: editForm.name,
-          email: editForm.email,
-          role: editForm.role,
-        assignedSites: editForm.role !== "SUPERADMIN" ? newSites : [],
+          name:               editForm.name,
+          email:              editForm.email,
+          role:               editForm.role,
+          assignedSites:      editForm.role !== "SUPERADMIN" ? newSites               : [],
+          assignedCategories: editForm.role !== "SUPERADMIN" ? editAssignedCategories : [],
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -202,34 +234,26 @@ const SuperAdmin = () => {
       for (const siteId of removedSites) {
         await axios.patch(
           `${API_URL}/monitoredsite/${siteId}/assign`,
-          {
-            userId: editUser._id,
-            action: "unassign",
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { userId: editUser._id, action: "unassign" },
+          { headers: { Authorization: `Bearer ${token}` } }
         );
       }
 
       for (const siteId of addedSites) {
         await axios.patch(
           `${API_URL}/monitoredsite/${siteId}/assign`,
-          {
-            userId: editUser._id,
-            action: "assign",
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { userId: editUser._id, action: "assign" },
+          { headers: { Authorization: `Bearer ${token}` } }
         );
       }
 
       alert("User updated successfully");
 
-      fetchUsers();
+      // Re-fetch fresh data, then close modal and clear transient state
+      await fetchUsers();
       setEditUser(null);
       setNewPassword("");
+      // ✅ Do NOT clear editAssignedCategories here — modal is already closed
     } catch (err) {
       console.error(err);
       alert("Failed to update user");
@@ -243,7 +267,10 @@ const SuperAdmin = () => {
       passwordStrength={passwordStrength}
       assignedSites={assignedSites}
       setAssignedSites={setAssignedSites}
+      assignedCategories={assignedCategories}
+      setAssignedCategories={setAssignedCategories}
       availableSites={availableSites}
+      availableCategories={availableCategories}
       handleSubmit={handleSubmit}
       users={users}
       handleDelete={handleDelete}
@@ -255,7 +282,11 @@ const SuperAdmin = () => {
       setEditForm={setEditForm}
       editAssignedSites={editAssignedSites}
       setEditAssignedSites={setEditAssignedSites}
+      editAssignedCategories={editAssignedCategories}
+      setEditAssignedCategories={setEditAssignedCategories}
       handleUpdateUser={handleUpdateUser}
+      openEditModal={openEditModal}
+
     />
   );
 };

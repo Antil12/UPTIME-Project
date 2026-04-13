@@ -1,4 +1,4 @@
 #!/bin/bash
 
 # Run the seeder container
-docker compose run --rm seeder node seed/createSuperAdmin.js
+sudo docker exec backend-backend-1 node seed/createSuperAdmin.js

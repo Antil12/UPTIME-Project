@@ -3,7 +3,7 @@ import MonitoredSite from "../models/MonitoredSite.js";
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, role, assignedSites } = req.body;
+    const { name, email, password, role, assignedSites, assignedCategories } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -19,9 +19,10 @@ export const createUser = async (req, res) => {
       email,
       password, // hashed automatically by schema
       role,
-
-      // ✅ Save assigned sites for viewer
-      assignedSites: role === "VIEWER" ? assignedSites || [] : [],
+      // Save assigned sites for USER/VIEWER roles
+      assignedSites: role !== "SUPERADMIN" ? assignedSites || [] : [],
+      // Save assigned categories for USER/VIEWER roles
+      assignedCategories: role !== "SUPERADMIN" ? assignedCategories || [] : [],
     });
 
     res.status(201).json({
@@ -43,7 +44,7 @@ export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
       .select("-password")
-      .populate("assignedSites", "_id domain url name"); // ✅ FIX
+      .populate("assignedSites", "_id domain url name");
 
     res.status(200).json({
       success: true,
@@ -62,7 +63,7 @@ export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 🔹 1. Find user first
+    // 1. Find user first
     const user = await User.findById(id);
 
     if (!user) {
@@ -72,18 +73,18 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    // 🔹 2. Remove user from all sites
+    // 2. Remove user from all sites
     await MonitoredSite.updateMany(
       {},
       {
         $pull: {
-          assignedUsers: user._id,   // remove userId
-          emailContact: user.email,  // remove email
+          assignedUsers: user._id,
+          emailContact: user.email,
         },
       }
     );
 
-    // 🔹 3. Delete user
+    // 3. Delete user
     await User.findByIdAndDelete(id);
 
     res.status(200).json({
@@ -122,7 +123,6 @@ export const updateUserPassword = async (req, res) => {
       });
     }
 
-    // ✅ Just assign plain password
     // Schema pre("save") will hash it automatically
     user.password = password;
 
@@ -143,7 +143,7 @@ export const updateUserPassword = async (req, res) => {
 
 export const updateUser = async (req, res) => {
   try {
-    const { name, email, role, assignedSites } = req.body;
+    const { name, email, role, assignedSites, assignedCategories } = req.body;
 
     const user = await User.findByIdAndUpdate(
       req.params.id,
@@ -151,7 +151,8 @@ export const updateUser = async (req, res) => {
         name,
         email,
         role,
-        assignedSites: role === "VIEWER" ? assignedSites || [] : [],
+        assignedSites: role !== "SUPERADMIN" ? assignedSites || [] : [],
+        assignedCategories: role !== "SUPERADMIN" ? assignedCategories || [] : [],
       },
       { new: true }
     );

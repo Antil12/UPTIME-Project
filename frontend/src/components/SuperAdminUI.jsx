@@ -9,6 +9,7 @@ import {
   EyeOff,
   CheckCircle2,
   X,
+  Tag,
 } from "lucide-react";
 
 // ─── Font Loader ──────────────────────────────────────────────────────────────
@@ -400,8 +401,165 @@ const StatCard = ({ icon: Icon, label, value }) => (
   </motion.div>
 );
 
+// ─── Category Assign List ─────────────────────────────────────────────────────
+const CategoryAssignList = ({
+  availableCategories,
+  selectedCategories,
+  setSelectedCategories,
+  availableSites,
+  setSelectedSites,
+}) => {
+  const handleCategoryToggle = (category, checked) => {
+    let updatedCategories;
+    if (checked) {
+      updatedCategories = [...selectedCategories, category];
+    } else {
+      updatedCategories = selectedCategories.filter((c) => c !== category);
+    }
+    setSelectedCategories(updatedCategories);
+
+    // Auto-select / deselect sites belonging to this category
+    const sitesInCategory = availableSites
+      .filter((s) => s.category === category)
+      .map((s) => s._id.toString());
+
+    setSelectedSites((prev) => {
+      if (checked) {
+        return [...new Set([...prev, ...sitesInCategory])];
+      } else {
+        const remainingCategories = updatedCategories;
+        return prev.filter((id) => {
+          const site = availableSites.find((s) => s._id.toString() === id);
+          if (!site) return false;
+          if (!site.category) return true;
+          if (remainingCategories.includes(site.category)) return true;
+          return !sitesInCategory.includes(id) || remainingCategories.includes(site.category);
+        });
+      }
+    });
+  };
+
+  const filteredCategories = availableCategories.filter(
+    (c) => c && c !== "ALL" && c !== "UNCATEGORIZED"
+  );
+
+  if (filteredCategories.length === 0) {
+    return (
+      <div
+        className="rounded-2xl p-3.5"
+        style={{
+          background: "rgba(255,255,255,0.018)",
+          border: "1px solid rgba(255,255,255,0.05)",
+        }}
+      >
+        <p
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "11px",
+            color: "rgba(148,163,184,0.55)",
+          }}
+        >
+          No categories available
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="rounded-2xl p-3.5 max-h-40 overflow-y-auto"
+      style={{
+        background: "rgba(255,255,255,0.018)",
+        border: "1px solid rgba(255,255,255,0.05)",
+      }}
+    >
+      <div className="flex flex-wrap gap-2">
+        {filteredCategories.map((category) => {
+          const checked = selectedCategories.includes(category);
+          const siteCount = availableSites.filter((s) => s.category === category).length;
+
+          return (
+            <motion.label
+              key={category}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 cursor-pointer transition-all duration-200"
+              style={{
+                background: checked
+                  ? "rgba(56,189,248,0.1)"
+                  : "rgba(255,255,255,0.02)",
+                border: checked
+                  ? "1px solid rgba(56,189,248,0.28)"
+                  : "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => handleCategoryToggle(category, e.target.checked)}
+                className="hidden"
+              />
+              <div
+                className="w-4 h-4 rounded-md flex items-center justify-center shrink-0 transition-all duration-200"
+                style={{
+                  background: checked ? "rgba(56,189,248,0.3)" : "rgba(255,255,255,0.05)",
+                  border: checked
+                    ? "1px solid rgba(56,189,248,0.6)"
+                    : "1px solid rgba(255,255,255,0.15)",
+                }}
+              >
+                {checked && (
+                  <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                    <path
+                      d="M1 3.5L3.5 6L8 1"
+                      stroke="#38bdf8"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </div>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "10px",
+                  letterSpacing: "0.06em",
+                  color: checked ? "rgba(226,232,240,0.95)" : "rgba(148,163,184,0.7)",
+                  textTransform: "uppercase",
+                }}
+              >
+                {category}
+              </span>
+              <span
+                className="rounded-md px-1.5 py-0.5"
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "9px",
+                  background: checked ? "rgba(56,189,248,0.15)" : "rgba(255,255,255,0.04)",
+                  color: checked ? "#38bdf8" : "rgba(148,163,184,0.45)",
+                  border: checked
+                    ? "1px solid rgba(56,189,248,0.2)"
+                    : "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                {siteCount}
+              </span>
+            </motion.label>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // ─── Site Assign List ─────────────────────────────────────────────────────────
-const SiteAssignList = ({ sites, selectedSites, setSelectedSites }) => {
+const SiteAssignList = ({
+  sites,
+  selectedSites,
+  setSelectedSites,
+  highlightedCategories = [],
+}) => {
   return (
     <div
       className="rounded-2xl p-3.5 max-h-52 overflow-y-auto space-y-2"
@@ -424,6 +582,8 @@ const SiteAssignList = ({ sites, selectedSites, setSelectedSites }) => {
         sites.map((site) => {
           const siteId = site._id.toString();
           const checked = selectedSites.includes(siteId);
+          const isCategoryHighlighted =
+            site.category && highlightedCategories.includes(site.category);
 
           return (
             <label
@@ -431,10 +591,14 @@ const SiteAssignList = ({ sites, selectedSites, setSelectedSites }) => {
               className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 cursor-pointer transition-all duration-200"
               style={{
                 background: checked
-                  ? "rgba(56,189,248,0.06)"
+                  ? isCategoryHighlighted
+                    ? "rgba(129,140,248,0.08)"
+                    : "rgba(56,189,248,0.06)"
                   : "rgba(255,255,255,0.01)",
                 border: checked
-                  ? "1px solid rgba(56,189,248,0.16)"
+                  ? isCategoryHighlighted
+                    ? "1px solid rgba(129,140,248,0.2)"
+                    : "1px solid rgba(56,189,248,0.16)"
                   : "1px solid rgba(255,255,255,0.03)",
               }}
             >
@@ -450,19 +614,41 @@ const SiteAssignList = ({ sites, selectedSites, setSelectedSites }) => {
                     }
                   }}
                 />
-                <span
-                  className="truncate"
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: "11px",
-                    color: "rgba(226,232,240,0.9)",
-                  }}
-                >
-                  {site.domain || site.url || site.name}
-                </span>
+                <div className="min-w-0">
+                  <span
+                    className="truncate block"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "11px",
+                      color: "rgba(226,232,240,0.9)",
+                    }}
+                  >
+                    {site.domain || site.url || site.name}
+                  </span>
+                  {site.category && (
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "9px",
+                        color: isCategoryHighlighted
+                          ? "rgba(129,140,248,0.7)"
+                          : "rgba(148,163,184,0.4)",
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {site.category}
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {checked && <CheckCircle2 size={14} className="text-sky-400 shrink-0" />}
+              <div className="flex items-center gap-2 shrink-0">
+                {isCategoryHighlighted && (
+                  <Tag size={11} style={{ color: "rgba(129,140,248,0.6)" }} />
+                )}
+                {checked && <CheckCircle2 size={14} className="text-sky-400" />}
+              </div>
             </label>
           );
         })
@@ -478,7 +664,10 @@ const SuperAdminUI = ({
   passwordStrength,
   assignedSites,
   setAssignedSites,
+  assignedCategories,
+  setAssignedCategories,
   availableSites,
+  availableCategories,
   handleSubmit,
   users,
   handleDelete,
@@ -490,7 +679,11 @@ const SuperAdminUI = ({
   setEditForm,
   editAssignedSites,
   setEditAssignedSites,
+  editAssignedCategories,
+  setEditAssignedCategories,
   handleUpdateUser,
+  // ✅ centralised open-modal handler from SuperAdmin.jsx
+  openEditModal,
 }) => {
   return (
     <>
@@ -596,7 +789,7 @@ const SuperAdminUI = ({
                   marginTop: "4px",
                 }}
               >
-                Create users, assign sites, and manage role-based access.
+                Create users, assign sites, categories, and manage role-based access.
               </div>
             </div>
 
@@ -656,8 +849,6 @@ const SuperAdminUI = ({
                 value={form.password}
                 onChange={handleChange}
               />
-
-              
             </div>
 
             {passwordStrength && (
@@ -710,26 +901,81 @@ const SuperAdminUI = ({
             </div>
 
             {form.role !== "SUPERADMIN" && (
-              <div className="mb-5">
-                <label
-                  className="block mb-3"
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: "10px",
-                    letterSpacing: "0.12em",
-                    color: "rgba(56,189,248,0.48)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Assign Websites
-                </label>
+              <>
+                {/* Assign Categories */}
+                <div className="mb-4">
+                  <label
+                    className="block mb-3"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "10px",
+                      letterSpacing: "0.12em",
+                      color: "rgba(129,140,248,0.6)",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Tag size={11} />
+                      Assign Categories
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          color: "rgba(148,163,184,0.4)",
+                          letterSpacing: "0.06em",
+                          fontWeight: 400,
+                        }}
+                      >
+                        — auto-selects sites below
+                      </span>
+                    </span>
+                  </label>
+                  <CategoryAssignList
+                    availableCategories={availableCategories}
+                    selectedCategories={assignedCategories}
+                    setSelectedCategories={setAssignedCategories}
+                    availableSites={availableSites}
+                    setSelectedSites={setAssignedSites}
+                  />
+                </div>
 
-                <SiteAssignList
-                  sites={availableSites}
-                  selectedSites={assignedSites}
-                  setSelectedSites={setAssignedSites}
-                />
-              </div>
+                {/* Assign Websites */}
+                <div className="mb-5">
+                  <label
+                    className="block mb-3"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "10px",
+                      letterSpacing: "0.12em",
+                      color: "rgba(56,189,248,0.48)",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Globe2 size={11} />
+                      Assign Websites
+                      {assignedSites.length > 0 && (
+                        <span
+                          className="rounded-md px-1.5 py-0.5"
+                          style={{
+                            fontSize: "9px",
+                            background: "rgba(56,189,248,0.12)",
+                            color: "#38bdf8",
+                            border: "1px solid rgba(56,189,248,0.2)",
+                          }}
+                        >
+                          {assignedSites.length} selected
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                  <SiteAssignList
+                    sites={availableSites}
+                    selectedSites={assignedSites}
+                    setSelectedSites={setAssignedSites}
+                    highlightedCategories={assignedCategories}
+                  />
+                </div>
+              </>
             )}
 
             <div className="flex justify-end">
@@ -842,27 +1088,30 @@ const SuperAdminUI = ({
                           {user.email}
                         </p>
 
-                        <div className="pt-1">
+                        <div className="pt-1 flex flex-wrap gap-2">
                           <ToggleChip label={user.role} active activeColor="#818cf8" />
+                          {user.assignedCategories && user.assignedCategories.length > 0 && (
+                            <span
+                              className="px-2.5 py-1.5 rounded-xl"
+                              style={{
+                                fontFamily: "'JetBrains Mono', monospace",
+                                fontSize: "9px",
+                                letterSpacing: "0.08em",
+                                background: "rgba(129,140,248,0.1)",
+                                border: "1px solid rgba(129,140,248,0.2)",
+                                color: "rgba(129,140,248,0.8)",
+                              }}
+                            >
+                              {user.assignedCategories.length} categor{user.assignedCategories.length === 1 ? "y" : "ies"}
+                            </span>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex gap-2">
+                        {/* ✅ Use centralised openEditModal */}
                         <button
-                          onClick={() => {
-                            setEditUser(user);
-                            setNewPassword("");
-                            setEditForm({
-                              name: user.name,
-                              email: user.email,
-                              role: user.role,
-                            });
-                            setEditAssignedSites(
-                              (user.assignedSites || []).map((site) =>
-                                site._id.toString()
-                              )
-                            );
-                          }}
+                          onClick={() => openEditModal(user)}
                           className="flex-1 py-3 rounded-xl text-sm"
                           style={{
                             background: "rgba(59,130,246,0.14)",
@@ -896,10 +1145,10 @@ const SuperAdminUI = ({
                   <table className="w-full text-sm">
                     <thead style={{ background: "rgba(255,255,255,0.02)" }}>
                       <tr>
-                        {["Name", "Email", "Role", "Actions"].map((head, idx) => (
+                        {["Name", "Email", "Role", "Categories", "Actions"].map((head, idx) => (
                           <th
                             key={head}
-                            className={`p-4 ${idx === 3 ? "text-right" : "text-left"}`}
+                            className={`p-4 ${idx === 4 ? "text-right" : "text-left"}`}
                             style={{
                               fontFamily: "'JetBrains Mono', monospace",
                               fontSize: "10px",
@@ -947,22 +1196,58 @@ const SuperAdminUI = ({
                             <ToggleChip label={user.role} active activeColor="#818cf8" />
                           </td>
 
+                          <td className="p-4">
+                            {user.assignedCategories && user.assignedCategories.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {user.assignedCategories.slice(0, 2).map((cat) => (
+                                  <span
+                                    key={cat}
+                                    className="px-2 py-1 rounded-lg"
+                                    style={{
+                                      fontFamily: "'JetBrains Mono', monospace",
+                                      fontSize: "9px",
+                                      letterSpacing: "0.06em",
+                                      textTransform: "uppercase",
+                                      background: "rgba(129,140,248,0.1)",
+                                      border: "1px solid rgba(129,140,248,0.18)",
+                                      color: "rgba(129,140,248,0.8)",
+                                    }}
+                                  >
+                                    {cat}
+                                  </span>
+                                ))}
+                                {user.assignedCategories.length > 2 && (
+                                  <span
+                                    className="px-2 py-1 rounded-lg"
+                                    style={{
+                                      fontFamily: "'JetBrains Mono', monospace",
+                                      fontSize: "9px",
+                                      background: "rgba(255,255,255,0.04)",
+                                      border: "1px solid rgba(255,255,255,0.08)",
+                                      color: "rgba(148,163,184,0.5)",
+                                    }}
+                                  >
+                                    +{user.assignedCategories.length - 2}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span
+                                style={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: "10px",
+                                  color: "rgba(148,163,184,0.3)",
+                                }}
+                              >
+                                —
+                              </span>
+                            )}
+                          </td>
+
                           <td className="p-4 text-right space-x-2">
+                            {/* ✅ Use centralised openEditModal */}
                             <button
-                              onClick={() => {
-                                setEditUser(user);
-                                setNewPassword("");
-                                setEditForm({
-                                  name: user.name,
-                                  email: user.email,
-                                  role: user.role,
-                                });
-                                setEditAssignedSites(
-                                  (user.assignedSites || []).map((site) =>
-                                    site._id.toString()
-                                  )
-                                );
-                              }}
+                              onClick={() => openEditModal(user)}
                               className="px-4 py-2 rounded-xl text-xs"
                               style={{
                                 background: "rgba(59,130,246,0.14)",
@@ -1003,7 +1288,7 @@ const SuperAdminUI = ({
             <motion.div
               initial={{ opacity: 0, y: 12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              className="w-full max-w-2xl rounded-2xl p-5 sm:p-6 relative overflow-hidden"
+              className="w-full max-w-2xl rounded-2xl p-5 sm:p-6 relative overflow-hidden max-h-[90vh] overflow-y-auto"
               style={{
                 background: "rgba(3,7,18,0.92)",
                 border: "1px solid rgba(56,189,248,0.12)",
@@ -1041,7 +1326,7 @@ const SuperAdminUI = ({
                       color: "rgba(148,163,184,0.5)",
                     }}
                   >
-                    Update profile, role, password, and assigned websites.
+                    Update profile, role, password, categories, and assigned websites.
                   </p>
                 </div>
 
@@ -1094,13 +1379,81 @@ const SuperAdminUI = ({
                 </div>
 
                 {editForm.role !== "SUPERADMIN" && (
-                  <div className="md:col-span-2">
-                    <SiteAssignList
-                      sites={availableSites}
-                      selectedSites={editAssignedSites}
-                      setSelectedSites={setEditAssignedSites}
-                    />
-                  </div>
+                  <>
+                    {/* Edit — Assign Categories */}
+                    <div className="md:col-span-2">
+                      <label
+                        className="block mb-3"
+                        style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: "10px",
+                          letterSpacing: "0.12em",
+                          color: "rgba(129,140,248,0.6)",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Tag size={11} />
+                          Assign Categories
+                          <span
+                            style={{
+                              fontSize: "9px",
+                              color: "rgba(148,163,184,0.4)",
+                              letterSpacing: "0.06em",
+                              fontWeight: 400,
+                            }}
+                          >
+                            — auto-selects sites below
+                          </span>
+                        </span>
+                      </label>
+                      <CategoryAssignList
+                        availableCategories={availableCategories}
+                        selectedCategories={editAssignedCategories}
+                        setSelectedCategories={setEditAssignedCategories}
+                        availableSites={availableSites}
+                        setSelectedSites={setEditAssignedSites}
+                      />
+                    </div>
+
+                    {/* Edit — Assign Websites */}
+                    <div className="md:col-span-2">
+                      <label
+                        className="block mb-2"
+                        style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: "10px",
+                          letterSpacing: "0.12em",
+                          color: "rgba(56,189,248,0.48)",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Globe2 size={11} />
+                          Assign Websites
+                          {editAssignedSites.length > 0 && (
+                            <span
+                              className="rounded-md px-1.5 py-0.5"
+                              style={{
+                                fontSize: "9px",
+                                background: "rgba(56,189,248,0.12)",
+                                color: "#38bdf8",
+                                border: "1px solid rgba(56,189,248,0.2)",
+                              }}
+                            >
+                              {editAssignedSites.length} selected
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                      <SiteAssignList
+                        sites={availableSites}
+                        selectedSites={editAssignedSites}
+                        setSelectedSites={setEditAssignedSites}
+                        highlightedCategories={editAssignedCategories}
+                      />
+                    </div>
+                  </>
                 )}
 
                 <div className="md:col-span-2">

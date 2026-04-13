@@ -41,19 +41,24 @@ export const getMonitoredSites = async (req, res) => {
     const userId = req.user?._id;
 
     if (role === "USER" || role === "VIEWER") {
-      const user = await User.findById(userId).select("assignedSites");
-      const assignedSiteIds = user?.assignedSites || [];
+      const user = await User.findById(userId).select("assignedSites assignedCategories");
+      const assignedSiteIds    = user?.assignedSites       || [];
+      const assignedCategories = user?.assignedCategories  || [];
 
-      const roleOr = [
+      const roleOrConditions = [
         { owner: userId },
         { _id: { $in: assignedSiteIds } },
         { assignedUsers: userId },
       ];
 
+      if (assignedCategories.length > 0) {
+        roleOrConditions.push({ category: { $in: assignedCategories } });
+      }
+
       if (searchOr) {
-        matchStage.$and = [{ $or: searchOr }, { $or: roleOr }];
+        matchStage.$and = [{ $or: searchOr }, { $or: roleOrConditions }];
       } else {
-        matchStage.$or = roleOr;
+        matchStage.$or = roleOrConditions;
       }
     } else if (searchOr) {
       matchStage.$or = searchOr;
@@ -62,8 +67,6 @@ export const getMonitoredSites = async (req, res) => {
     // ── Aggregation pipeline ─────────────────────────────────────────────────
     const pipeline = [
       { $match: matchStage },
-
-      // ✅ Owner
       {
         $lookup: {
           from: "users",
@@ -73,8 +76,6 @@ export const getMonitoredSites = async (req, res) => {
         },
       },
       { $unwind: { path: "$ownerData", preserveNullAndEmptyArrays: true } },
-
-      // ✅ Current (site-level) status — also carries globalStatus field
       {
         $lookup: {
           from: "sitecurrentstatuses",
@@ -84,8 +85,6 @@ export const getMonitoredSites = async (req, res) => {
         },
       },
       { $unwind: { path: "$uptime", preserveNullAndEmptyArrays: true } },
-
-      // ✅ SSL status
       {
         $lookup: {
           from: "sslstatuses",
@@ -95,13 +94,9 @@ export const getMonitoredSites = async (req, res) => {
         },
       },
       { $unwind: { path: "$ssl", preserveNullAndEmptyArrays: true } },
-
-      // ✅ Status filter (applied after join so we can filter on uptime.status)
       ...(status && status !== "ALL"
         ? [{ $match: { "uptime.status": status } }]
         : []),
-
-      // ✅ Project — includes globalStatus from the SiteCurrentStatus document
       {
         $project: {
           _id: 1,
@@ -120,15 +115,11 @@ export const getMonitoredSites = async (req, res) => {
           ownerEmail: "$ownerData.email",
           ownerRole:  "$ownerData.role",
 
-          // Site-level (direct HTTP check) status
           status:         { $ifNull: ["$uptime.status",  "UNKNOWN"] },
           statusCode:     "$uptime.statusCode",
           responseTimeMs: "$uptime.responseTimeMs",
           lastCheckedAt:  "$uptime.lastCheckedAt",
 
-          // ✅ Global (multi-region aggregated) status
-          // Falls back to site-level status when globalStatus not yet computed,
-          // so the frontend never shows UNKNOWN for healthy single-region sites.
           globalStatus: {
             $ifNull: [
               "$uptime.globalStatus",
@@ -136,17 +127,14 @@ export const getMonitoredSites = async (req, res) => {
             ],
           },
 
-          // Regional breakdown (array of { region, status } objects)
-          regionalStatuses: { $ifNull: ["$uptime.regionalStatuses", []] },
-          downRegions:      { $ifNull: ["$uptime.downRegions", []] },
+          regionalStatuses:    { $ifNull: ["$uptime.regionalStatuses", []] },
+          downRegions:         { $ifNull: ["$uptime.downRegions", []] },
           globalLastCheckedAt: "$uptime.globalLastCheckedAt",
 
-          // SSL
-          sslStatus:       "$ssl.sslStatus",
+          sslStatus:        "$ssl.sslStatus",
           sslDaysRemaining: "$ssl.daysRemaining",
-          sslValidTo:      "$ssl.validTo",
+          sslValidTo:       "$ssl.validTo",
 
-          // Sort keys
           statusPriority: { $ifNull: ["$uptime.statusPriority", 4] },
           sslPriority:    { $ifNull: ["$ssl.sslPriority",       5] },
         },
@@ -156,7 +144,6 @@ export const getMonitoredSites = async (req, res) => {
       },
     ];
 
-    // ── No-pagination mode (used by internal callers) ────────────────────────
     if (NO_PAGINATION) {
       const data       = await MonitoredSite.aggregate(pipeline);
       const totalCount = data.length;
@@ -171,7 +158,6 @@ export const getMonitoredSites = async (req, res) => {
       });
     }
 
-    // ── Paginated response ────────────────────────────────────────────────────
     pipeline.push({
       $facet: {
         data:       [{ $skip: skip }, { $limit: LIMIT }],
@@ -209,16 +195,13 @@ export const getMonitoredSites = async (req, res) => {
 export const getSitesByRegionForLambda = async (req, res) => {
   try {
     const region = req.params.region;
-
     if (!region) {
       return res.status(400).json({ success: false, message: "Region is required" });
     }
-
     const sites = await MonitoredSite.find(
       { isActive: 1, regions: region },
       "_id domain url responseThresholdMs regions"
     ).lean();
-
     return res.json({ success: true, count: sites.length, data: sites });
   } catch (err) {
     console.error("getSitesByRegionForLambda error:", err);
@@ -232,17 +215,10 @@ export const getSitesByRegionForLambda = async (req, res) => {
 export const getStatusStats = async (req, res) => {
   try {
     const stats = await SiteCurrentStatus.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-        },
-      },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
-
     const result = { UP: 0, DOWN: 0, SLOW: 0 };
     stats.forEach((s) => { result[s._id] = s.count; });
-
     return res.json({ success: true, data: result });
   } catch (error) {
     console.error("❌ getStatusStats error:", error);
@@ -259,19 +235,25 @@ export const getSiteById = async (req, res) => {
     if (!site) {
       return res.status(404).json({ success: false, message: "Site not found" });
     }
-
     const role   = (req.user && req.user.role) || "";
     const userId = req.user?._id?.toString();
     if (role === "USER" || role === "VIEWER") {
+      const user = await User.findById(userId).select("assignedSites assignedCategories");
       const ownerId  = site.owner ? site.owner.toString() : null;
       const assigned = Array.isArray(site.assignedUsers)
         ? site.assignedUsers.map((a) => a.toString())
         : [];
-      if (ownerId !== userId && !assigned.includes(userId)) {
+      const assignedSiteIds    = (user?.assignedSites       || []).map((id) => id.toString());
+      const assignedCategories = user?.assignedCategories   || [];
+      const hasAccess =
+        ownerId === userId ||
+        assigned.includes(userId) ||
+        assignedSiteIds.includes(site._id.toString()) ||
+        (site.category && assignedCategories.includes(site.category));
+      if (!hasAccess) {
         return res.status(403).json({ success: false, message: "Not authorized to view this site" });
       }
     }
-
     return res.json({ success: true, data: site });
   } catch {
     return res.status(500).json({ success: false, message: "Failed to fetch site" });
@@ -341,8 +323,8 @@ export const updateSite = async (req, res) => {
       emailContact: emailContact
         ? Array.isArray(emailContact) ? emailContact : [emailContact]
         : [],
-      phoneContact:       phoneContact || null,
-      priority:           priority !== undefined ? Number(priority) : 0,
+      phoneContact:        phoneContact || null,
+      priority:            priority !== undefined ? Number(priority) : 0,
       responseThresholdMs:
         responseThresholdMs !== undefined && responseThresholdMs !== null
           ? Number(responseThresholdMs)
@@ -358,11 +340,19 @@ export const updateSite = async (req, res) => {
     const userId = req.user?._id?.toString();
 
     if (role === "USER" || role === "VIEWER") {
+      const user = await User.findById(userId).select("assignedSites assignedCategories");
       const ownerId  = site.owner ? site.owner.toString() : null;
       const assigned = Array.isArray(site.assignedUsers)
         ? site.assignedUsers.map((a) => a.toString())
         : [];
-      if (ownerId !== userId && !assigned.includes(userId)) {
+      const assignedSiteIds    = (user?.assignedSites       || []).map((id) => id.toString());
+      const assignedCategories = user?.assignedCategories   || [];
+      const hasAccess =
+        ownerId === userId ||
+        assigned.includes(userId) ||
+        assignedSiteIds.includes(site._id.toString()) ||
+        (site.category && assignedCategories.includes(site.category));
+      if (!hasAccess) {
         return res.status(403).json({ success: false, message: "Not authorized to update this site" });
       }
     }
@@ -380,14 +370,12 @@ export const updateSite = async (req, res) => {
     site.lastManualUpdateAt = new Date();
     await site.save();
 
-    // Sync RegionAssignment records
     if (Array.isArray(regions)) {
       try {
         const existing        = await RegionAssignment.find({ siteId: site._id });
         const existingRegions = existing.map((e) => e.region);
         const toAdd           = regions.filter((r) => !existingRegions.includes(r));
         const toRemove        = existingRegions.filter((r) => !regions.includes(r));
-
         if (toAdd.length > 0) {
           try {
             await RegionAssignment.insertMany(
@@ -420,16 +408,13 @@ export const deleteSite = async (req, res) => {
     if (!site) {
       return res.status(404).json({ success: false, message: "Site not found" });
     }
-
     if (req.user.role !== "SUPERADMIN") {
       return res.status(403).json({ success: false, message: "Only SuperAdmin can delete sites" });
     }
-
     site.isActive  = 0;
     site.deletedBy = req.user._id;
     site.deletedAt = new Date();
     await site.save();
-
     return res.json({ success: true, message: "Site moved to logs successfully" });
   } catch (error) {
     console.error("Delete site error:", error);
@@ -455,14 +440,11 @@ export const assignUsersToSite = async (req, res) => {
       const manualEmails = site.emailContact.filter(
         (email) => !users.some((u) => u.email === email)
       );
-
       site.assignedUsers = assignedUsers;
       site.emailContact  = [...new Set([...manualEmails, ...viewerEmails])];
       await site.save();
-
       await User.updateMany({ assignedSites: site._id }, { $pull: { assignedSites: site._id } });
       await User.updateMany({ _id: { $in: assignedUsers } }, { $addToSet: { assignedSites: site._id } });
-
       return res.json({ success: true, data: site });
     }
 
@@ -502,18 +484,13 @@ export const assignUsersToSite = async (req, res) => {
 ===================================================== */
 export const checkAndUpdateSiteStatus = async (req, res) => {
   const { siteId } = req.params;
-
   try {
     const site = await MonitoredSite.findOne({ _id: siteId, isActive: 1 });
     if (!site) {
       return res.status(404).json({ success: false, message: "Site not found" });
     }
 
-    let status         = "UNKNOWN";
-    let statusCode     = null;
-    let responseTimeMs = null;
-    let reason         = null;
-
+    let status = "UNKNOWN", statusCode = null, responseTimeMs = null, reason = null;
     const SLOW_THRESHOLD = site.responseThresholdMs || 15000;
     const startTime = Date.now();
 
@@ -524,10 +501,8 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
       } catch {
         response = await axios.get(site.url, { timeout: 10000, validateStatus: () => true });
       }
-
       responseTimeMs = Date.now() - startTime;
       statusCode     = response.status;
-
       if (statusCode >= 200 && statusCode < 400) {
         status = responseTimeMs > SLOW_THRESHOLD ? "SLOW" : "UP";
         reason = status === "SLOW" ? "HIGH_RESPONSE_TIME" : null;
@@ -539,9 +514,7 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
         status = "DOWN"; reason = "INVALID_RESPONSE";
       }
     } catch (err) {
-      responseTimeMs = null;
-      statusCode     = null;
-      status = "DOWN";
+      responseTimeMs = null; statusCode = null; status = "DOWN";
       reason = err.code === "ECONNABORTED" ? "TIMEOUT" : (err.message || "REQUEST_FAILED");
     }
 
@@ -555,7 +528,6 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
       { siteId, status, statusPriority, statusCode, reason, responseTimeMs, lastCheckedAt: new Date() },
       { upsert: true, new: true }
     );
-
     return res.json({ success: true, data: currentStatus });
   } catch (error) {
     console.error("❌ checkAndUpdateSiteStatus error:", error);
@@ -585,12 +557,6 @@ export const computeGlobalStatus = async (req, res) => {
 /* =====================================================
    MANUAL GLOBAL CHECK FOR A SINGLE SITE
 ===================================================== */
-/* =====================================================
-   MANUAL GLOBAL CHECK FOR A SINGLE SITE
-   Performs a LIVE HTTP check from the server for every region assigned
-   to the site, persists the results, then re-aggregates the global status.
-   This bypasses the Lambda cron and gives the user an instant result.
-===================================================== */
 export const globalCheckSite = async (req, res) => {
   try {
     const { siteId } = req.params;
@@ -600,60 +566,46 @@ export const globalCheckSite = async (req, res) => {
       return res.status(404).json({ success: false, message: "Site not found" });
     }
 
-    // ── RBAC ──────────────────────────────────────────────────────────────
     const role   = (req.user && req.user.role) || "";
     const userId = req.user?._id?.toString();
     if (role === "USER" || role === "VIEWER") {
+      const user = await User.findById(userId).select("assignedSites assignedCategories");
       const ownerId  = site.owner ? site.owner.toString() : null;
       const assigned = Array.isArray(site.assignedUsers)
         ? site.assignedUsers.map((a) => a.toString())
         : [];
-      if (ownerId !== userId && !assigned.includes(userId)) {
+      const assignedSiteIds    = (user?.assignedSites       || []).map((id) => id.toString());
+      const assignedCategories = user?.assignedCategories   || [];
+      const hasAccess =
+        ownerId === userId ||
+        assigned.includes(userId) ||
+        assignedSiteIds.includes(site._id.toString()) ||
+        (site.category && assignedCategories.includes(site.category));
+      if (!hasAccess) {
         return res.status(403).json({ success: false, message: "Not authorized to check this site" });
       }
     }
 
-    // ── Live HTTP check helper ────────────────────────────────────────────
     const SLOW_THRESHOLD = site.responseThresholdMs || 15_000;
     const TIMEOUT_MS     = 20_000;
 
     async function liveCheck(url) {
       const start = Date.now();
-      let response   = null;
-      let methodUsed = "HEAD";
-
+      let response = null, methodUsed = "HEAD";
       try {
-        response = await axios.head(url, {
-          timeout: TIMEOUT_MS,
-          validateStatus: () => true,
-          headers: { "User-Agent": "UptimeMonitor/1.0 ManualCheck" },
-        });
+        response = await axios.head(url, { timeout: TIMEOUT_MS, validateStatus: () => true, headers: { "User-Agent": "UptimeMonitor/1.0 ManualCheck" } });
         if (response.status === 405) throw new Error("HEAD not allowed (405)");
       } catch {
         methodUsed = "GET";
         try {
-          response = await axios.get(url, {
-            timeout: TIMEOUT_MS,
-            validateStatus: () => true,
-            headers: { "User-Agent": "UptimeMonitor/1.0 ManualCheck" },
-          });
+          response = await axios.get(url, { timeout: TIMEOUT_MS, validateStatus: () => true, headers: { "User-Agent": "UptimeMonitor/1.0 ManualCheck" } });
         } catch (getErr) {
-          const responseTimeMs = Date.now() - start;
-          return {
-            status: "DOWN",
-            statusCode: null,
-            responseTimeMs,
-            reason: getErr.code === "ECONNABORTED" ? "TIMEOUT" : (getErr.message || "REQUEST_FAILED"),
-            methodUsed,
-          };
+          return { status: "DOWN", statusCode: null, responseTimeMs: Date.now() - start, reason: getErr.code === "ECONNABORTED" ? "TIMEOUT" : (getErr.message || "REQUEST_FAILED"), methodUsed };
         }
       }
-
       const responseTimeMs = Date.now() - start;
       const httpStatus     = response.status;
-      let   status;
-      let   reason = null;
-
+      let status, reason = null;
       if (httpStatus >= 200 && httpStatus < 400) {
         status = responseTimeMs > SLOW_THRESHOLD ? "SLOW" : "UP";
         reason = status === "SLOW" ? "HIGH_RESPONSE_TIME" : null;
@@ -664,15 +616,12 @@ export const globalCheckSite = async (req, res) => {
       } else {
         status = "DOWN"; reason = "INVALID_RESPONSE";
       }
-
       return { status, statusCode: httpStatus, responseTimeMs, reason, methodUsed };
     }
 
-    // ── Run live check ────────────────────────────────────────────────────
     const checkResult = await liveCheck(site.url);
     const checkedAt   = new Date();
 
-    // ── Persist site-level status ─────────────────────────────────────────
     let statusPriority = 4;
     if (checkResult.status === "DOWN")      statusPriority = 1;
     else if (checkResult.status === "SLOW") statusPriority = 2;
@@ -680,46 +629,26 @@ export const globalCheckSite = async (req, res) => {
 
     await SiteCurrentStatus.findOneAndUpdate(
       { siteId: site._id },
-      {
-        siteId:         site._id,
-        status:         checkResult.status,
-        statusPriority,
-        statusCode:     checkResult.statusCode,
-        reason:         checkResult.reason,
-        responseTimeMs: checkResult.responseTimeMs,
-        lastCheckedAt:  checkedAt,
-      },
+      { siteId: site._id, status: checkResult.status, statusPriority, statusCode: checkResult.statusCode, reason: checkResult.reason, responseTimeMs: checkResult.responseTimeMs, lastCheckedAt: checkedAt },
       { upsert: true, new: true }
     );
 
-    // ── For each assigned region, also persist a RegionCurrentStatus ──────
-    // This ensures the regional breakdown shows fresh data immediately.
     const regions = Array.isArray(site.regions) ? site.regions : [];
     if (regions.length > 0) {
       await Promise.all(
         regions.map((region) =>
           RegionCurrentStatus.findOneAndUpdate(
             { siteId: site._id, region },
-            {
-              siteId:         site._id,
-              region,
-              status:         checkResult.status,
-              statusCode:     checkResult.statusCode,
-              responseTimeMs: checkResult.responseTimeMs,
-              reason:         checkResult.reason,
-              lastCheckedAt:  checkedAt,
-            },
+            { siteId: site._id, region, status: checkResult.status, statusCode: checkResult.statusCode, responseTimeMs: checkResult.responseTimeMs, reason: checkResult.reason, lastCheckedAt: checkedAt },
             { upsert: true, new: true }
           )
         )
       );
     }
 
-    // ── Re-aggregate global status from the freshly written data ──────────
     const { calculateGlobalStatus } = await import("../services/globalStatusService.js");
     const globalResult = await calculateGlobalStatus(siteId);
 
-    // ── Build regional breakdown for the response ─────────────────────────
     const regionalBreakdown = await Promise.all(
       regions.map(async (region) => {
         const rs = await RegionCurrentStatus.findOne({ siteId: site._id, region }).lean();
@@ -741,12 +670,10 @@ export const globalCheckSite = async (req, res) => {
         siteId:           site._id,
         domain:           site.domain,
         url:              site.url,
-        // The live HTTP check result (single-server perspective)
         liveStatus:       checkResult.status,
         liveStatusCode:   checkResult.statusCode,
         liveResponseTime: checkResult.responseTimeMs,
         methodUsed:       checkResult.methodUsed,
-        // The re-aggregated multi-region global status
         globalStatus:     globalResult?.globalStatus || checkResult.status,
         downRegions:      globalResult?.downRegions  || [],
         regionalBreakdown,
@@ -798,42 +725,34 @@ export const getSitesByRegion = async (req, res) => {
 
     const role   = req.user?.role;
     const userId = req.user?._id;
-
     const filter = { isActive: 1, regions: region };
 
     if (role === "USER" || role === "VIEWER") {
-      const user = await User.findById(userId).select("assignedSites");
-      const assignedSiteIds = user?.assignedSites || [];
-      filter.$or = [
+      const user = await User.findById(userId).select("assignedSites assignedCategories");
+      const assignedSiteIds    = user?.assignedSites      || [];
+      const assignedCategories = user?.assignedCategories || [];
+      const roleOrConditions   = [
         { owner: userId },
         { _id: { $in: assignedSiteIds } },
         { assignedUsers: userId },
       ];
+      if (assignedCategories.length > 0) {
+        roleOrConditions.push({ category: { $in: assignedCategories } });
+      }
+      filter.$or = roleOrConditions;
     }
 
     const sites = await MonitoredSite.find(filter).sort({ createdAt: -1 });
-
     const sitesWithStatus = await Promise.all(
       sites.map(async (site) => {
-        const regionStatus = await RegionCurrentStatus.findOne({
-          siteId: site._id,
-          region,
-        });
-        return {
-          ...site.toObject(),
-          currentStatus: regionStatus || { status: "UNKNOWN", lastCheckedAt: null },
-        };
+        const regionStatus = await RegionCurrentStatus.findOne({ siteId: site._id, region });
+        return { ...site.toObject(), currentStatus: regionStatus || { status: "UNKNOWN", lastCheckedAt: null } };
       })
     );
-
     return res.json({ success: true, count: sitesWithStatus.length, data: sitesWithStatus });
   } catch (err) {
     console.error("getSitesByRegion error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch sites for region",
-      details: err.message,
-    });
+    return res.status(500).json({ success: false, message: "Failed to fetch sites for region", details: err.message });
   }
 };
 
@@ -842,9 +761,7 @@ export const getSitesByRegion = async (req, res) => {
 ===================================================== */
 export const getSlowAlertBatch = async (req, res) => {
   const batch = getSlowBatch();
-  if (!batch) {
-    return res.json({ success: true, data: null });
-  }
+  if (!batch) return res.json({ success: true, data: null });
   try {
     await emailQueue.add("slow-site-alert", batch);
     clearSlowBatch();
@@ -856,12 +773,47 @@ export const getSlowAlertBatch = async (req, res) => {
 };
 
 /* =====================================================
-   DELETED SITE LOGS
+   DELETED SITE LOGS  ← FIXED
+   
+   Bugs fixed:
+   1. toDate was only applied to "Deleted" events, not "Created"/"Updated"
+   2. fromDate/toDate used new Date("YYYY-MM-DD") which parses as UTC midnight,
+      so events on the boundary day could be excluded due to timezone offset.
+      Fix: fromDate → start of that day (00:00:00.000 UTC),
+           toDate   → end of that day  (23:59:59.999 UTC)
+   3. Stats were computed on search-filtered results, so they changed when
+      the user typed in the search box. Stats now always reflect only the
+      date-range filter (consistent with what the stat cards should show).
 ===================================================== */
 export const getDeletedLogs = async (req, res) => {
   try {
     const { fromDate, toDate, q, page = 1, limit = 10 } = req.query;
 
+    // ── Build inclusive UTC date boundaries ──────────────────────────────────
+    // "2025-01-15" → fromMs = start of that day UTC, toMs = end of that day UTC
+    // This ensures events at any time on the boundary dates are always included.
+    let fromMs = null;
+    let toMs   = null;
+
+    if (fromDate) {
+      // e.g. "2025-01-15" → 2025-01-15T00:00:00.000Z
+      fromMs = new Date(`${fromDate}T00:00:00.000Z`).getTime();
+    }
+    if (toDate) {
+      // e.g. "2025-01-20" → 2025-01-20T23:59:59.999Z  (inclusive end-of-day)
+      toMs = new Date(`${toDate}T23:59:59.999Z`).getTime();
+    }
+
+    // ── Helper: is a given Date within the requested range? ─────────────────
+    const inRange = (date) => {
+      if (!date) return false;
+      const ms = new Date(date).getTime();
+      if (fromMs !== null && ms < fromMs) return false;
+      if (toMs   !== null && ms > toMs)   return false;
+      return true;
+    };
+
+    // ── Fetch all relevant sites ─────────────────────────────────────────────
     const sites = await MonitoredSite.find({
       $or: [{ isActive: 1 }, { isActive: 0, deletedBy: { $ne: null } }],
     })
@@ -869,59 +821,68 @@ export const getDeletedLogs = async (req, res) => {
       .populate("updatedBy", "email role")
       .populate("deletedBy", "email role");
 
+    // ── Build raw log entries ────────────────────────────────────────────────
     const formattedLogs = [];
 
     sites.forEach((site) => {
-      if (!fromDate || new Date(site.createdAt) >= new Date(fromDate)) {
+      // ✅ "Created" — apply BOTH fromDate and toDate
+      if (inRange(site.createdAt)) {
         formattedLogs.push({
-          domain: site.domain, url: site.url,
-          action: "Created", user: site.owner?.email || "Unknown",
+          domain:    site.domain,
+          url:       site.url,
+          action:    "Created",
+          user:      site.owner?.email || "Unknown",
           timestamp: site.createdAt,
         });
       }
-      if (site.lastManualUpdateAt && site.updatedBy) {
-        if (!fromDate || new Date(site.lastManualUpdateAt) >= new Date(fromDate)) {
-          formattedLogs.push({
-            domain: site.domain, url: site.url,
-            action: "Updated", user: site.updatedBy?.email || "Unknown",
-            timestamp: site.lastManualUpdateAt,
-          });
-        }
+
+      // ✅ "Updated" — apply BOTH fromDate and toDate
+      if (site.lastManualUpdateAt && site.updatedBy && inRange(site.lastManualUpdateAt)) {
+        formattedLogs.push({
+          domain:    site.domain,
+          url:       site.url,
+          action:    "Updated",
+          user:      site.updatedBy?.email || "Unknown",
+          timestamp: site.lastManualUpdateAt,
+        });
       }
-      if (site.isActive === 0 && site.deletedBy && site.deletedAt) {
-        if (
-          (!fromDate || new Date(site.deletedAt) >= new Date(fromDate)) &&
-          (!toDate   || new Date(site.deletedAt) <= new Date(toDate))
-        ) {
-          formattedLogs.push({
-            domain: site.domain, url: site.url,
-            action: "Deleted", user: site.deletedBy?.email || "Unknown",
-            timestamp: site.deletedAt,
-          });
-        }
+
+      // ✅ "Deleted" — apply BOTH fromDate and toDate
+      if (site.isActive === 0 && site.deletedBy && site.deletedAt && inRange(site.deletedAt)) {
+        formattedLogs.push({
+          domain:    site.domain,
+          url:       site.url,
+          action:    "Deleted",
+          user:      site.deletedBy?.email || "Unknown",
+          timestamp: site.deletedAt,
+        });
       }
     });
 
+    // Sort newest-first
     formattedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    const qStr = q ? String(q).trim().toLowerCase() : "";
-    let filtered = formattedLogs;
-    if (qStr) {
-      filtered = formattedLogs.filter((l) =>
-        (l.domain || "").toLowerCase().includes(qStr) ||
-        (l.url    || "").toLowerCase().includes(qStr) ||
-        (l.action || "").toLowerCase().includes(qStr) ||
-        (l.user   || "").toLowerCase().includes(qStr)
-      );
-    }
-
+    // ── Stats — computed on DATE-RANGE filtered data BEFORE text search ──────
+    // This keeps stat card numbers stable while the user types in the search box.
     const stats = {
-      created: filtered.filter((l) => l.action === "Created").length,
-      updated: filtered.filter((l) => l.action === "Updated").length,
-      deleted: filtered.filter((l) => l.action === "Deleted").length,
+      created: formattedLogs.filter((l) => l.action === "Created").length,
+      updated: formattedLogs.filter((l) => l.action === "Updated").length,
+      deleted: formattedLogs.filter((l) => l.action === "Deleted").length,
     };
 
-    const PAGE       = Math.max(1, parseInt(page, 10) || 1);
+    // ── Text search filter (applied AFTER stats so stats don't change) ───────
+    const qStr = q ? String(q).trim().toLowerCase() : "";
+    const filtered = qStr
+      ? formattedLogs.filter((l) =>
+          (l.domain || "").toLowerCase().includes(qStr) ||
+          (l.url    || "").toLowerCase().includes(qStr) ||
+          (l.action || "").toLowerCase().includes(qStr) ||
+          (l.user   || "").toLowerCase().includes(qStr)
+        )
+      : formattedLogs;
+
+    // ── Paginate ─────────────────────────────────────────────────────────────
+    const PAGE       = Math.max(1, parseInt(page,  10) || 1);
     const LIMIT      = Math.max(1, parseInt(limit, 10) || 10);
     const totalCount = filtered.length;
     const totalPages = Math.max(1, Math.ceil(totalCount / LIMIT));
@@ -973,20 +934,16 @@ export const bulkImportSites = async (req, res) => {
           if (!row.url) return;
           const url = row.url.trim();
           if (!url.startsWith("http")) return;
-          
-          // Parse emails — split by comma and collect all valid emails into array
           const emailsStr = row.email ? row.email.trim() : "";
-          const emailList = emailsStr 
-            ? emailsStr.split(",").map(e => e.trim()).filter(e => e.length > 0) 
+          const emailList = emailsStr
+            ? emailsStr.split(",").map((e) => e.trim()).filter((e) => e.length > 0)
             : [];
-          
-          // Create ONE row with all emails in array
           rows.push({
-            domain:   row.domain?.trim() || "",
+            domain:       row.domain?.trim() || "",
             url,
-            category: row.category || "UNCATEGORIZED",
-            owner:    req.user._id,
-            priority: Number(row.priority ?? 0),
+            category:     row.category || "UNCATEGORIZED",
+            owner:        req.user._id,
+            priority:     Number(row.priority ?? 0),
             emailContact: emailList.length > 0 ? emailList : [],
           });
         })
@@ -1019,9 +976,7 @@ export const bulkImportSites = async (req, res) => {
       }
     });
 
-    const uniqueSites = [];
-    const skipped     = [];
-    const reactivated = [];
+    const uniqueSites = [], skipped = [], reactivated = [];
 
     for (const site of rows) {
       const domain = site.domain?.toLowerCase().trim();
