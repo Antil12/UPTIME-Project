@@ -500,16 +500,17 @@ const Dashboard = ({
                       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                       whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                       onClick={() => {
-                        const allIds = tableRows.map((u) => u._id);
+                        // Select ALL websites in dashboard, not just paginated ones
+                        const allIds = urls.map((u) => u._id);
                         const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
                         setSelectedIds(allSelected ? [] : allIds);
                       }}
-                      disabled={tableRows.length === 0}
+                      disabled={urls.length === 0}
                       className="flex items-center gap-2 px-4 py-2 rounded-2xl transition-colors duration-200 disabled:opacity-40"
                       style={{ overflow: "hidden", whiteSpace: "nowrap", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(148,163,184,0.7)" }}
                     >
                       <Square size={12} />
-                      {tableRows.length > 0 && tableRows.every((u) => selectedIds.includes(u._id)) ? "Deselect All" : "Select All"}
+                      {urls.length > 0 && urls.every((u) => selectedIds.includes(u._id)) ? "Deselect All" : "Select All"}
                     </motion.button>
 
                     <motion.button

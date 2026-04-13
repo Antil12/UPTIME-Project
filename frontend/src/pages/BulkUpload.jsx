@@ -900,6 +900,24 @@ const BulkUpload = () => {
                   >
                     domain, url, category, priority
                   </div>
+                  <p
+                    className="mt-2 text-amber-300"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "10px",
+                    }}
+                  >
+                    ✓ Tip: You can also add an optional <span className="text-sky-300">email</span> column
+                  </p>
+                  <p
+                    className="mt-1 text-amber-300"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "10px",
+                    }}
+                  >
+                    ✓ Multiple emails can be separated by commas (creates separate entries)
+                  </p>
 
                   <p
                     className="mt-3"
@@ -982,6 +1000,7 @@ const BulkUpload = () => {
                   >
                     <li>• <span className="text-white">category</span> → default: <span className="text-sky-300">UNCATEGORIZED</span></li>
                     <li>• <span className="text-white">priority</span> → default: <span className="text-sky-300">0</span></li>
+                    <li>• <span className="text-white">email</span> → contact email(s), comma-separated for multiple</li>
                   </ul>
                 </div>
 

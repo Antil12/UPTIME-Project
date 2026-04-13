@@ -973,12 +973,21 @@ export const bulkImportSites = async (req, res) => {
           if (!row.url) return;
           const url = row.url.trim();
           if (!url.startsWith("http")) return;
+          
+          // Parse emails — split by comma and collect all valid emails into array
+          const emailsStr = row.email ? row.email.trim() : "";
+          const emailList = emailsStr 
+            ? emailsStr.split(",").map(e => e.trim()).filter(e => e.length > 0) 
+            : [];
+          
+          // Create ONE row with all emails in array
           rows.push({
             domain:   row.domain?.trim() || "",
             url,
             category: row.category || "UNCATEGORIZED",
             owner:    req.user._id,
             priority: Number(row.priority ?? 0),
+            emailContact: emailList.length > 0 ? emailList : [],
           });
         })
         .on("end", () => {

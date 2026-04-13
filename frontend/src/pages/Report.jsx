@@ -223,6 +223,29 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
       return;
     }
 
+    // Validate custom range if selected
+    if (range === "custom") {
+      if (!customFrom || !customTo) {
+        setError("Please select both dates for custom range");
+        setLoading(false);
+        return;
+      }
+
+      const fromDate = new Date(customFrom);
+      const toDate = new Date(customTo);
+      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+        setError("Invalid date format");
+        setLoading(false);
+        return;
+      }
+
+      if (fromDate > toDate) {
+        setError("'From' date cannot be after 'To' date");
+        setLoading(false);
+        return;
+      }
+    }
+
     // Cancel previous in-flight request to prevent race conditions
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
@@ -253,12 +276,18 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
       if (res.data?.data) {
         setLogsBySite(res.data.data.logsBySite || {});
         setStatsMap(res.data.data.statsMap || {});
+      } else {
+        setError("No data received from server");
       }
     } catch (err) {
       // Ignore abort errors — they're intentional cancellations
       if (axios.isCancel(err) || err?.code === "ERR_CANCELED") return;
       console.error("Report fetch error:", err);
-      setError("Failed to load report data. Please try again.");
+      
+      const errorMsg = err.response?.data?.message || 
+                       err.message || 
+                       "Failed to load report data. Please try again.";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -271,9 +300,42 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
 
   // ─── Apply custom date range ─────────────────────────────────────────────
   const applyCustomRange = () => {
-    if (!tempFrom || !tempTo) return;
+    // Validation: check both dates are provided
+    if (!tempFrom || !tempTo) {
+      setError("Please select both 'From' and 'To' dates");
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+
+    // Parse dates to validate
+    const fromDate = new Date(tempFrom);
+    const toDate = new Date(tempTo);
+
+    // Check if dates are valid
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      setError("Invalid date format. Please use YYYY-MM-DD");
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+
+    // Ensure from <= to
+    if (fromDate > toDate) {
+      setError("'From' date cannot be after 'To' date");
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+
+    // Ensure date range is not too large (max 1 year)
+    const oneYear = 365 * 24 * 60 * 60 * 1000;
+    if (toDate.getTime() - fromDate.getTime() > oneYear) {
+      setError("Date range cannot exceed 1 year");
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+
     setCustomFrom(tempFrom);
     setCustomTo(tempTo);
+    setError(null);
   };
 
   const handleRangeChange = (val) => {
@@ -282,6 +344,8 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
     if (val !== "custom") {
       setCustomFrom("");
       setCustomTo("");
+      setTempFrom("");
+      setTempTo("");
     }
   };
 

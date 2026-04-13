@@ -20,6 +20,21 @@ const ExportButtons = ({
   // ================= FETCH LOGS =================
   const fetchAllLogs = async () => {
     try {
+      // Validate custom range
+      if (range === "custom") {
+        if (!customFrom || !customTo) {
+          throw new Error("Please select both dates for custom range");
+        }
+        const fromDate = new Date(customFrom);
+        const toDate = new Date(customTo);
+        if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+          throw new Error("Invalid date format");
+        }
+        if (fromDate > toDate) {
+          throw new Error("'From' date cannot be after 'To' date");
+        }
+      }
+
       const token = localStorage.getItem("loginToken");
       if (!token || !urls.length) return {};
 
