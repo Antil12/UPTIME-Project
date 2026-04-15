@@ -52,7 +52,15 @@ const SuperAdmin = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setUsers(res.data.users || []);
+      // Normalise every user so assignedCategories is always a plain string[]
+      const normalised = (res.data.users || []).map((u) => ({
+        ...u,
+        assignedCategories: Array.isArray(u.assignedCategories)
+          ? u.assignedCategories.filter(Boolean)
+          : [],
+      }));
+
+      setUsers(normalised);
     } catch (err) {
       console.error("Failed to fetch users", err);
     }
@@ -96,9 +104,36 @@ const SuperAdmin = () => {
   }, []);
 
   /* ================= OPEN EDIT MODAL ================= */
-  // Centralised helper so both mobile-card and desktop-table buttons use
-  // exactly the same logic — and assignedCategories is always seeded correctly.
   const openEditModal = (user) => {
+    // ── Assigned categories ──────────────────────────────────────────────────
+    // Pull from the normalised user object (always a string[]).
+    // Fall back to deriving them from assigned sites so that users created
+    // before the category field existed still show the correct chips.
+    let cats = Array.isArray(user.assignedCategories)
+      ? user.assignedCategories.filter(Boolean)
+      : [];
+
+    if (cats.length === 0 && Array.isArray(user.assignedSites) && user.assignedSites.length > 0) {
+      // Derive from the sites that are currently assigned to this user
+      const siteIds = user.assignedSites.map((s) =>
+        typeof s === "object" ? s._id.toString() : s.toString()
+      );
+      const derived = [
+        ...new Set(
+          availableSites
+            .filter((s) => siteIds.includes(s._id.toString()) && s.category)
+            .map((s) => s.category)
+            .filter((c) => c && c !== "ALL" && c !== "UNCATEGORIZED")
+        ),
+      ];
+      cats = derived;
+    }
+
+    // ── Assigned site IDs ────────────────────────────────────────────────────
+    const siteIds = (user.assignedSites || []).map((site) =>
+      typeof site === "object" ? site._id.toString() : site.toString()
+    );
+
     setEditUser(user);
     setNewPassword("");
     setEditForm({
@@ -106,17 +141,8 @@ const SuperAdmin = () => {
       email: user.email || "",
       role:  user.role  || "USER",
     });
-
-    // Seed assigned sites (populated array → extract _id strings)
-    const siteIds = (user.assignedSites || []).map((site) =>
-      typeof site === "object" ? site._id.toString() : site.toString()
-    );
     setEditAssignedSites(siteIds);
-
-    // ✅ FIX: always seed assigned categories from the user object
-    setEditAssignedCategories(
-      Array.isArray(user.assignedCategories) ? [...user.assignedCategories] : []
-    );
+    setEditAssignedCategories(cats);
   };
 
   /* ================= CREATE USER ================= */
@@ -203,7 +229,7 @@ const SuperAdmin = () => {
         typeof site === "object" ? site._id.toString() : site.toString()
       );
 
-      const newSites    = (editAssignedSites  || []).map((id) => id.toString());
+      const newSites     = (editAssignedSites  || []).map((id) => id.toString());
       const removedSites = oldSites.filter((id) => !newSites.includes(id));
       const addedSites   = newSites.filter((id) => !oldSites.includes(id));
 
@@ -249,11 +275,10 @@ const SuperAdmin = () => {
 
       alert("User updated successfully");
 
-      // Re-fetch fresh data, then close modal and clear transient state
+      // Re-fetch fresh data, then close modal
       await fetchUsers();
       setEditUser(null);
       setNewPassword("");
-      // ✅ Do NOT clear editAssignedCategories here — modal is already closed
     } catch (err) {
       console.error(err);
       alert("Failed to update user");
@@ -286,7 +311,6 @@ const SuperAdmin = () => {
       setEditAssignedCategories={setEditAssignedCategories}
       handleUpdateUser={handleUpdateUser}
       openEditModal={openEditModal}
-
     />
   );
 };

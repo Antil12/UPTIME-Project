@@ -43,7 +43,7 @@ const SettingsMenu = ({ onLogout }) => {
   const menuButtonBase = `
     w-full group relative overflow-hidden
     flex items-center justify-between
-    rounded-2xl px-4 py-3
+    rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3
     transition-all duration-300
   `;
 
@@ -61,7 +61,7 @@ const SettingsMenu = ({ onLogout }) => {
         whileHover={{ y: -1, scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={() => setOpen(true)}
-        className="relative flex items-center justify-center p-2.5 rounded-2xl overflow-hidden"
+        className="relative flex items-center justify-center p-2 md:p-2.5 rounded-xl md:rounded-2xl overflow-hidden"
         style={{
           background: "rgba(255,255,255,0.05)",
           border: "1px solid rgba(56,189,248,0.14)",
@@ -76,7 +76,8 @@ const SettingsMenu = ({ onLogout }) => {
               "linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(129,140,248,0.06) 100%)",
           }}
         />
-        <Settings size={18} className="relative z-10 text-white" />
+        <Settings size={16} className="relative z-10 text-white md:hidden" />
+        <Settings size={18} className="relative z-10 text-white hidden md:block" />
       </motion.button>
 
       <AnimatePresence>
@@ -95,13 +96,14 @@ const SettingsMenu = ({ onLogout }) => {
               exit={{ opacity: 0 }}
             />
 
-            {/* SIDEBAR PANEL */}
+            {/* SIDEBAR PANEL — mobile/tablet: narrower; desktop: 380px unchanged */}
             <motion.div
               initial={{ x: "100%", opacity: 0.8 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0.8 }}
               transition={{ type: "spring", stiffness: 120, damping: 18 }}
-              className="fixed top-0 right-0 h-full w-full sm:w-[380px] z-50 overflow-hidden"
+              className="fixed top-0 right-0 h-full z-50 overflow-hidden
+                         w-[280px] sm:w-[320px] lg:w-[380px]"
               style={{
                 background: "rgba(3,7,18,0.92)",
                 borderLeft: "1px solid rgba(56,189,248,0.10)",
@@ -139,26 +141,27 @@ const SettingsMenu = ({ onLogout }) => {
               {/* CONTENT */}
               <div className="relative z-10 flex flex-col h-full">
                 {/* HEADER */}
-                <div className="px-5 pt-5 pb-4 border-b border-white/5">
+                <div className="px-4 md:px-5 pt-4 md:pt-5 pb-3 md:pb-4 border-b border-white/5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="h-[1px] w-7 bg-sky-400/20" />
+                      <div className="flex items-center gap-2 md:gap-3 mb-1.5 md:mb-2">
+                        <div className="h-[1px] w-5 md:w-7 bg-sky-400/20" />
                         <span
                           style={{
                             fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: "9px",
-                            letterSpacing: "0.24em",
+                            fontSize: "8px",
+                            letterSpacing: "0.20em",
                             color: "rgba(56,189,248,0.46)",
                             textTransform: "uppercase",
                           }}
+                          className="md:text-[9px]"
                         >
                           Control Panel
                         </span>
                       </div>
 
                       <h2
-                        className="text-white text-xl"
+                        className="text-white text-base md:text-xl"
                         style={{
                           fontFamily: "'Orbitron', sans-serif",
                           fontWeight: 700,
@@ -173,25 +176,26 @@ const SettingsMenu = ({ onLogout }) => {
                       whileHover={{ scale: 1.04 }}
                       whileTap={{ scale: 0.96 }}
                       onClick={() => setOpen(false)}
-                      className="w-10 h-10 rounded-2xl flex items-center justify-center"
+                      className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl flex items-center justify-center"
                       style={{
                         background: "rgba(255,255,255,0.03)",
                         border: "1px solid rgba(56,189,248,0.08)",
                       }}
                     >
-                      <X size={16} className="text-slate-200" />
+                      <X size={14} className="text-slate-200 md:hidden" />
+                      <X size={16} className="text-slate-200 hidden md:block" />
                     </motion.button>
                   </div>
                 </div>
 
                 {/* BODY */}
-                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+                <div className="flex-1 overflow-y-auto px-4 md:px-5 py-4 md:py-5 space-y-4 md:space-y-5">
                   {/* USER CARD */}
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 }}
-                    className="relative overflow-hidden rounded-3xl p-5"
+                    className="relative overflow-hidden rounded-2xl md:rounded-3xl p-4 md:p-5"
                     style={{
                       background: "rgba(255,255,255,0.025)",
                       border: "1px solid rgba(56,189,248,0.08)",
@@ -207,11 +211,11 @@ const SettingsMenu = ({ onLogout }) => {
                       }}
                     />
 
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-3 md:gap-4">
                       {/* Avatar */}
                       <div className="relative shrink-0">
                         <div
-                          className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-lg"
+                          className="w-11 h-11 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center text-white text-base md:text-lg"
                           style={{
                             fontFamily: "'Orbitron', sans-serif",
                             fontWeight: 800,
@@ -224,14 +228,14 @@ const SettingsMenu = ({ onLogout }) => {
                           {initials}
                         </div>
 
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-400 border-2 border-slate-950" />
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 md:w-5 md:h-5 rounded-full bg-emerald-400 border-2 border-slate-950" />
                       </div>
 
                       {/* User Details */}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                           <h3
-                            className="text-white text-base break-words"
+                            className="text-white text-sm md:text-base break-words"
                             style={{
                               fontFamily: "'Orbitron', sans-serif",
                               fontWeight: 700,
@@ -244,7 +248,7 @@ const SettingsMenu = ({ onLogout }) => {
                           <span
                             className={`
                               inline-flex items-center gap-1
-                              text-[10px] px-2.5 py-1 rounded-full font-medium
+                              px-2 py-0.5 md:px-2.5 md:py-1 rounded-full font-medium
                               ${
                                 isAdmin
                                   ? "bg-purple-500/10 text-purple-300 border border-purple-400/15"
@@ -253,32 +257,33 @@ const SettingsMenu = ({ onLogout }) => {
                             `}
                             style={{
                               fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: "9px",
                               letterSpacing: "0.08em",
                             }}
                           >
-                            {isAdmin ? <Shield size={10} /> : <User2 size={10} />}
+                            {isAdmin ? <Shield size={9} /> : <User2 size={9} />}
                             {user?.role || "USER"}
                           </span>
                         </div>
 
                         <p
-                          className="mt-2 break-all"
+                          className="mt-1.5 md:mt-2 break-all"
                           style={{
                             fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: "11px",
+                            fontSize: "10px",
                             color: "rgba(148,163,184,0.7)",
                           }}
                         >
                           {user?.email || "user@email.com"}
                         </p>
 
-                        <div className="mt-4 flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <div className="mt-3 md:mt-4 flex items-center gap-1.5 md:gap-2">
+                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-400" />
                           <span
                             style={{
                               fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: "10px",
-                              letterSpacing: "0.12em",
+                              fontSize: "9px",
+                              letterSpacing: "0.10em",
                               color: "rgba(52,211,153,0.75)",
                               textTransform: "uppercase",
                             }}
@@ -291,28 +296,26 @@ const SettingsMenu = ({ onLogout }) => {
                   </motion.div>
 
                   {/* SECTION LABEL */}
-                  <div className="pt-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <div className="h-[1px] w-8 bg-sky-400/20" />
+                  <div className="pt-0.5 md:pt-1">
+                    <div className="flex items-center gap-2 md:gap-3 mb-1">
+                      <div className="h-[1px] w-6 md:w-8 bg-sky-400/20" />
                       <span
                         style={{
                           fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: "9px",
-                          letterSpacing: "0.24em",
+                          fontSize: "8px",
+                          letterSpacing: "0.20em",
                           color: "rgba(56,189,248,0.42)",
                           textTransform: "uppercase",
                         }}
+                        className="md:text-[9px]"
                       >
                         Preferences
                       </span>
                     </div>
                   </div>
 
-                  
-                
-
                   {/* NAVIGATION / ACTIONS */}
-                  <div className="space-y-3">
+                  <div className="space-y-2 md:space-y-3">
                     {/* LOGS */}
                     {user?.role === "SUPERADMIN" && (
                       <motion.button
@@ -334,20 +337,21 @@ const SettingsMenu = ({ onLogout }) => {
                           }}
                         />
 
-                        <div className="relative z-10 flex items-center gap-3 min-w-0">
+                        <div className="relative z-10 flex items-center gap-2 md:gap-3 min-w-0">
                           <div
-                            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                            className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0"
                             style={{
                               background: "rgba(56,189,248,0.08)",
                               border: "1px solid rgba(56,189,248,0.10)",
                             }}
                           >
-                            <FileText size={18} className="text-sky-300" />
+                            <FileText size={15} className="text-sky-300 md:hidden" />
+                            <FileText size={18} className="text-sky-300 hidden md:block" />
                           </div>
 
                           <div className="text-left min-w-0">
                             <p
-                              className="text-white text-sm"
+                              className="text-white text-xs md:text-sm"
                               style={{
                                 fontFamily: "'Orbitron', sans-serif",
                                 fontWeight: 700,
@@ -359,7 +363,7 @@ const SettingsMenu = ({ onLogout }) => {
                             <p
                               style={{
                                 fontFamily: "'JetBrains Mono', monospace",
-                                fontSize: "10px",
+                                fontSize: "9px",
                                 color: "rgba(148,163,184,0.6)",
                               }}
                             >
@@ -368,7 +372,8 @@ const SettingsMenu = ({ onLogout }) => {
                           </div>
                         </div>
 
-                        <ChevronRight size={16} className="relative z-10 text-slate-400" />
+                        <ChevronRight size={14} className="relative z-10 text-slate-400 md:hidden" />
+                        <ChevronRight size={16} className="relative z-10 text-slate-400 hidden md:block" />
                       </motion.button>
                     )}
 
@@ -393,20 +398,21 @@ const SettingsMenu = ({ onLogout }) => {
                           }}
                         />
 
-                        <div className="relative z-10 flex items-center gap-3 min-w-0">
+                        <div className="relative z-10 flex items-center gap-2 md:gap-3 min-w-0">
                           <div
-                            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                            className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0"
                             style={{
                               background: "rgba(129,140,248,0.08)",
-                              border: "1px solid rgba(129,140,248,0.10)", 
+                              border: "1px solid rgba(129,140,248,0.10)",
                             }}
                           >
-                            <Upload size={18} className="text-indigo-300" />
+                            <Upload size={15} className="text-indigo-300 md:hidden" />
+                            <Upload size={18} className="text-indigo-300 hidden md:block" />
                           </div>
 
                           <div className="text-left min-w-0">
                             <p
-                              className="text-white text-sm"
+                              className="text-white text-xs md:text-sm"
                               style={{
                                 fontFamily: "'Orbitron', sans-serif",
                                 fontWeight: 700,
@@ -418,7 +424,7 @@ const SettingsMenu = ({ onLogout }) => {
                             <p
                               style={{
                                 fontFamily: "'JetBrains Mono', monospace",
-                                fontSize: "10px",
+                                fontSize: "9px",
                                 color: "rgba(148,163,184,0.6)",
                               }}
                             >
@@ -427,33 +433,32 @@ const SettingsMenu = ({ onLogout }) => {
                           </div>
                         </div>
 
-                        <ChevronRight size={16} className="relative z-10 text-slate-400" />
+                        <ChevronRight size={14} className="relative z-10 text-slate-400 md:hidden" />
+                        <ChevronRight size={16} className="relative z-10 text-slate-400 hidden md:block" />
                       </motion.button>
                     )}
-
-                    {/* EXTRA PREMIUM INFO CARD */}
-                    
                   </div>
                 </div>
 
                 {/* FOOTER */}
-                <div className="p-5 border-t border-white/5">
+                <div className="p-4 md:p-5 border-t border-white/5">
                   <div
-                    className="rounded-2xl p-3"
+                    className="rounded-xl md:rounded-2xl p-2.5 md:p-3"
                     style={{
                       background: "rgba(255,255,255,0.02)",
                       border: "1px solid rgba(255,255,255,0.04)",
                     }}
                   >
-                    <div className="flex items-center justify-between mb-3 px-1">
-                      <div className="flex items-center gap-2">
-                        <PanelTop size={14} className="text-sky-300" />
+                    <div className="flex items-center justify-between mb-2 md:mb-3 px-1">
+                      <div className="flex items-center gap-1.5 md:gap-2">
+                        <PanelTop size={12} className="text-sky-300 md:hidden" />
+                        <PanelTop size={14} className="text-sky-300 hidden md:block" />
                         <span
                           style={{
                             fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: "10px",
+                            fontSize: "9px",
                             color: "rgba(148,163,184,0.62)",
-                            letterSpacing: "0.12em",
+                            letterSpacing: "0.10em",
                             textTransform: "uppercase",
                           }}
                         >
@@ -461,12 +466,12 @@ const SettingsMenu = ({ onLogout }) => {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <div className="flex items-center gap-1.5 md:gap-2">
+                        <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-400" />
                         <span
                           style={{
                             fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: "10px",
+                            fontSize: "9px",
                             color: "rgba(52,211,153,0.72)",
                           }}
                         >
@@ -479,7 +484,7 @@ const SettingsMenu = ({ onLogout }) => {
                       whileHover={{ y: -1 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={onLogout}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm"
+                      className="w-full flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm"
                       style={{
                         background: "rgba(239,68,68,0.08)",
                         border: "1px solid rgba(239,68,68,0.18)",
@@ -487,7 +492,8 @@ const SettingsMenu = ({ onLogout }) => {
                         fontFamily: "'JetBrains Mono', monospace",
                       }}
                     >
-                      <LogOut size={16} />
+                      <LogOut size={14} className="md:hidden" />
+                      <LogOut size={16} className="hidden md:block" />
                       Logout
                     </motion.button>
                   </div>
@@ -501,4 +507,4 @@ const SettingsMenu = ({ onLogout }) => {
   );
 };
 
-export default SettingsMenu;  
+export default SettingsMenu;

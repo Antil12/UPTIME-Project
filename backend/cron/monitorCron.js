@@ -262,6 +262,6 @@ else statusPriority = 4;
       console.log(`✅ Checked ${sites.length} sites`);
     },
     1 * 60 * 1000,
-  ); // 19 minute
+  ); // 1 minute
 };
 

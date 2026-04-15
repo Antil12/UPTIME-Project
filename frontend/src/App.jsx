@@ -37,6 +37,9 @@ const fetchPinnedIds = async () => {
       });
       return new Set((res.data?.pinnedSites || []).map((s) => s._id));
     } catch (err) {
+      if (err.response?.status === 401 || isAbortError(err)) {
+        return new Set();
+      }
       console.error("Fetch pinned sites failed:", err);
       return new Set();
     } finally {
@@ -68,6 +71,9 @@ const fetchPagedSites = async (status, searchQuery, pageNum) => {
         totalCount: res.data?.totalCount ?? res.data?.total ?? 0,
       };
     } catch (err) {
+      if (err.response?.status === 401 || isAbortError(err)) {
+        return { data: [], totalCount: 0 };
+      }
       console.error("Fetch paged sites failed:", err);
       return { data: [], totalCount: 0 };
     } finally {
@@ -84,6 +90,11 @@ const fetchPagedSites = async (status, searchQuery, pageNum) => {
  * dashboard's current page/filter state.
  * Only one request in-flight at a time.
  */
+const isAbortError = (err) =>
+  err?.code === "ERR_CANCELED" ||
+  err?.name === "CanceledError" ||
+  err?.message?.toLowerCase().includes("aborted");
+
 const fetchAllSitesFull = async () => {
   if (allSitesFullFlight) return allSitesFullFlight;
 
@@ -92,6 +103,12 @@ const fetchAllSitesFull = async () => {
       const res = await axios.get(`${API_BASE}?status=ALL&page=1&limit=10000`);
       return res.data?.data || [];
     } catch (err) {
+      if (err.response?.status === 401) {
+        return [];
+      }
+      if (isAbortError(err)) {
+        return [];
+      }
       console.error("Fetch all sites (full) failed:", err);
       return [];
     } finally {
@@ -235,7 +252,9 @@ function App() {
       });
 
     } catch (err) {
-      console.error("Load data failed:", err);
+      if (!isAbortError(err)) {
+        console.error("Load data failed:", err);
+      }
     }
   },
   [selectedStatus, search, page]

@@ -1145,7 +1145,7 @@ const SuperAdminUI = ({
                   <table className="w-full text-sm">
                     <thead style={{ background: "rgba(255,255,255,0.02)" }}>
                       <tr>
-                        {["Name", "Email", "Role", "Categories", "Actions"].map((head, idx) => (
+                        {["Name", "Email", "Role",, "Actions"].map((head, idx) => (
                           <th
                             key={head}
                             className={`p-4 ${idx === 4 ? "text-right" : "text-left"}`}
@@ -1196,7 +1196,7 @@ const SuperAdminUI = ({
                             <ToggleChip label={user.role} active activeColor="#818cf8" />
                           </td>
 
-                          <td className="p-4">
+                          {/* <td className="p-4">
                             {user.assignedCategories && user.assignedCategories.length > 0 ? (
                               <div className="flex flex-wrap gap-1.5">
                                 {user.assignedCategories.slice(0, 2).map((cat) => (
@@ -1242,7 +1242,7 @@ const SuperAdminUI = ({
                                 —
                               </span>
                             )}
-                          </td>
+                          </td> */}
 
                           <td className="p-4 text-right space-x-2">
                             {/* ✅ Use centralised openEditModal */}

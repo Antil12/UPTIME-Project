@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import SiteReport from "./SiteReport";
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE     = import.meta.env.VITE_API_URL;
 const LOG_API_BASE = `${API_BASE}/uptime-logs`;
 
 const monoLabel = {
@@ -18,14 +18,10 @@ const monoLabel = {
 };
 
 // ─── Module-level deduplication for /user/hidden-columns ─────────────────────
-// Mirrors the same pattern used for pinned-sites in App.jsx.
-// Only one HTTP GET is ever in-flight at a time; concurrent callers share the
-// same promise and all receive the same resolved value.
 let hiddenColumnsFlight = null;
 
 const fetchHiddenColumnsOnce = async () => {
   if (hiddenColumnsFlight) return hiddenColumnsFlight;
-
   hiddenColumnsFlight = (async () => {
     try {
       const token = localStorage.getItem("loginToken");
@@ -35,14 +31,13 @@ const fetchHiddenColumnsOnce = async () => {
       });
       return res.data.hiddenColumns || [];
     } catch (err) {
+      if (err.response?.status === 401) return [];
       console.error("Failed to fetch hidden columns:", err);
       return [];
     } finally {
-      // Clear so that an explicit save/refresh can re-fetch fresh data
       hiddenColumnsFlight = null;
     }
   })();
-
   return hiddenColumnsFlight;
 };
 
@@ -52,17 +47,13 @@ const PortalDropdown = ({ anchorRef, open, children, align = "left" }) => {
 
   useEffect(() => {
     if (!open || !anchorRef.current) return;
-
     const update = () => {
       const rect = anchorRef.current.getBoundingClientRect();
       setPos({
-        top: rect.bottom + window.scrollY + 8,
-        left: align === "right"
-          ? rect.right + window.scrollX
-          : rect.left + window.scrollX,
+        top:  rect.bottom + window.scrollY + 8,
+        left: align === "right" ? rect.right + window.scrollX : rect.left + window.scrollX,
       });
     };
-
     update();
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
@@ -75,15 +66,7 @@ const PortalDropdown = ({ anchorRef, open, children, align = "left" }) => {
   if (!open) return null;
 
   return createPortal(
-    <div
-      style={{
-        position: "absolute",
-        top: pos.top,
-        left: pos.left,
-        zIndex: 9999,
-        ...(align === "right" ? { transform: "translateX(-100%)" } : {}),
-      }}
-    >
+    <div style={{ position: "absolute", top: pos.top, left: pos.left, zIndex: 9999, ...(align === "right" ? { transform: "translateX(-100%)" } : {}) }}>
       {children}
     </div>,
     document.body
@@ -98,28 +81,14 @@ const FilterDropdown = ({ anchorRef, open, options, value, onSelect, onClear }) 
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 4, scale: 0.97 }}
       transition={{ duration: 0.18 }}
-      style={{
-        width: "192px",
-        background: "rgba(3,7,18,0.97)",
-        border: "1px solid rgba(56,189,248,0.14)",
-        backdropFilter: "blur(28px)",
-        boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 24px rgba(56,189,248,0.05)",
-        borderRadius: "16px",
-        overflow: "hidden",
-      }}
+      style={{ width: "192px", background: "rgba(3,7,18,0.97)", border: "1px solid rgba(56,189,248,0.14)", backdropFilter: "blur(28px)", boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 24px rgba(56,189,248,0.05)", borderRadius: "16px", overflow: "hidden" }}
     >
       {options.map((opt) => (
         <button
           key={opt}
           onClick={() => onSelect(opt)}
           className="flex items-center justify-between w-full px-4 py-2.5 transition-all duration-200"
-          style={{
-            ...monoLabel,
-            fontSize: "10px",
-            color: value === opt ? "#38bdf8" : "rgba(148,163,184,0.7)",
-            background: value === opt ? "rgba(56,189,248,0.07)" : "transparent",
-            borderLeft: value === opt ? "2px solid rgba(56,189,248,0.45)" : "2px solid transparent",
-          }}
+          style={{ ...monoLabel, fontSize: "10px", color: value === opt ? "#38bdf8" : "rgba(148,163,184,0.7)", background: value === opt ? "rgba(56,189,248,0.07)" : "transparent", borderLeft: value === opt ? "2px solid rgba(56,189,248,0.45)" : "2px solid transparent" }}
           onMouseEnter={(e) => { if (value !== opt) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
           onMouseLeave={(e) => { if (value !== opt) e.currentTarget.style.background = "transparent"; }}
         >
@@ -141,116 +110,172 @@ const FilterDropdown = ({ anchorRef, open, options, value, onSelect, onClear }) 
   </PortalDropdown>
 );
 
-// ─── Domain Filter Dropdown (with category + sort) ────────────────────────────
+// ─── Domain Filter Dropdown ───────────────────────────────────────────────────
+// KEY FIX: uses local draft state so interactions don't close the dropdown.
+// The dropdown now also closes when a click occurs outside of the button or the
+// dropdown content itself.
 const DomainFilterDropdown = ({
-  anchorRef, open, onClose, categories, selectedCategories,
-  toggleCategory, removeCategory, sortOrder, setSortOrder,
-  setSelectedCategories, chipStyle,
-}) => (
-  <PortalDropdown anchorRef={anchorRef} open={open}>
-    <motion.div
-      initial={{ opacity: 0, y: 6, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 4, scale: 0.97 }}
-      transition={{ duration: 0.18 }}
-      style={{
-        width: "288px",
-        background: "rgba(3,7,18,0.98)",
-        border: "1px solid rgba(56,189,248,0.14)",
-        backdropFilter: "blur(28px)",
-        boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 0 24px rgba(56,189,248,0.05)",
-        borderRadius: "16px",
-        overflow: "hidden",
-      }}
-    >
-      <div className="h-[1px]" style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.4) 40%, transparent)", borderRadius: "16px 16px 0 0" }} />
-      <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(56,189,248,0.07)" }}>
-        <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "10px", fontWeight: 700, color: "white", letterSpacing: "0.06em" }}>
-          FILTER DOMAIN
-        </span>
-      </div>
-      <div className="p-4 space-y-4">
-        <div>
-          <p style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)", marginBottom: "10px" }}>Sort Order</p>
-          <div className="flex gap-2">
-            {["ASC", "DESC"].map((order) => (
-              <button
-                key={order}
-                onClick={() => setSortOrder(order)}
-                className="flex-1 py-2 rounded-xl transition-all duration-200"
-                style={{
-                  ...monoLabel, fontSize: "10px",
-                  background: sortOrder === order ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.03)",
-                  border: sortOrder === order ? "1px solid rgba(56,189,248,0.32)" : "1px solid rgba(255,255,255,0.06)",
-                  color: sortOrder === order ? "#38bdf8" : "rgba(148,163,184,0.6)",
-                }}
-              >
-                {order === "ASC" ? "A → Z" : "Z → A"}
-              </button>
-            ))}
-          </div>
+  anchorRef, open, onClose,
+  categories,
+  selectedCategories, setSelectedCategories,
+  sortOrder, setSortOrder,
+  chipStyle,
+  dropdownRef,
+}) => {
+  // Draft state — does NOT write to parent until Apply
+  const [draftCategories, setDraftCategories] = useState(selectedCategories);
+  const [draftSortOrder,  setDraftSortOrder]  = useState(sortOrder);
+
+  // Sync draft when dropdown opens
+  useEffect(() => {
+    if (open) {
+      setDraftCategories(selectedCategories);
+      setDraftSortOrder(sortOrder);
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleDraftCategory = (cat) => {
+    if (cat === "ALL") {
+      setDraftCategories(["ALL"]);
+    } else {
+      let updated = [...draftCategories].filter((c) => c !== "ALL");
+      updated = updated.includes(cat) ? updated.filter((c) => c !== cat) : [...updated, cat];
+      setDraftCategories(updated.length === 0 ? ["ALL"] : updated);
+    }
+  };
+
+  const removeDraftCategory = (cat) => {
+    const updated = draftCategories.filter((c) => c !== cat);
+    setDraftCategories(updated.length === 0 ? ["ALL"] : updated);
+  };
+
+  const handleApply = () => {
+    setSelectedCategories(draftCategories);
+    setSortOrder(draftSortOrder);
+    onClose();
+  };
+
+  const handleReset = () => {
+    setDraftCategories(["ALL"]);
+    setDraftSortOrder("ASC");
+    setSelectedCategories(["ALL"]);
+    setSortOrder("ASC");
+    onClose();
+  };
+
+  return (
+    <PortalDropdown anchorRef={anchorRef} open={open}>
+      <motion.div
+        ref={dropdownRef}
+        initial={{ opacity: 0, y: 6, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 4, scale: 0.97 }}
+        transition={{ duration: 0.18 }}
+        onMouseDown={(e) => e.stopPropagation()}
+        style={{ width: "288px", background: "rgba(3,7,18,0.98)", border: "1px solid rgba(56,189,248,0.14)", backdropFilter: "blur(28px)", boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 0 24px rgba(56,189,248,0.05)", borderRadius: "16px", overflow: "hidden" }}
+      >
+        <div className="h-[1px]" style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.4) 40%, transparent)", borderRadius: "16px 16px 0 0" }} />
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(56,189,248,0.07)" }}>
+          <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "10px", fontWeight: 700, color: "white", letterSpacing: "0.06em" }}>
+            FILTER DOMAIN
+          </span>
         </div>
-        <div>
-          <p style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)", marginBottom: "10px" }}>Category</p>
-          {!selectedCategories.includes("ALL") && selectedCategories.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "10px" }}>
-              {selectedCategories.map((cat) => (
-                <span key={cat} style={chipStyle}>
-                  {cat}
-                  <span
-                    onClick={() => removeCategory(cat)}
-                    style={{ cursor: "pointer", opacity: 0.7, fontSize: "11px", lineHeight: 1, marginLeft: "2px" }}
-                  >×</span>
-                </span>
+
+        <div className="p-4 space-y-4">
+          {/* Sort Order */}
+          <div>
+            <p style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)", marginBottom: "10px" }}>Sort Order</p>
+            <div className="flex gap-2">
+              {["ASC", "DESC"].map((order) => (
+                <button
+                  key={order}
+                  onClick={() => setDraftSortOrder(order)}
+                  className="flex-1 py-2 rounded-xl transition-all duration-200"
+                  style={{
+                    ...monoLabel, fontSize: "10px",
+                    background: draftSortOrder === order ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.03)",
+                    border: draftSortOrder === order ? "1px solid rgba(56,189,248,0.32)" : "1px solid rgba(255,255,255,0.06)",
+                    color: draftSortOrder === order ? "#38bdf8" : "rgba(148,163,184,0.6)",
+                  }}
+                >
+                  {order === "ASC" ? "A → Z" : "Z → A"}
+                </button>
               ))}
             </div>
-          )}
-          <div style={{ background: "rgba(3,7,18,0.6)", border: "1px solid rgba(56,189,248,0.1)", borderRadius: "12px", overflow: "hidden", maxHeight: "220px", overflowY: "auto" }}>
-            {categories.map((cat, idx) => (
-              <label
-                key={cat}
-                className="flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all duration-200"
-                style={{ borderTop: idx === 0 ? "none" : "1px solid rgba(56,189,248,0.04)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(56,189,248,0.06)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                <div
-                  className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all duration-200"
-                  style={{
-                    border: selectedCategories.includes(cat) ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.1)",
-                    background: selectedCategories.includes(cat) ? "rgba(56,189,248,0.15)" : "transparent",
-                  }}
-                  onClick={() => toggleCategory(cat)}
+          </div>
+
+          {/* Category */}
+          <div>
+            <p style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)", marginBottom: "10px" }}>Category</p>
+
+            {/* Active category chips */}
+            {!draftCategories.includes("ALL") && draftCategories.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "10px" }}>
+                {draftCategories.map((cat) => (
+                  <span key={cat} style={chipStyle}>
+                    {cat}
+                    <span
+                      onClick={() => removeDraftCategory(cat)}
+                      style={{ cursor: "pointer", opacity: 0.7, fontSize: "11px", lineHeight: 1, marginLeft: "2px" }}
+                    >×</span>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div style={{ background: "rgba(3,7,18,0.6)", border: "1px solid rgba(56,189,248,0.1)", borderRadius: "12px", overflow: "hidden", maxHeight: "220px", overflowY: "auto" }}>
+              {categories.map((cat, idx) => (
+                <label
+                  key={cat}
+                  className="flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all duration-200"
+                  style={{ borderTop: idx === 0 ? "none" : "1px solid rgba(56,189,248,0.04)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(56,189,248,0.06)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  {selectedCategories.includes(cat) && <span style={{ color: "#38bdf8", fontSize: "8px" }}>✓</span>}
-                </div>
-                <span style={{ ...monoLabel, fontSize: "10px", color: selectedCategories.includes(cat) ? "#38bdf8" : "rgba(148,163,184,0.7)" }}>
-                  {cat}
-                </span>
-              </label>
-            ))}
+                  <div
+                    className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all duration-200"
+                    style={{
+                      border: draftCategories.includes(cat) ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.1)",
+                      background: draftCategories.includes(cat) ? "rgba(56,189,248,0.15)" : "transparent",
+                    }}
+                    onClick={() => toggleDraftCategory(cat)}
+                  >
+                    {draftCategories.includes(cat) && <span style={{ color: "#38bdf8", fontSize: "8px" }}>✓</span>}
+                  </div>
+                  <span style={{ ...monoLabel, fontSize: "10px", color: draftCategories.includes(cat) ? "#38bdf8" : "rgba(148,163,184,0.7)" }}>
+                    {cat}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-      <div className="flex gap-2 px-4 py-3" style={{ borderTop: "1px solid rgba(56,189,248,0.07)" }}>
-        <button
-          onClick={() => { setSelectedCategories(["ALL"]); setSortOrder("ASC"); }}
-          className="flex-1 py-2 rounded-xl transition-all duration-200"
-          style={{ ...monoLabel, fontSize: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(148,163,184,0.6)" }}
-        >
-          Reset
-        </button>
-        <button
-          onClick={onClose}
-          className="flex-1 py-2 rounded-xl transition-all duration-200"
-          style={{ ...monoLabel, fontSize: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.28)", color: "#38bdf8" }}
-        >
-          Apply
-        </button>
-      </div>
-    </motion.div>
-  </PortalDropdown>
-);
+
+        {/* Footer actions */}
+        <div className="flex gap-2 px-4 py-3" style={{ borderTop: "1px solid rgba(56,189,248,0.07)" }}>
+          <button
+            onClick={handleReset}
+            className="flex-1 py-2 rounded-xl transition-all duration-200"
+            style={{ ...monoLabel, fontSize: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(148,163,184,0.6)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(148,163,184,0.9)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.color = "rgba(148,163,184,0.6)"; }}
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleApply}
+            className="flex-1 py-2 rounded-xl transition-all duration-200"
+            style={{ ...monoLabel, fontSize: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.28)", color: "#38bdf8" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(56,189,248,0.18)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(56,189,248,0.1)"; }}
+          >
+            Apply
+          </button>
+        </div>
+      </motion.div>
+    </PortalDropdown>
+  );
+};
 
 // ─── HUD Column Settings ──────────────────────────────────────────────────────
 const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleColumn, searchColumn, setSearchColumn, DEFAULT_COLUMNS, menuRef }) => (
@@ -261,16 +286,7 @@ const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleCol
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 4, scale: 0.97 }}
       transition={{ duration: 0.18 }}
-      style={{
-        width: "256px",
-        background: "rgba(3,7,18,0.97)",
-        border: "1px solid rgba(56,189,248,0.14)",
-        backdropFilter: "blur(28px)",
-        boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 24px rgba(56,189,248,0.04)",
-        borderRadius: "16px",
-        overflow: "hidden",
-        transform: "translateX(-100%)",
-      }}
+      style={{ width: "256px", background: "rgba(3,7,18,0.97)", border: "1px solid rgba(56,189,248,0.14)", backdropFilter: "blur(28px)", boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 24px rgba(56,189,248,0.04)", borderRadius: "16px", overflow: "hidden", transform: "translateX(-100%)" }}
     >
       <div className="h-[1px]" style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.4) 40%, rgba(129,140,248,0.3) 70%, transparent)" }} />
       <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(56,189,248,0.07)" }}>
@@ -304,18 +320,11 @@ const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleCol
             <div
               onClick={() => toggleColumn(col)}
               className="relative w-8 h-4 rounded-full cursor-pointer transition-all duration-300"
-              style={{
-                background: !hiddenColumns.includes(col) ? "rgba(56,189,248,0.28)" : "rgba(255,255,255,0.06)",
-                border: !hiddenColumns.includes(col) ? "1px solid rgba(56,189,248,0.45)" : "1px solid rgba(255,255,255,0.08)",
-              }}
+              style={{ background: !hiddenColumns.includes(col) ? "rgba(56,189,248,0.28)" : "rgba(255,255,255,0.06)", border: !hiddenColumns.includes(col) ? "1px solid rgba(56,189,248,0.45)" : "1px solid rgba(255,255,255,0.08)" }}
             >
               <div
                 className="absolute top-0.5 w-3 h-3 rounded-full transition-all duration-300"
-                style={{
-                  left: !hiddenColumns.includes(col) ? "17px" : "2px",
-                  background: !hiddenColumns.includes(col) ? "#38bdf8" : "rgba(148,163,184,0.3)",
-                  boxShadow: !hiddenColumns.includes(col) ? "0 0 8px rgba(56,189,248,0.6)" : "none",
-                }}
+                style={{ left: !hiddenColumns.includes(col) ? "17px" : "2px", background: !hiddenColumns.includes(col) ? "#38bdf8" : "rgba(148,163,184,0.3)", boxShadow: !hiddenColumns.includes(col) ? "0 0 8px rgba(56,189,248,0.6)" : "none" }}
               />
             </div>
           </label>
@@ -330,143 +339,96 @@ const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleCol
   </PortalDropdown>
 );
 
-// ─── Th Cell ──────────────────────────────────────────────────────────────────
 const Th = ({ children, className = "", style = {}, ...rest }) => (
-  <th
-    className={`px-4 py-3 text-left whitespace-nowrap ${className}`}
-    style={{
-      ...monoLabel,
-      fontSize: "9px",
-      color: "rgba(56,189,248,0.5)",
-      position: "sticky",
-      top: 0,
-      zIndex: 40,
-      background: "rgba(3,7,18,0.97)",
-      backdropFilter: "blur(20px)",
-      WebkitBackdropFilter: "blur(20px)",
-      borderBottom: "1px solid rgba(56,189,248,0.13)",
-      fontWeight: 400,
-      ...style,
-    }}
+  <th className={`px-4 py-3 text-left whitespace-nowrap ${className}`}
+    style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.5)", position: "sticky", top: 0, zIndex: 40, background: "rgba(3,7,18,0.97)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(56,189,248,0.13)", fontWeight: 400, ...style }}
     {...rest}
   >
     {children}
   </th>
 );
 
-// ─── Filter Button ─────────────────────────────────────────────────────────────
 const FilterBtn = ({ active, onClick, btnRef }) => (
   <button
     ref={btnRef}
     onClick={onClick}
     className="inline-flex items-center justify-center w-5 h-5 rounded-md transition-all duration-200"
-    style={{
-      background: active ? "rgba(56,189,248,0.15)" : "transparent",
-      color: active ? "#38bdf8" : "rgba(148,163,184,0.3)",
-      border: active ? "1px solid rgba(56,189,248,0.28)" : "1px solid transparent",
-    }}
+    style={{ background: active ? "rgba(56,189,248,0.15)" : "transparent", color: active ? "#38bdf8" : "rgba(148,163,184,0.3)", border: active ? "1px solid rgba(56,189,248,0.28)" : "1px solid transparent" }}
   >
     <Filter size={10} />
   </button>
 );
 
-// ─── Status Badge ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
   const map = {
-    UP: { color: "#34d399", bg: "rgba(52,211,153,0.08)", border: "rgba(52,211,153,0.22)" },
-    SLOW: { color: "#fbbf24", bg: "rgba(251,191,36,0.08)", border: "rgba(251,191,36,0.22)" },
+    UP:   { color: "#34d399", bg: "rgba(52,211,153,0.08)",  border: "rgba(52,211,153,0.22)"  },
+    SLOW: { color: "#fbbf24", bg: "rgba(251,191,36,0.08)",  border: "rgba(251,191,36,0.22)"  },
     DOWN: { color: "#f87171", bg: "rgba(248,113,113,0.08)", border: "rgba(248,113,113,0.22)" },
   };
   const s = map[status] || { color: "rgba(148,163,184,0.5)", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)" };
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
-      <motion.span
-        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ background: s.color, boxShadow: `0 0 5px ${s.color}` }}
-        animate={status === "DOWN" ? { opacity: [1, 0.3, 1] } : {}}
-        transition={{ duration: 0.9, repeat: Infinity }}
-      />
+      <motion.span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color, boxShadow: `0 0 5px ${s.color}` }}
+        animate={status === "DOWN" ? { opacity: [1, 0.3, 1] } : {}} transition={{ duration: 0.9, repeat: Infinity }} />
       <span style={{ ...monoLabel, fontSize: "9px", color: s.color }}>{status || "CHECKING"}</span>
     </span>
   );
 };
 
-// ─── SSL Badge ─────────────────────────────────────────────────────────────────
 const SslBadge = ({ item }) => {
   const getText = () => {
     if (!item.sslStatus) return "Checking";
-    if (item.sslStatus === "VALID") return "Secure";
+    if (item.sslStatus === "VALID")    return "Secure";
     if (item.sslStatus === "EXPIRING") return `Expiring (${item.sslDaysRemaining}d)`;
-    if (item.sslStatus === "ERROR") return "Error";
+    if (item.sslStatus === "ERROR")    return "Error";
     return item.sslStatus;
   };
   const colorMap = { VALID: "#34d399", EXPIRING: "#fbbf24", EXPIRED: "#f87171", ERROR: "#f87171" };
-  const color = colorMap[item.sslStatus] || "rgba(148,163,184,0.5)";
+  const color    = colorMap[item.sslStatus] || "rgba(148,163,184,0.5)";
   return <span style={{ ...monoLabel, fontSize: "10px", color }}>{getText()}</span>;
 };
 
-// ─── Action Button ─────────────────────────────────────────────────────────────
 const ActionBtn = ({ onClick, title, children, danger = false }) => (
   <motion.button
-    whileHover={{ scale: 1.14, y: -1 }}
-    whileTap={{ scale: 0.88 }}
-    onClick={onClick}
-    title={title}
+    whileHover={{ scale: 1.14, y: -1 }} whileTap={{ scale: 0.88 }}
+    onClick={onClick} title={title}
     className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200"
-    style={{
-      background: danger ? "rgba(248,113,113,0.07)" : "rgba(56,189,248,0.07)",
-      border: danger ? "1px solid rgba(248,113,113,0.14)" : "1px solid rgba(56,189,248,0.12)",
-      color: danger ? "rgba(248,113,113,0.7)" : "rgba(56,189,248,0.65)",
-    }}
+    style={{ background: danger ? "rgba(248,113,113,0.07)" : "rgba(56,189,248,0.07)", border: danger ? "1px solid rgba(248,113,113,0.14)" : "1px solid rgba(56,189,248,0.12)", color: danger ? "rgba(248,113,113,0.7)" : "rgba(56,189,248,0.65)" }}
   >
     {children}
   </motion.button>
 );
 
-// ─── Row Expand Icon ───────────────────────────────────────────────────────────
 const ExpandChevron = ({ expanded }) => (
-  <motion.span
-    animate={{ rotate: expanded ? 180 : 0 }}
-    transition={{ duration: 0.22 }}
-    style={{ display: "inline-block", color: "rgba(56,189,248,0.45)", fontSize: "10px" }}
-  >
+  <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.22 }}
+    style={{ display: "inline-block", color: "rgba(56,189,248,0.45)", fontSize: "10px" }}>
     ▼
   </motion.span>
 );
 
 // ─── Main UrlTable ─────────────────────────────────────────────────────────────
 const UrlTable = forwardRef(({
-  urls,
-  allUrls,
-  theme,
-  currentUser,
-  selectedSslStatus,
-  setSelectedSslStatus,
-  onPin,
-  onDelete,
-  onEdit,
-  selectionMode = false,
-  selectedIds = [],
-  setSelectedIds = () => {},
+  urls, allUrls, theme, currentUser,
+  selectedSslStatus, setSelectedSslStatus,
+  onPin, onDelete, onEdit,
+  selectionMode = false, selectedIds = [], setSelectedIds = () => {},
   categories = [],
-  selectedCategories,
-  setSelectedCategories,
-  selectedStatus,
-  setSelectedStatus,
+  selectedCategories, setSelectedCategories,
+  selectedStatus, setSelectedStatus,
 }, ref) => {
-  const isViewer = currentUser?.role?.toUpperCase() === "VIEWER";
+  const isViewer    = currentUser?.role?.toUpperCase() === "VIEWER";
   const isSuperAdmin = currentUser?.role?.toUpperCase() === "SUPERADMIN";
 
-  const BASE_COLUMNS = ["sno", "domain", "url", "ssl", "status", "globalStatus", "statusCode", "lastCheckedAt", "actions"];
-  const ADMIN_COLUMNS = ["userEmail", "userRole"];
+  const BASE_COLUMNS    = ["sno", "domain", "url", "ssl", "status", "globalStatus", "statusCode", "lastCheckedAt", "actions"];
+  const ADMIN_COLUMNS   = ["userEmail", "userRole"];
   const DEFAULT_COLUMNS = isSuperAdmin
     ? [...BASE_COLUMNS.slice(0, 5), ...ADMIN_COLUMNS, ...BASE_COLUMNS.slice(5)]
     : BASE_COLUMNS;
 
-  // ── Column state ──────────────────────────────────────────────────────────────
-  const [searchColumn, setSearchColumn] = useState("");
-  const [globalCheckLoading, setGlobalCheckLoading] = useState(null);
-  const [globalCheckModalData, setGlobalCheckModalData] = useState(null); // Store regional breakdown for modal
+  const [searchColumn,        setSearchColumn]        = useState("");
+  const [globalCheckLoading,  setGlobalCheckLoading]  = useState(null);
+  const [globalCheckModalData,setGlobalCheckModalData]= useState(null);
+
   const visibleColumnsForRole = DEFAULT_COLUMNS.filter((col) => {
     if (!isSuperAdmin && (col === "userEmail" || col === "userRole")) return false;
     if (isViewer && col === "actions") return false;
@@ -476,35 +438,32 @@ const UrlTable = forwardRef(({
     col.toLowerCase().includes(searchColumn.toLowerCase())
   );
 
-  // ── Button refs (portals anchor to these) ─────────────────────────────────────
   const columnBtnRef = useRef(null);
   const domainBtnRef = useRef(null);
-  const sslBtnRef = useRef(null);
+  const sslBtnRef    = useRef(null);
   const statusBtnRef = useRef(null);
-  const roleBtnRef = useRef(null);
-  const columnMenuRef = useRef(null);
+  const roleBtnRef   = useRef(null);
+  const columnMenuRef= useRef(null);
+  const domainDropdownRef = useRef(null);
 
-  // ── UI state ──────────────────────────────────────────────────────────────────
-  const [hiddenColumns, setHiddenColumns] = useState([]);
-  const [showColumnMenu, setShowColumnMenu] = useState(false);
-  const [selectedRole, setSelectedRole] = useState("ALL");
-  const [sortOrder, setSortOrder] = useState("ASC");
-  const [expandedSite, setExpandedSite] = useState(null);
-  const [siteLogs, setSiteLogs] = useState({});
+  const [hiddenColumns,      setHiddenColumns]      = useState([]);
+  const [showColumnMenu,     setShowColumnMenu]      = useState(false);
+  const [selectedRole,       setSelectedRole]        = useState("ALL");
+  const [sortOrder,          setSortOrder]           = useState("ASC");
+  const [expandedSite,       setExpandedSite]        = useState(null);
+  const [siteLogs,           setSiteLogs]            = useState({});
 
-  const [showDomainFilter, setShowDomainFilter] = useState(false);
-  const [showSslFilter, setShowSslFilter] = useState(false);
-  const [showStatusFilter, setShowStatusFilter] = useState(false);
-  const [showRoleFilter, setShowRoleFilter] = useState(false);
+  const [showDomainFilter,   setShowDomainFilter]    = useState(false);
+  const [showSslFilter,      setShowSslFilter]       = useState(false);
+  const [showStatusFilter,   setShowStatusFilter]    = useState(false);
+  const [showRoleFilter,     setShowRoleFilter]      = useState(false);
 
-  // ── Expose column button ref/toggle to parent ─────────────────────────────────
   useImperativeHandle(ref, () => ({
-    getColumnBtnRef: () => columnBtnRef,
-    toggleColumnMenu: () => setShowColumnMenu((v) => !v),
-    isColumnMenuOpen: () => showColumnMenu,
+    getColumnBtnRef:   () => columnBtnRef,
+    toggleColumnMenu:  () => setShowColumnMenu((v) => !v),
+    isColumnMenuOpen:  () => showColumnMenu,
   }));
 
-  // ── Derived options ───────────────────────────────────────────────────────────
   const roleOptions = useMemo(() => {
     const roles = allUrls.map((u) => u.ownerRole).filter(Boolean);
     return ["ALL", ...Array.from(new Set(roles))];
@@ -520,12 +479,11 @@ const UrlTable = forwardRef(({
     return ["ALL", ...Array.from(new Set(statuses))];
   }, [allUrls]);
 
-  // ── Filtered + sorted data ────────────────────────────────────────────────────
   const filteredData = urls.filter((u) => {
     const categoryMatch = selectedCategories.includes("ALL") || selectedCategories.includes(u.category);
-    const statusMatch = selectedStatus === "ALL" || u.status === selectedStatus;
-    const sslMatch = selectedSslStatus === "ALL" || u.sslStatus === selectedSslStatus;
-    const roleMatch = selectedRole === "ALL" || u.ownerRole === selectedRole;
+    const statusMatch   = selectedStatus    === "ALL" || u.status    === selectedStatus;
+    const sslMatch      = selectedSslStatus === "ALL" || u.sslStatus === selectedSslStatus;
+    const roleMatch     = selectedRole      === "ALL" || u.ownerRole === selectedRole;
     return categoryMatch && statusMatch && sslMatch && roleMatch;
   });
 
@@ -540,71 +498,52 @@ const UrlTable = forwardRef(({
     return sortOrder === "ASC" ? a.domain.localeCompare(b.domain) : b.domain.localeCompare(a.domain);
   });
 
-  // ── Load hidden columns once (deduplicated at module level) ──────────────────
-  // The module-level `fetchHiddenColumnsOnce` guarantees that no matter how many
-  // times UrlTable mounts or re-renders in quick succession, only one HTTP
-  // request is ever sent. Subsequent mounts reuse the cached/in-flight promise.
   useEffect(() => {
     let cancelled = false;
-    fetchHiddenColumnsOnce().then((cols) => {
-      if (!cancelled) setHiddenColumns(cols);
-    });
+    fetchHiddenColumnsOnce().then((cols) => { if (!cancelled) setHiddenColumns(cols); });
     return () => { cancelled = true; };
   }, []);
 
-  // ── Close all dropdowns on outside click ──────────────────────────────────────
+  // ── Close dropdowns on outside click ──────────────────────────────────────────
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (showColumnMenu && columnMenuRef.current && !columnMenuRef.current.contains(e.target) && !columnBtnRef.current?.contains(e.target)) {
         setShowColumnMenu(false);
       }
-      if (showDomainFilter && !domainBtnRef.current?.contains(e.target)) setShowDomainFilter(false);
-      if (showSslFilter && !sslBtnRef.current?.contains(e.target)) setShowSslFilter(false);
+      if (showDomainFilter && !domainBtnRef.current?.contains(e.target) && !domainDropdownRef.current?.contains(e.target)) {
+        setShowDomainFilter(false);
+      }
+      if (showSslFilter    && !sslBtnRef.current?.contains(e.target))    setShowSslFilter(false);
       if (showStatusFilter && !statusBtnRef.current?.contains(e.target)) setShowStatusFilter(false);
-      if (showRoleFilter && !roleBtnRef.current?.contains(e.target)) setShowRoleFilter(false);
+      if (showRoleFilter   && !roleBtnRef.current?.contains(e.target))   setShowRoleFilter(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showColumnMenu, showDomainFilter, showSslFilter, showStatusFilter, showRoleFilter]);
 
-  // ── Toggle column visibility ──────────────────────────────────────────────────
-  // After a successful save we reset the module-level flight so the next mount
-  // (e.g. navigation away and back) picks up the freshly persisted value.
   const toggleColumn = async (column) => {
     if (!isSuperAdmin && (column === "userEmail" || column === "userRole")) return;
     const updated = hiddenColumns.includes(column)
       ? hiddenColumns.filter((c) => c !== column)
       : [...hiddenColumns, column];
-
-    // Optimistic update
     setHiddenColumns(updated);
-
     try {
       const token = localStorage.getItem("loginToken");
-      await axios.put(
-        `${API_BASE}/user/hidden-columns`,
-        { hiddenColumns: updated },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      // Invalidate the cache so a fresh fetch is made next time
+      await axios.put(`${API_BASE}/user/hidden-columns`, { hiddenColumns: updated }, { headers: { Authorization: `Bearer ${token}` } });
       hiddenColumnsFlight = null;
     } catch (err) {
       console.error("Save hidden column failed:", err);
-      // Roll back optimistic update on error
       setHiddenColumns(hiddenColumns);
     }
   };
 
-  // ── Expand / collapse site report row ────────────────────────────────────────
   const handleToggleSite = async (item) => {
     const next = expandedSite === item._id ? null : item._id;
     setExpandedSite(next);
     if (next && !siteLogs[item._id]) {
       try {
         const token = localStorage.getItem("loginToken");
-        const res = await axios.get(`${LOG_API_BASE}/${item._id}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const res   = await axios.get(`${LOG_API_BASE}/${item._id}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
         setSiteLogs((prev) => ({ ...prev, [item._id]: res.data?.data || [] }));
       } catch (err) {
         console.error("Failed to fetch site logs", err);
@@ -617,13 +556,7 @@ const UrlTable = forwardRef(({
     setGlobalCheckLoading(siteId);
     try {
       const token = localStorage.getItem("loginToken");
-      const res = await axios.post(
-        `${API_BASE}/monitoredsite/global-check/${siteId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      console.log("✅ Global check completed:", res.data.data);
-      // Open modal with regional breakdown
+      const res   = await axios.post(`${API_BASE}/monitoredsite/global-check/${siteId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
       setGlobalCheckModalData(res.data.data);
     } catch (err) {
       console.error("Failed to perform global check:", err);
@@ -633,27 +566,20 @@ const UrlTable = forwardRef(({
     }
   };
 
+  // Only closes ssl/status/role — not domain (which is controlled by its own Apply button)
+  const closeNonDomainFilters = useCallback(() => {
+    setShowSslFilter(false);
+    setShowStatusFilter(false);
+    setShowRoleFilter(false);
+  }, []);
+
+  // Full close including domain (used when another filter opens)
   const closeAllFilters = useCallback(() => {
     setShowDomainFilter(false);
     setShowSslFilter(false);
     setShowStatusFilter(false);
     setShowRoleFilter(false);
   }, []);
-
-  const removeCategory = (cat) => {
-    const updated = selectedCategories.filter((c) => c !== cat);
-    setSelectedCategories(updated.length === 0 ? ["ALL"] : updated);
-  };
-
-  const toggleCategory = (cat) => {
-    if (cat === "ALL") {
-      setSelectedCategories(["ALL"]);
-    } else {
-      let updated = [...selectedCategories].filter((c) => c !== "ALL");
-      updated = updated.includes(cat) ? updated.filter((c) => c !== cat) : [...updated, cat];
-      setSelectedCategories(updated.length === 0 ? ["ALL"] : updated);
-    }
-  };
 
   const visibleColsCount = DEFAULT_COLUMNS.filter((col) => {
     if (hiddenColumns.includes(col)) return false;
@@ -675,138 +601,56 @@ const UrlTable = forwardRef(({
       <AnimatePresence>
         {globalCheckModalData && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setGlobalCheckModalData(null)}
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: "rgba(0,0,0,0.7)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 9999,
-              backdropFilter: "blur(4px)",
-            }}
+            style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, backdropFilter: "blur(4px)" }}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              style={{
-                background: "rgba(3,7,18,0.95)",
-                border: "1px solid rgba(56,189,248,0.2)",
-                borderRadius: "20px",
-                backdropFilter: "blur(20px)",
-                boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(56,189,248,0.1)",
-                padding: "32px",
-                maxWidth: "600px",
-                maxHeight: "80vh",
-                overflowY: "auto",
-              }}
+              style={{ background: "rgba(3,7,18,0.95)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: "20px", backdropFilter: "blur(20px)", boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(56,189,248,0.1)", padding: "32px", maxWidth: "600px", maxHeight: "80vh", overflowY: "auto" }}
             >
-              {/* Modal Header */}
               <div className="flex items-center justify-between mb-6 gap-4">
                 <div>
-                  <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "4px" }}>
-                    🌍 Global Status Check
-                  </h2>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>
-                    {globalCheckModalData.domain}
-                  </p>
+                  <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "4px" }}>🌍 Global Status Check</h2>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>{globalCheckModalData.domain}</p>
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setGlobalCheckModalData(null)}
-                  style={{
-                    background: "rgba(56,189,248,0.1)",
-                    border: "1px solid rgba(56,189,248,0.2)",
-                    borderRadius: "8px",
-                    padding: "8px 12px",
-                    color: "#38bdf8",
-                    cursor: "pointer",
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: "18px",
-                  }}
-                >
+                <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setGlobalCheckModalData(null)}
+                  style={{ background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: "8px", padding: "8px 12px", color: "#38bdf8", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontSize: "18px" }}>
                   ✕
                 </motion.button>
               </div>
 
-              {/* Global Status */}
               <div className="mb-6 p-4 rounded-xl" style={{ background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.15)" }}>
-                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(56,189,248,0.5)", marginBottom: "8px", letterSpacing: "0.06em" }}>
-                  GLOBAL STATUS
-                </p>
+                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(56,189,248,0.5)", marginBottom: "8px", letterSpacing: "0.06em" }}>GLOBAL STATUS</p>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <StatusBadge status={globalCheckModalData.globalStatus} />
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>
-                    {new Date(globalCheckModalData.checkTimestamp).toLocaleString()}
-                  </span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>{new Date(globalCheckModalData.checkTimestamp).toLocaleString()}</span>
                 </div>
               </div>
 
-              {/* Regional Breakdown */}
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(56,189,248,0.5)", marginBottom: "12px", letterSpacing: "0.06em" }}>
-                REGIONAL BREAKDOWN
-              </p>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(56,189,248,0.5)", marginBottom: "12px", letterSpacing: "0.06em" }}>REGIONAL BREAKDOWN</p>
               <div className="space-y-2">
                 {globalCheckModalData.regionalBreakdown.map((region, idx) => {
                   const statusColors = { UP: "#34d399", DOWN: "#f87171", SLOW: "#fbbf24", UNKNOWN: "#94a3b8" };
-                  const color = statusColors[region.status] || "#94a3b8";
+                  const color        = statusColors[region.status] || "#94a3b8";
                   return (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05 }}
+                    <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
                       className="p-3 rounded-lg transition-all"
-                      style={{
-                        background: `${color}12`,
-                        border: `1px solid ${color}30`,
-                      }}
+                      style={{ background: `${color}12`, border: `1px solid ${color}30` }}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div
-                            style={{
-                              width: "8px",
-                              height: "8px",
-                              borderRadius: "50%",
-                              background: color,
-                              boxShadow: `0 0 8px ${color}`,
-                              flexShrink: 0,
-                            }}
-                          />
+                          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: color, boxShadow: `0 0 8px ${color}`, flexShrink: 0 }} />
                           <div className="flex-1 min-w-0">
-                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", fontWeight: 600, color: color }}>
-                              {region.region}
-                            </p>
-                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>
-                              {region.lastCheckedAt ? new Date(region.lastCheckedAt).toLocaleTimeString() : "Never"}
-                            </p>
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", fontWeight: 600, color }}>{region.region}</p>
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>{region.lastCheckedAt ? new Date(region.lastCheckedAt).toLocaleTimeString() : "Never"}</p>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color, fontWeight: 600 }}>
-                            {region.status}
-                          </p>
-                          {region.responseTimeMs && (
-                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>
-                              {region.responseTimeMs}ms
-                            </p>
-                          )}
-                          {region.statusCode && (
-                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>
-                              HTTP {region.statusCode}
-                            </p>
-                          )}
+                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color, fontWeight: 600 }}>{region.status}</p>
+                          {region.responseTimeMs && <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>{region.responseTimeMs}ms</p>}
+                          {region.statusCode && <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>HTTP {region.statusCode}</p>}
                         </div>
                       </div>
                     </motion.div>
@@ -814,26 +658,8 @@ const UrlTable = forwardRef(({
                 })}
               </div>
 
-              {/* Close Button */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setGlobalCheckModalData(null)}
-                style={{
-                  width: "100%",
-                  marginTop: "24px",
-                  padding: "12px",
-                  borderRadius: "12px",
-                  background: "rgba(56,189,248,0.12)",
-                  border: "1px solid rgba(56,189,248,0.2)",
-                  color: "#38bdf8",
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  letterSpacing: "0.06em",
-                }}
-              >
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setGlobalCheckModalData(null)}
+                style={{ width: "100%", marginTop: "24px", padding: "12px", borderRadius: "12px", background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", fontWeight: 600, cursor: "pointer", letterSpacing: "0.06em" }}>
                 Close
               </motion.button>
             </motion.div>
@@ -845,42 +671,20 @@ const UrlTable = forwardRef(({
       <AnimatePresence>
         {showColumnMenu && (
           <ColumnMenu
-            anchorRef={columnBtnRef}
-            open={showColumnMenu}
-            menuRef={columnMenuRef}
-            filteredColumns={filteredColumns}
-            hiddenColumns={hiddenColumns}
-            toggleColumn={toggleColumn}
-            searchColumn={searchColumn}
-            setSearchColumn={setSearchColumn}
-            DEFAULT_COLUMNS={DEFAULT_COLUMNS}
+            anchorRef={columnBtnRef} open={showColumnMenu} menuRef={columnMenuRef}
+            filteredColumns={filteredColumns} hiddenColumns={hiddenColumns}
+            toggleColumn={toggleColumn} searchColumn={searchColumn}
+            setSearchColumn={setSearchColumn} DEFAULT_COLUMNS={DEFAULT_COLUMNS}
           />
         )}
       </AnimatePresence>
 
       {/* ─── Desktop Table ─── */}
       <div className="hidden lg:block">
-        <div
-          className="rounded-2xl"
-          style={{
-            background: "rgba(3,7,18,0.75)",
-            border: "1px solid rgba(56,189,248,0.1)",
-            backdropFilter: "blur(22px)",
-            boxShadow: "0 0 28px rgba(56,189,248,0.04), inset 0 1px 0 rgba(56,189,248,0.05)",
-          }}
-        >
+        <div className="rounded-2xl" style={{ background: "rgba(3,7,18,0.75)", border: "1px solid rgba(56,189,248,0.1)", backdropFilter: "blur(22px)", boxShadow: "0 0 28px rgba(56,189,248,0.04), inset 0 1px 0 rgba(56,189,248,0.05)" }}>
           <div className="h-[1px]" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.4) 30%, rgba(129,140,248,0.32) 70%, transparent 100%)", flexShrink: 0 }} />
 
-          <div
-            style={{
-              overflowX: "auto",
-              overflowY: "auto",
-              maxHeight: "calc(100vh - 220px)",
-              borderRadius: "0 0 16px 16px",
-              position: "relative",
-              paddingBottom: "8px",
-            }}
-          >
+          <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: "calc(100vh - 220px)", borderRadius: "0 0 16px 16px", position: "relative", paddingBottom: "8px" }}>
             <table className="w-full text-sm" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
               <thead style={{ position: "relative", zIndex: 40 }}>
                 <tr>
@@ -895,21 +699,25 @@ const UrlTable = forwardRef(({
                         <FilterBtn
                           btnRef={domainBtnRef}
                           active={!selectedCategories.includes("ALL") || sortOrder !== "ASC"}
-                          onClick={() => { const next = !showDomainFilter; closeAllFilters(); if (next) setShowDomainFilter(true); }}
+                          onClick={() => {
+                            // Toggling domain filter: close all OTHER filters first, then toggle
+                            closeNonDomainFilters();
+                            setShowColumnMenu(false);
+                            setShowDomainFilter((v) => !v);
+                          }}
                         />
                         <AnimatePresence>
                           {showDomainFilter && (
                             <DomainFilterDropdown
                               anchorRef={domainBtnRef}
+                              dropdownRef={domainDropdownRef}
                               open={showDomainFilter}
                               onClose={() => setShowDomainFilter(false)}
                               categories={categories}
                               selectedCategories={selectedCategories}
-                              toggleCategory={toggleCategory}
-                              removeCategory={removeCategory}
+                              setSelectedCategories={setSelectedCategories}
                               sortOrder={sortOrder}
                               setSortOrder={setSortOrder}
-                              setSelectedCategories={setSelectedCategories}
                               chipStyle={chipStyle}
                             />
                           )}
@@ -932,11 +740,7 @@ const UrlTable = forwardRef(({
                         />
                         <AnimatePresence>
                           {showSslFilter && (
-                            <FilterDropdown
-                              anchorRef={sslBtnRef}
-                              open={showSslFilter}
-                              options={sslOptions}
-                              value={selectedSslStatus}
+                            <FilterDropdown anchorRef={sslBtnRef} open={showSslFilter} options={sslOptions} value={selectedSslStatus}
                               onSelect={(v) => { setSelectedSslStatus(v); setShowSslFilter(false); }}
                               onClear={() => { setSelectedSslStatus("ALL"); setShowSslFilter(false); }}
                             />
@@ -958,11 +762,7 @@ const UrlTable = forwardRef(({
                         />
                         <AnimatePresence>
                           {showStatusFilter && (
-                            <FilterDropdown
-                              anchorRef={statusBtnRef}
-                              open={showStatusFilter}
-                              options={statusOptions}
-                              value={selectedStatus}
+                            <FilterDropdown anchorRef={statusBtnRef} open={showStatusFilter} options={statusOptions} value={selectedStatus}
                               onSelect={(v) => { setSelectedStatus(v); setShowStatusFilter(false); }}
                               onClear={() => { setSelectedStatus("ALL"); setShowStatusFilter(false); }}
                             />
@@ -973,11 +773,7 @@ const UrlTable = forwardRef(({
                   )}
 
                   {/* ── Global Status column ── */}
-                  {!hiddenColumns.includes("globalStatus") && (
-                    <Th>
-                      <span>Global Status</span>
-                    </Th>
-                  )}
+                  {!hiddenColumns.includes("globalStatus") && <Th><span>Global Status</span></Th>}
 
                   {/* ── SuperAdmin columns ── */}
                   {isSuperAdmin && (
@@ -994,11 +790,7 @@ const UrlTable = forwardRef(({
                             />
                             <AnimatePresence>
                               {showRoleFilter && (
-                                <FilterDropdown
-                                  anchorRef={roleBtnRef}
-                                  open={showRoleFilter}
-                                  options={roleOptions}
-                                  value={selectedRole}
+                                <FilterDropdown anchorRef={roleBtnRef} open={showRoleFilter} options={roleOptions} value={selectedRole}
                                   onSelect={(v) => { setSelectedRole(v); setShowRoleFilter(false); }}
                                   onClear={() => { setSelectedRole("ALL"); setShowRoleFilter(false); }}
                                 />
@@ -1010,7 +802,7 @@ const UrlTable = forwardRef(({
                     </>
                   )}
 
-                  {!hiddenColumns.includes("statusCode") && <Th style={{ textAlign: "center" }}>Status Code</Th>}
+                  {!hiddenColumns.includes("statusCode")    && <Th style={{ textAlign: "center" }}>Status Code</Th>}
                   {!hiddenColumns.includes("lastCheckedAt") && <Th>Last Check</Th>}
                   {!isViewer && !hiddenColumns.includes("actions") && <Th style={{ textAlign: "center" }}>Actions</Th>}
                 </tr>
@@ -1020,24 +812,13 @@ const UrlTable = forwardRef(({
                 {sortedData.map((item, i) => (
                   <FragmentRow
                     key={item._id}
-                    item={item}
-                    i={i}
-                    selectionMode={selectionMode}
-                    selectedIds={selectedIds}
-                    setSelectedIds={setSelectedIds}
-                    hiddenColumns={hiddenColumns}
-                    isSuperAdmin={isSuperAdmin}
-                    isViewer={isViewer}
-                    expandedSite={expandedSite}
-                    handleToggleSite={handleToggleSite}
-                    onPin={onPin}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    siteLogs={siteLogs}
-                    theme={theme}
-                    colSpan={visibleColsCount}
-                    handleGlobalCheck={handleGlobalCheck}
-                    globalCheckLoading={globalCheckLoading}
+                    item={item} i={i}
+                    selectionMode={selectionMode} selectedIds={selectedIds} setSelectedIds={setSelectedIds}
+                    hiddenColumns={hiddenColumns} isSuperAdmin={isSuperAdmin} isViewer={isViewer}
+                    expandedSite={expandedSite} handleToggleSite={handleToggleSite}
+                    onPin={onPin} onEdit={onEdit} onDelete={onDelete}
+                    siteLogs={siteLogs} theme={theme} colSpan={visibleColsCount}
+                    handleGlobalCheck={handleGlobalCheck} globalCheckLoading={globalCheckLoading}
                   />
                 ))}
               </tbody>
@@ -1051,16 +832,11 @@ const UrlTable = forwardRef(({
         <select
           aria-label="Filter by category"
           value={selectedCategories[0] || "ALL"}
-          onChange={(e) => {
-            const value = e.target.value;
-            setSelectedCategories(value === "ALL" ? ["ALL"] : [value]);
-          }}
+          onChange={(e) => { const v = e.target.value; setSelectedCategories(v === "ALL" ? ["ALL"] : [v]); }}
           className="flex-1 px-3 py-2.5 rounded-2xl outline-none"
           style={{ background: "rgba(3,7,18,0.75)", border: "1px solid rgba(56,189,248,0.1)", color: "rgba(148,163,184,0.8)", ...monoLabel, fontSize: "10px", backdropFilter: "blur(12px)" }}
         >
-          {categories.map((cat) => (
-            <option key={cat} value={cat} style={{ background: "#030712" }}>{cat}</option>
-          ))}
+          {categories.map((cat) => <option key={cat} value={cat} style={{ background: "#030712" }}>{cat}</option>)}
         </select>
 
         <select
@@ -1070,55 +846,36 @@ const UrlTable = forwardRef(({
           className="flex-1 px-3 py-2.5 rounded-2xl outline-none"
           style={{ background: "rgba(3,7,18,0.75)", border: "1px solid rgba(56,189,248,0.1)", color: "rgba(148,163,184,0.8)", ...monoLabel, fontSize: "10px", backdropFilter: "blur(12px)" }}
         >
-          {statusOptions.map((status) => (
-            <option key={status} value={status} style={{ background: "#030712" }}>{status}</option>
-          ))}
+          {statusOptions.map((status) => <option key={status} value={status} style={{ background: "#030712" }}>{status}</option>)}
         </select>
       </div>
 
       {/* ─── Mobile Card View ─── */}
       <div className="lg:hidden space-y-4">
         {sortedData.map((item, idx) => {
-          const isExpanded = expandedSite === item._id;
+          const isExpanded     = expandedSite === item._id;
           const statusColorMap = { UP: "#34d399", SLOW: "#fbbf24", DOWN: "#f87171" };
-          const accentColor = statusColorMap[item.status] || "rgba(148,163,184,0.3)";
+          const accentColor    = statusColorMap[item.status] || "rgba(148,163,184,0.3)";
 
           return (
-            <motion.div
-              key={item._id}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.04, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div
-                className="relative rounded-2xl overflow-hidden"
-                style={{ background: "rgba(3,7,18,0.75)", border: "1px solid rgba(56,189,248,0.1)", backdropFilter: "blur(20px)", boxShadow: "0 0 24px rgba(56,189,248,0.03)" }}
-              >
+            <motion.div key={item._id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}>
+              <div className="relative rounded-2xl overflow-hidden" style={{ background: "rgba(3,7,18,0.75)", border: "1px solid rgba(56,189,248,0.1)", backdropFilter: "blur(20px)", boxShadow: "0 0 24px rgba(56,189,248,0.03)" }}>
                 <div className="h-[1px]" style={{ background: `linear-gradient(90deg, transparent 0%, ${accentColor}55 40%, transparent 100%)` }} />
                 <div className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: `linear-gradient(to bottom, ${accentColor}70, transparent)` }} />
 
                 <div className="p-5 pl-6">
                   <div className="flex items-center justify-between mb-4">
-                    <button
-                      onClick={() => handleToggleSite(item)}
-                      style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", color: "#38bdf8", fontWeight: 400 }}
-                      className="hover:underline text-left flex items-center gap-2"
-                    >
-                      {item.domain}
-                      <ExpandChevron expanded={isExpanded} />
+                    <button onClick={() => handleToggleSite(item)} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", color: "#38bdf8", fontWeight: 400 }}
+                      className="hover:underline text-left flex items-center gap-2">
+                      {item.domain}<ExpandChevron expanded={isExpanded} />
                     </button>
                     <StatusBadge status={item.status} />
                   </div>
 
-                  <a href={item.url} target="_blank" rel="noreferrer" className="block mb-4 break-all hover:underline" style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)" }}>
-                    {item.url}
-                  </a>
+                  <a href={item.url} target="_blank" rel="noreferrer" className="block mb-4 break-all hover:underline" style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)" }}>{item.url}</a>
 
                   <div className="grid grid-cols-2 gap-3 mb-4">
-                    {[
-                      { label: "Status Code", value: item.statusCode || "--" },
-                      { label: "SSL", value: <SslBadge item={item} /> },
-                    ].map(({ label, value }) => (
+                    {[{ label: "Status Code", value: item.statusCode || "--" }, { label: "SSL", value: <SslBadge item={item} /> }].map(({ label, value }) => (
                       <div key={label} className="rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
                         <div style={{ ...monoLabel, fontSize: "8px", color: "rgba(148,163,184,0.4)", marginBottom: "6px" }}>{label}</div>
                         <div style={{ ...monoLabel, fontSize: "11px", color: "rgba(148,163,184,0.8)" }}>{value}</div>
@@ -1130,12 +887,9 @@ const UrlTable = forwardRef(({
 
                   <div className="flex items-center justify-between">
                     {!isViewer && (
-                      <motion.button
-                        whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                        onClick={() => onEdit(item)}
+                      <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => onEdit(item)}
                         className="px-4 py-2 rounded-xl"
-                        style={{ ...monoLabel, fontSize: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.22)", color: "#38bdf8" }}
-                      >
+                        style={{ ...monoLabel, fontSize: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.22)", color: "#38bdf8" }}>
                         Edit
                       </motion.button>
                     )}
@@ -1149,9 +903,7 @@ const UrlTable = forwardRef(({
               <AnimatePresence>
                 {isExpanded && (
                   <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
+                    initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                     className="mt-3 rounded-2xl overflow-hidden"
                     style={{ background: "rgba(3,7,18,0.68)", border: "1px solid rgba(56,189,248,0.09)", backdropFilter: "blur(16px)" }}
@@ -1181,11 +933,9 @@ const FragmentRow = ({
   return (
     <>
       <motion.tr
-        initial={{ opacity: 0, x: -8 }}
-        animate={{ opacity: 1, x: 0 }}
+        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
         transition={{ delay: i * 0.025, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        role="row"
-        tabIndex={0}
+        role="row" tabIndex={0}
         className="group transition-all duration-200"
         style={{ borderTop: "1px solid rgba(56,189,248,0.045)" }}
         onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(56,189,248,0.03)"; e.currentTarget.style.boxShadow = "inset 2px 0 0 rgba(56,189,248,0.25)"; }}
@@ -1195,13 +945,8 @@ const FragmentRow = ({
           <td className="px-4 py-3">
             <div
               className="w-4 h-4 rounded flex items-center justify-center cursor-pointer transition-all duration-200"
-              style={{
-                border: selectedIds.includes(item._id) ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.1)",
-                background: selectedIds.includes(item._id) ? "rgba(56,189,248,0.15)" : "transparent",
-              }}
-              onClick={() => setSelectedIds((prev) =>
-                prev.includes(item._id) ? prev.filter((id) => id !== item._id) : [...prev, item._id]
-              )}
+              style={{ border: selectedIds.includes(item._id) ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.1)", background: selectedIds.includes(item._id) ? "rgba(56,189,248,0.15)" : "transparent" }}
+              onClick={() => setSelectedIds((prev) => prev.includes(item._id) ? prev.filter((id) => id !== item._id) : [...prev, item._id])}
             >
               {selectedIds.includes(item._id) && <span style={{ color: "#38bdf8", fontSize: "8px" }}>✓</span>}
             </div>
@@ -1215,16 +960,11 @@ const FragmentRow = ({
         {!hiddenColumns.includes("domain") && (
           <td className="px-4 py-3">
             <div className="flex items-center gap-2">
-              {item.pinned && (
-                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ color: "rgba(56,189,248,0.6)", fontSize: "11px" }}>📌</motion.span>
-              )}
-              <button
-                onClick={() => handleToggleSite(item)}
+              {item.pinned && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ color: "rgba(56,189,248,0.6)", fontSize: "11px" }}>📌</motion.span>}
+              <button onClick={() => handleToggleSite(item)}
                 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "#38bdf8", letterSpacing: "0.02em", fontWeight: 400 }}
-                className="hover:underline text-left flex items-center gap-1.5"
-              >
-                {item.domain}
-                <ExpandChevron expanded={expandedSite === item._id} />
+                className="hover:underline text-left flex items-center gap-1.5">
+                {item.domain}<ExpandChevron expanded={expandedSite === item._id} />
               </button>
             </div>
           </td>
@@ -1232,9 +972,7 @@ const FragmentRow = ({
 
         {!hiddenColumns.includes("url") && (
           <td className="px-4 py-3 max-w-xs">
-            <a href={item.url} target="_blank" rel="noreferrer" className="hover:underline truncate block" style={{ ...monoLabel, fontSize: "10px", color: "rgba(56,189,248,0.5)" }}>
-              {item.url}
-            </a>
+            <a href={item.url} target="_blank" rel="noreferrer" className="hover:underline truncate block" style={{ ...monoLabel, fontSize: "10px", color: "rgba(56,189,248,0.5)" }}>{item.url}</a>
           </td>
         )}
 
@@ -1251,27 +989,15 @@ const FragmentRow = ({
             <div className="flex items-center gap-2">
               <StatusBadge status={item.globalStatus || "UNKNOWN"} />
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
                 onClick={() => handleGlobalCheck(item._id)}
                 disabled={globalCheckLoading === item._id}
                 title="Manual Global Check"
                 className="w-5 h-5 flex items-center justify-center rounded transition-all"
-                style={{
-                  background: globalCheckLoading === item._id ? "rgba(56,189,248,0.2)" : "rgba(56,189,248,0.08)",
-                  border: "1px solid rgba(56,189,248,0.2)",
-                  color: globalCheckLoading === item._id ? "#38bdf8" : "rgba(56,189,248,0.6)",
-                  cursor: globalCheckLoading === item._id ? "wait" : "pointer",
-                }}
+                style={{ background: globalCheckLoading === item._id ? "rgba(56,189,248,0.2)" : "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.2)", color: globalCheckLoading === item._id ? "#38bdf8" : "rgba(56,189,248,0.6)", cursor: globalCheckLoading === item._id ? "wait" : "pointer" }}
               >
                 {globalCheckLoading === item._id ? (
-                  <motion.span
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    style={{ fontSize: "10px" }}
-                  >
-                    ⟳
-                  </motion.span>
+                  <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} style={{ fontSize: "10px" }}>⟳</motion.span>
                 ) : (
                   <span style={{ fontSize: "10px" }}>🌍</span>
                 )}
@@ -1282,21 +1008,15 @@ const FragmentRow = ({
 
         {isSuperAdmin && (
           <>
-            {!hiddenColumns.includes("userEmail") && (
-              <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(148,163,184,0.5)" }}>{item.ownerEmail || "--"}</td>
-            )}
-            {!hiddenColumns.includes("userRole") && (
-              <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(148,163,184,0.6)" }}>{item.ownerRole || "--"}</td>
-            )}
+            {!hiddenColumns.includes("userEmail") && <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(148,163,184,0.5)" }}>{item.ownerEmail || "--"}</td>}
+            {!hiddenColumns.includes("userRole")  && <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(148,163,184,0.6)" }}>{item.ownerRole  || "--"}</td>}
           </>
         )}
 
         {!hiddenColumns.includes("statusCode") && (
           <td className="px-4 py-3 text-center" style={{ ...monoLabel, fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>
             {item.statusCode ? (
-              <span style={{ color: item.statusCode >= 200 && item.statusCode < 300 ? "#34d399" : item.statusCode >= 400 ? "#f87171" : "rgba(148,163,184,0.6)" }}>
-                {item.statusCode}
-              </span>
+              <span style={{ color: item.statusCode >= 200 && item.statusCode < 300 ? "#34d399" : item.statusCode >= 400 ? "#f87171" : "rgba(148,163,184,0.6)" }}>{item.statusCode}</span>
             ) : "--"}
           </td>
         )}
@@ -1329,9 +1049,7 @@ const FragmentRow = ({
           <tr>
             <td colSpan={colSpan} style={{ padding: 0 }}>
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
+                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                 style={{ background: "rgba(56,189,248,0.018)", borderTop: "1px solid rgba(56,189,248,0.09)", borderBottom: "1px solid rgba(56,189,248,0.09)" }}
               >

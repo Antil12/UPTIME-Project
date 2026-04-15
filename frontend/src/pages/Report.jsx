@@ -409,23 +409,62 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                     style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", color: "white", fontFamily: "'JetBrains Mono', monospace" }}
                   />
                 </div>
+{/* ── Range Selector (Upgraded UI) ── */}
+<div className="flex items-center gap-2 flex-wrap">
 
-                {/* Range */}
-                <div className="relative min-w-[180px]">
-                  <CalendarRange size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-400/60 pointer-events-none" />
-                  <select
-                    value={range}
-                    onChange={(e) => handleRangeChange(e.target.value)}
-                    className="w-full pl-9 pr-9 py-2.5 rounded-lg outline-none text-sm appearance-none"
-                    style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", color: "white", fontFamily: "'JetBrains Mono', monospace" }}
-                  >
-                    <option value="24h" className="bg-gray-900 text-white">Last 24 Hours</option>
-                    <option value="7d" className="bg-gray-900 text-white">Last 7 Days</option>
-                    <option value="30d" className="bg-gray-900 text-white">Last 30 Days</option>
-                    <option value="custom" className="bg-gray-900 text-white">Custom Range</option>
-                  </select>
-                </div>
-              </div>
+  {[
+    { key: "24h", label: "24H" },
+    { key: "7d", label: "7D" },
+    { key: "30d", label: "30D" },
+    { key: "custom", label: "CUSTOM" },
+  ].map((item) => {
+    const active = range === item.key;
+
+    return (
+      <motion.button
+        key={item.key}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => handleRangeChange(item.key)}
+        className="relative px-4 py-2 rounded-lg overflow-hidden"
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "11px",
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: active ? "#38bdf8" : "rgba(148,163,184,0.6)",
+          border: active
+            ? "1px solid rgba(56,189,248,0.3)"
+            : "1px solid rgba(56,189,248,0.07)",
+          background: active
+            ? "rgba(56,189,248,0.12)"
+            : "rgba(255,255,255,0.02)",
+        }}
+      >
+        {/* Glow effect */}
+        {active && (
+          <motion.div
+            layoutId="rangeGlow"
+            className="absolute inset-0 rounded-lg"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(56,189,248,0.15), rgba(129,140,248,0.15))",
+              filter: "blur(8px)",
+              zIndex: 0,
+            }}
+          />
+        )}
+
+        <span className="relative z-10 flex items-center gap-2">
+          <CalendarRange size={12} className={active ? "text-sky-400" : "text-slate-400"} />
+          {item.label}
+        </span>
+      </motion.button>
+    );
+  })}
+
+</div>
+</div>
 
               {/* Export */}
               <div className="relative z-[9999] overflow-visible self-start">
@@ -441,39 +480,86 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
             </div>
 
             {/* Custom Range Picker */}
-            {range === "custom" && (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                className="mt-4 rounded-lg p-3"
-                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.05)" }}
-              >
-                <div className="flex flex-col md:flex-row md:items-end gap-3">
-                  {[
-                    { label: "From", val: tempFrom, set: setTempFrom },
-                    { label: "To", val: tempTo, set: setTempTo },
-                  ].map(({ label, val, set }) => (
-                    <div key={label} className="flex flex-col text-sm">
-                      <label className="mb-1.5" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.55)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                        {label}
-                      </label>
-                      <input
-                        type="date" value={val} onChange={(e) => set(e.target.value)}
-                        className="px-3 py-2.5 rounded-lg outline-none text-sm"
-                        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", color: "white", fontFamily: "'JetBrains Mono', monospace" }}
-                      />
-                    </div>
-                  ))}
-                  <motion.button
-                    whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.98 }}
-                    onClick={applyCustomRange}
-                    className="px-4 py-2.5 rounded-lg text-xs text-white"
-                    style={{ background: "rgba(14,165,233,0.16)", border: "1px solid rgba(56,189,248,0.16)", boxShadow: "0 0 12px rgba(56,189,248,0.04)", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.08em", textTransform: "uppercase" }}
-                  >
-                    Apply
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
+           {range === "custom" && (
+  <motion.div
+    initial={{ opacity: 0, y: 6 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="mt-3 rounded-lg px-3 py-3"
+    style={{
+      background: "rgba(3,7,18,0.65)",
+      border: "1px solid rgba(56,189,248,0.06)",
+      backdropFilter: "blur(14px)",
+    }}
+  >
+    <div className="flex flex-col sm:flex-row items-end gap-2.5">
+
+      {/* Inputs */}
+      {[ 
+        { label: "FROM", val: tempFrom, set: setTempFrom },
+        { label: "TO", val: tempTo, set: setTempTo }
+      ].map((f) => (
+        <div key={f.label} className="flex flex-col flex-1 min-w-[120px]">
+
+          <label
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "8px",
+              color: "rgba(148,163,184,0.45)",
+              letterSpacing: "0.14em",
+              marginBottom: "4px",
+            }}
+          >
+            {f.label}
+          </label>
+
+          <div className="relative">
+            <input
+              type="date"
+              value={f.val}
+              onChange={(e) => f.set(e.target.value)}
+              className="w-full px-2.5 py-2 rounded-md outline-none text-[11px]"
+              style={{
+                background: "rgba(255,255,255,0.015)",
+                border: "1px solid rgba(56,189,248,0.06)",
+                color: "rgba(226,232,240,0.9)",
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            />
+
+            {/* subtle focus glow */}
+            <div
+              className="pointer-events-none absolute inset-0 rounded-md opacity-0 focus-within:opacity-100 transition"
+              style={{
+                boxShadow: "0 0 0 1px rgba(56,189,248,0.25), 0 0 8px rgba(56,189,248,0.12)",
+              }}
+            />
+          </div>
+        </div>
+      ))}
+
+      {/* Apply Button */}
+      <motion.button
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.96 }}
+        onClick={applyCustomRange}
+        className="h-[34px] px-4 rounded-md flex items-center justify-center"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(56,189,248,0.18), rgba(129,140,248,0.18))",
+          border: "1px solid rgba(56,189,248,0.22)",
+          color: "#38bdf8",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "10px",
+          letterSpacing: "0.12em",
+          whiteSpace: "nowrap",
+        }}
+      >
+        APPLY
+      </motion.button>
+
+    </div>
+  </motion.div>
+)}
           </motion.div>
 
           {/* ── Page Info Bar ───────────────────────────────────────────────── */}

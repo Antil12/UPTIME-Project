@@ -108,8 +108,13 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Backend is running" });
 });
 
-// Apply authLimiter to refresh-token and signup only (login is excluded)
-app.use("/api/auth/refresh-token", authLimiter);
+// API root endpoint
+app.get("/api", (req, res) => {
+  res.json({ message: "API is running" });
+});
+
+// Apply authLimiter only to endpoints that need brute-force protection.
+app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/signup", authLimiter);
 
 app.use("/api/auth", authRoutes);

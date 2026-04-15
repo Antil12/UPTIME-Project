@@ -2,43 +2,43 @@ import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 
 const createAccessToken = (user) => {
-  return jwt.sign({ id: user._id, role: user.role  }, process.env.JWT_SECRET, {
-    expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m",
-  });
+  return jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m" }
+  );
 };
 
 const createRefreshToken = (user) => {
-  return jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "7d",
-  });
+  return jwt.sign(
+    { id: user._id },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "7d" }
+  );
 };
 
 const sendRefreshTokenCookie = (res, token) => {
-  const cookieOptions = {
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookie("refreshToken", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/api/auth/",
-  
-  };
-
-  res.cookie("refreshToken", token, cookieOptions);
+    secure: isProd,
+    sameSite: "none",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
 };
-
-
 
 // ================= LOGIN =================
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
     const user = await User.findOne({ email });
+
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
     const isMatch = await user.matchPassword(password);
-
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
@@ -52,7 +52,12 @@ export const login = async (req, res) => {
     sendRefreshTokenCookie(res, refreshToken);
 
     res.json({
-      user: { id: user._id, name: user.name, email: user.email,role: user.role   },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
       accessToken,
     });
   } catch (error) {
@@ -64,8 +69,12 @@ export const login = async (req, res) => {
 // ================= REFRESH TOKEN =================
 export const refreshToken = async (req, res) => {
   try {
+    // Cookie is sent to "/" so it will always be present here
     const token = req.cookies?.refreshToken || req.body?.refreshToken;
-    if (!token) return res.status(401).json({ message: "No refresh token" });
+
+    if (!token) {
+      return res.status(401).json({ message: "No refresh token" });
+    }
 
     let decoded;
     try {
@@ -79,19 +88,19 @@ export const refreshToken = async (req, res) => {
       return res.status(401).json({ message: "Invalid refresh token" });
     }
 
-    if (user.refreshToken !== token) {
-      user.refreshToken = undefined;
-      await user.save();
-      return res.status(401).json({ message: "Refresh token revoked" });
+    if (!user.refreshToken) {
+      return res.status(401).json({ message: "Invalid refresh token" });
     }
 
+    if (user.refreshToken !== token) {
+      console.warn(
+        `[Auth] Refresh token mismatch for user ${user._id} — accepting valid refresh token while refresh is still enabled.`
+      );
+    }
+
+    // Issue a new access token and refresh the cookie expiry using the same token.
     const newAccessToken = createAccessToken(user);
-    const newRefreshToken = createRefreshToken(user);
-
-    user.refreshToken = newRefreshToken;
-    await user.save();
-
-    sendRefreshTokenCookie(res, newRefreshToken);
+    sendRefreshTokenCookie(res, token);
 
     res.json({ accessToken: newAccessToken });
   } catch (error) {
@@ -114,11 +123,18 @@ export const logout = async (req, res) => {
           await user.save();
         }
       } catch (err) {
-        // ignore invalid token
+        // ignore invalid token on logout
       }
     }
 
-    res.clearCookie("refreshToken", { path: "/api/auth/" });
+    const isProd = process.env.NODE_ENV === "production";
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "none",
+      path: "/",
+    });
+
     res.json({ message: "Logged out" });
   } catch (error) {
     console.error("Auth error (logout):", error);

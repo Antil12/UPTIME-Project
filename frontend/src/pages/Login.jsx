@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
+import { scheduleProactiveRefresh } from "../api/setupAxios"; // ← NEW
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -44,10 +45,9 @@ const CursorGlow = () => {
   );
 };
 
-// ─── Background Layers (shared with splash) ───────────────────────────────────
+// ─── Background Layers ────────────────────────────────────────────────────────
 const Background = () => (
   <>
-    {/* Atmo glows */}
     <div className="pointer-events-none absolute inset-0 z-0" style={{
       background: "radial-gradient(ellipse 70% 50% at 50% 30%, rgba(56,189,248,0.05) 0%, transparent 100%)",
     }} />
@@ -61,15 +61,11 @@ const Background = () => (
       background: "radial-gradient(ellipse, rgba(16,185,129,0.03) 0%, transparent 65%)",
       filter: "blur(70px)",
     }} />
-
-    {/* Fine grid */}
     <div className="pointer-events-none absolute inset-0 z-0" style={{
       backgroundImage:
         "linear-gradient(rgba(148,163,184,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.035) 1px, transparent 1px)",
       backgroundSize: "40px 40px",
     }} />
-
-    {/* Perspective floor grid */}
     <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0" style={{ height: "40%", overflow: "hidden" }}>
       <svg width="100%" height="100%" viewBox="0 0 1200 380" preserveAspectRatio="none"
         xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.07 }}>
@@ -87,8 +83,6 @@ const Background = () => (
         background: "linear-gradient(to bottom, #030712 0%, transparent 45%)",
       }} />
     </div>
-
-    {/* Scanline sweep */}
     <motion.div
       className="pointer-events-none absolute inset-0 z-[2]"
       style={{
@@ -185,32 +179,24 @@ const OrbitRing = ({ radius, duration, dotCount, color, delay = 0, tilt = 70 }) 
 );
 
 // ─── Card HUD Frame ───────────────────────────────────────────────────────────
-// Decorative bracket corners drawn directly on the card edges
 const CardHUD = () => (
   <>
-    {/* Top bar accent */}
     <div className="absolute top-0 left-0 right-0 h-[1px]"
       style={{ background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.5) 30%, rgba(129,140,248,0.5) 70%, transparent 100%)" }} />
-    {/* Bottom bar */}
     <div className="absolute bottom-0 left-0 right-0 h-[1px]"
       style={{ background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.2) 50%, transparent 100%)" }} />
-
-    {/* Corner accents — top-left */}
     <div className="absolute top-0 left-0 w-5 h-5">
       <div className="absolute top-0 left-0 w-full h-[2px] bg-sky-400/70" />
       <div className="absolute top-0 left-0 h-full w-[2px] bg-sky-400/70" />
     </div>
-    {/* top-right */}
     <div className="absolute top-0 right-0 w-5 h-5">
       <div className="absolute top-0 right-0 w-full h-[2px] bg-sky-400/70" />
       <div className="absolute top-0 right-0 h-full w-[2px] bg-sky-400/70" />
     </div>
-    {/* bottom-left */}
     <div className="absolute bottom-0 left-0 w-5 h-5">
       <div className="absolute bottom-0 left-0 w-full h-[2px] bg-sky-400/40" />
       <div className="absolute bottom-0 left-0 h-full w-[2px] bg-sky-400/40" />
     </div>
-    {/* bottom-right */}
     <div className="absolute bottom-0 right-0 w-5 h-5">
       <div className="absolute bottom-0 right-0 w-full h-[2px] bg-sky-400/40" />
       <div className="absolute bottom-0 right-0 h-full w-[2px] bg-sky-400/40" />
@@ -239,7 +225,6 @@ const HUDInput = ({ label, type = "text", value, onChange, required, rightSlot, 
         {label}
       </label>
       <div className="relative">
-        {/* focus glow underline */}
         <motion.div
           className="absolute bottom-0 left-0 h-[1px] rounded-full"
           animate={{ width: focused ? "100%" : "0%", opacity: focused ? 1 : 0 }}
@@ -319,10 +304,17 @@ const Login = ({ onLogin }) => {
         { email, password },
         { withCredentials: true }
       );
-      localStorage.setItem("loginToken", res.data.accessToken);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+
+      const { accessToken, user } = res.data;
+
+      localStorage.setItem("loginToken", accessToken);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // ── Start the proactive refresh timer immediately after login ──
+      scheduleProactiveRefresh(accessToken);
+
       setLoginSuccess(true);
-      setTimeout(() => onLogin(res.data.user), 900);
+      setTimeout(() => onLogin(user), 900);
     } catch (err) {
       setError(err.response?.data?.message || "Authentication failed");
       setLoading(false);
@@ -338,21 +330,17 @@ const Login = ({ onLogin }) => {
         <CursorGlow />
         <Background />
 
-        {/* Orbit rings — same as splash, just fewer */}
         <OrbitRing radius={240} duration={16} dotCount={8} color="#38bdf8" tilt={72} />
         <OrbitRing radius={310} duration={26} dotCount={12} color="#818cf8" tilt={68} delay={1} />
 
-        {/* Floating glyphs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {Array.from({ length: 30 }).map((_, i) => <FloatingGlyph key={i} i={i} />)}
         </div>
 
-        {/* Page-level HUD corners */}
         {["tl", "tr", "bl", "br"].map((p, i) => (
           <HUDCorner key={p} pos={p} delay={0.1 + i * 0.05} />
         ))}
 
-        {/* Timestamp — top right */}
         <motion.div
           className="absolute top-6 right-10 z-20"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
@@ -361,7 +349,6 @@ const Login = ({ onLogin }) => {
           {new Date().toISOString().replace("T", " ").slice(0, 19)} UTC
         </motion.div>
 
-        {/* Bottom left status */}
         <motion.div
           className="absolute bottom-6 left-8 z-20"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
@@ -369,7 +356,6 @@ const Login = ({ onLogin }) => {
           <StatusDot color="#34d399" label="Auth Service Online" />
         </motion.div>
 
-        {/* Bottom right version */}
         <motion.div
           className="absolute bottom-6 right-8 z-20"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
@@ -389,7 +375,6 @@ const Login = ({ onLogin }) => {
               exit={{ opacity: 0, scale: 1.08, filter: "blur(10px) brightness(2)", y: -20 }}
               transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
             >
-              {/* Card body */}
               <div
                 className="relative overflow-hidden"
                 style={{
@@ -403,14 +388,12 @@ const Login = ({ onLogin }) => {
               >
                 <CardHUD />
 
-                {/* Header */}
                 <motion.div
                   className="mb-8"
                   initial={{ opacity: 0, y: -12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.25, duration: 0.55 }}
                 >
-                  {/* Eyebrow */}
                   <div className="flex items-center gap-2.5 mb-4">
                     <motion.div className="h-[1px] bg-sky-400/30"
                       initial={{ width: 0 }} animate={{ width: 20 }}
@@ -429,7 +412,6 @@ const Login = ({ onLogin }) => {
                       transition={{ delay: 0.5, duration: 0.5, transformOrigin: "left" }} />
                   </div>
 
-                  {/* Title */}
                   <h1 style={{
                     fontFamily: "'Orbitron', sans-serif",
                     fontWeight: 900,
@@ -453,7 +435,6 @@ const Login = ({ onLogin }) => {
                   </p>
                 </motion.div>
 
-                {/* Divider */}
                 <motion.div
                   className="flex items-center gap-3 mb-7"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
@@ -463,7 +444,6 @@ const Login = ({ onLogin }) => {
                   <div className="flex-1 h-[1px]" style={{ background: "linear-gradient(90deg, rgba(56,189,248,0.15), transparent)" }} />
                 </motion.div>
 
-                {/* Error message */}
                 <AnimatePresence>
                   {error && (
                     <motion.div
@@ -481,7 +461,6 @@ const Login = ({ onLogin }) => {
                         alignItems: "center",
                         gap: "10px",
                       }}>
-                        {/* Error icon */}
                         <div style={{
                           width: 6, height: 6, borderRadius: "50%",
                           background: "#f87171", flexShrink: 0,
@@ -500,7 +479,6 @@ const Login = ({ onLogin }) => {
                   )}
                 </AnimatePresence>
 
-                {/* Form */}
                 <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                   <HUDInput
                     label="Identifier / Email"
@@ -543,7 +521,6 @@ const Login = ({ onLogin }) => {
                     }
                   />
 
-                  {/* Submit button */}
                   <motion.button
                     type="submit"
                     disabled={loading}
@@ -573,7 +550,6 @@ const Login = ({ onLogin }) => {
                       boxShadow: loading ? "none" : "0 0 30px rgba(56,189,248,0.08), inset 0 1px 0 rgba(56,189,248,0.15)",
                     }}
                   >
-                    {/* Button shimmer on hover */}
                     <motion.div
                       className="absolute inset-0 pointer-events-none"
                       style={{
@@ -606,7 +582,6 @@ const Login = ({ onLogin }) => {
                   </motion.button>
                 </form>
 
-                {/* Footer row */}
                 <motion.div
                   className="flex items-center justify-between mt-6"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}
@@ -624,7 +599,6 @@ const Login = ({ onLogin }) => {
                 </motion.div>
               </div>
 
-              {/* Card outer glow pulse */}
               <motion.div
                 className="absolute inset-0 rounded-xl pointer-events-none"
                 style={{ border: "1px solid rgba(56,189,248,0.08)", borderRadius: "12px" }}
@@ -633,7 +607,6 @@ const Login = ({ onLogin }) => {
               />
             </motion.div>
           ) : (
-            /* ── Success state ── */
             <motion.div
               key="success"
               className="relative z-10 flex flex-col items-center gap-5"
@@ -641,7 +614,6 @@ const Login = ({ onLogin }) => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             >
-              {/* Animated ring */}
               <div className="relative w-20 h-20">
                 <motion.div
                   className="absolute inset-0 rounded-full"

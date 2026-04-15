@@ -23,7 +23,7 @@ import {
   ShieldCheck,
   Settings2,
 } from "lucide-react";
-
+ 
 // ─── Font Loader ──────────────────────────────────────────────────────────────
 const FontLoader = () => {
   useEffect(() => {
@@ -31,26 +31,26 @@ const FontLoader = () => {
     const link = document.createElement("link");
     link.id = "uptime-fonts";
     link.href =
-      "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;700&display=swap";
+      "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;700&display=swap%22";
     link.rel = "stylesheet";
     document.head.appendChild(link);
   }, []);
   return null;
 };
-
+ 
 // ─── Cursor Glow ──────────────────────────────────────────────────────────────
 const CursorGlow = () => {
   const x = useMotionValue(-400);
   const y = useMotionValue(-400);
   const sx = useSpring(x, { stiffness: 90, damping: 24 });
   const sy = useSpring(y, { stiffness: 90, damping: 24 });
-
+ 
   useEffect(() => {
     const fn = (e) => { x.set(e.clientX); y.set(e.clientY); };
     window.addEventListener("mousemove", fn);
     return () => window.removeEventListener("mousemove", fn);
   }, [x, y]);
-
+ 
   return (
     <motion.div
       className="pointer-events-none fixed z-0"
@@ -63,7 +63,7 @@ const CursorGlow = () => {
     />
   );
 };
-
+ 
 // ─── Full Page Background ─────────────────────────────────────────────────────
 const Background = () => (
   <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
@@ -81,7 +81,7 @@ const Background = () => (
     />
   </div>
 );
-
+ 
 // ─── HUD Corner Brackets ─────────────────────────────────────────────────────
 const HUDCorner = ({ pos, delay = 0 }) => {
   const cls = { tl: "top-4 left-4", tr: "top-4 right-4", bl: "bottom-4 left-4", br: "bottom-4 right-4" };
@@ -99,7 +99,7 @@ const HUDCorner = ({ pos, delay = 0 }) => {
     </motion.div>
   );
 };
-
+ 
 // ─── Orbit Ring ───────────────────────────────────────────────────────────────
 const OrbitRing = ({ radius, duration, dotCount, color, delay = 0, tilt = 70 }) => (
   <motion.div
@@ -125,7 +125,7 @@ const OrbitRing = ({ radius, duration, dotCount, color, delay = 0, tilt = 70 }) 
     })}
   </motion.div>
 );
-
+ 
 // ─── Status Dot ───────────────────────────────────────────────────────────────
 const StatusDot = ({ color = "#34d399", label }) => (
   <div className="flex items-center gap-2">
@@ -140,7 +140,7 @@ const StatusDot = ({ color = "#34d399", label }) => (
     )}
   </div>
 );
-
+ 
 // ─── HUD Stat Card ────────────────────────────────────────────────────────────
 const HudStatCard = ({ icon: Icon, label, value, accentColor = "#38bdf8", onClick, index = 0, sublabel }) => (
   <motion.div
@@ -171,7 +171,7 @@ const HudStatCard = ({ icon: Icon, label, value, accentColor = "#38bdf8", onClic
     </div>
   </motion.div>
 );
-
+ 
 // ─── Ticker / Live Feed Bar ───────────────────────────────────────────────────
 const LiveTicker = ({ urls }) => {
   const downSites = urls.filter((u) => u.status === "DOWN");
@@ -198,7 +198,7 @@ const LiveTicker = ({ urls }) => {
     </div>
   );
 };
-
+ 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = ({
   urls,
@@ -222,23 +222,23 @@ const Dashboard = ({
 }) => {
   const uptimePercent =
     urls.length === 0 ? "0%" : `${Math.round((upSites.length / urls.length) * 100)}%`;
-
+ 
   const [popupOpen, setPopupOpen] = useState(false);
   const [filter, setFilter] = useState("24h");
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const isViewer = currentUser?.role === "VIEWER";
-
+ 
   const [selectedCategories, setSelectedCategories] = useState(["ALL"]);
   const [categories, setCategories] = useState(["ALL"]);
   const [uptimeData, setUptimeData] = useState(null);
   const [selectedSslStatus, setSelectedSslStatus] = useState("ALL");
-
+ 
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const columnBtnRef = useRef(null);
   const urlTableRef = useRef(null);
-
+ 
   useEffect(() => {
     if (!popupOpen) return;
     const fetchUptimeAnalytics = async () => {
@@ -251,7 +251,7 @@ const Dashboard = ({
     };
     fetchUptimeAnalytics();
   }, [filter, popupOpen]);
-
+ 
   useEffect(() => {
     const uniqueCategories = [
       "ALL",
@@ -259,12 +259,12 @@ const Dashboard = ({
     ];
     setCategories(uniqueCategories);
   }, [urls]);
-
+ 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
     if (user) setCurrentUser(user);
   }, []);
-
+ 
   useEffect(() => {
     if (urlTableRef.current) {
       const handle = urlTableRef.current;
@@ -274,12 +274,12 @@ const Dashboard = ({
       }
     }
   }, [showColumnMenu]);
-
+ 
   const filtersActive =
     !selectedCategories.includes("ALL") ||
     selectedStatus !== "ALL" ||
     selectedSslStatus !== "ALL";
-
+ 
   let tableRows;
   if (filtersActive) {
     tableRows = urls.filter((u) => {
@@ -294,34 +294,34 @@ const Dashboard = ({
   } else {
     tableRows = filteredUrls;
   }
-
+ 
   const globalUpSites = urls.filter((u) => u.status === "UP" || u.status === "SLOW");
   const globalDownSites = urls.filter((u) => u.status === "DOWN");
   const sslIssues = urls.filter((u) => u.sslStatus === "EXPIRING" || u.sslStatus === "ERROR");
-
+ 
   const handleColumnBtnClick = () => {
     if (urlTableRef.current) {
       urlTableRef.current.toggleColumnMenu();
       setShowColumnMenu((v) => !v);
     }
   };
-
+ 
   return (
     <>
       <FontLoader />
       <Background />
       <CursorGlow />
-
+ 
       <OrbitRing radius={220} duration={22} dotCount={8} color="#38bdf8" tilt={72} />
       <OrbitRing radius={290} duration={34} dotCount={12} color="#818cf8" tilt={66} delay={1.2} />
       <OrbitRing radius={155} duration={15} dotCount={5} color="#34d399" tilt={74} delay={0.5} />
-
+ 
       {["tl", "tr", "bl", "br"].map((p, i) => (
         <HUDCorner key={p} pos={p} delay={0.1 + i * 0.06} />
       ))}
-
+ 
       <main className="relative z-10 px-4 sm:px-6 lg:px-8 py-5 max-w-[1500px] mx-auto space-y-4">
-
+ 
         {/* ─── Header ─── */}
         <motion.div
           initial={{ opacity: 0, y: -14 }}
@@ -344,7 +344,7 @@ const Dashboard = ({
               {new Date().toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
             </div>
           </div>
-
+ 
           <div className="flex items-center gap-4">
             {downSites.length > 0 && (
               <motion.div
@@ -361,14 +361,14 @@ const Dashboard = ({
             )}
           </div>
         </motion.div>
-
+ 
         {/* ─── Live Ticker ─── */}
         {urls.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15, duration: 0.45 }}>
             <LiveTicker urls={urls} />
           </motion.div>
         )}
-
+ 
         {/* ─── Stat Cards ─── */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <HudStatCard
@@ -396,44 +396,121 @@ const Dashboard = ({
             onClick={() => setPopupOpen(true)}
           />
         </section>
-
+ 
         {/* ─── Secondary Stat Row ─── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35, duration: 0.45 }}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+        {/* ─── Secondary Stat Row ─── */}
+<motion.div
+  initial={{ opacity: 0, y: 10 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: 0.35, duration: 0.45 }}
+  className="w-full"
+>
+  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+    {[
+      {
+        label: "SSL Issues",
+        value: sslIssues.length,
+        color: sslIssues.length > 0 ? "#fbbf24" : "#34d399",
+        icon: ShieldCheck,
+        sub:
+          sslIssues.length > 0
+            ? `${sslIssues.length} certs expiring/erroring`
+            : "All certs healthy",
+      },
+      {
+        label: "Categories",
+        value: categories.length - 1,
+        color: "#38bdf8",
+        icon: Globe2,
+        sub: "Monitored groups",
+      },
+      {
+        label: "Slow Sites",
+        value: urls.filter((u) => u.status === "SLOW").length,
+        color: "#fbbf24",
+        icon: Wifi,
+        sub: "Latency detected",
+      },
+    ].map((stat) => (
+      <motion.div
+        key={stat.label}
+        whileHover={{ y: -2 }}
+        className="
+          flex items-center gap-2 sm:gap-3
+          px-2 py-2 sm:px-4 sm:py-3
+          rounded-xl sm:rounded-2xl
+        "
+        style={{
+          background: "rgba(3,7,18,0.64)",
+          border: `1px solid ${stat.color}10`,
+          backdropFilter: "blur(15px)",
+        }}
+      >
+        {/* ICON */}
+        <div
+          className="
+            w-6 h-6 sm:w-8 sm:h-8
+            rounded-lg sm:rounded-xl
+            flex items-center justify-center
+          "
+          style={{
+            background: `${stat.color}09`,
+            border: `1px solid ${stat.color}18`,
+          }}
         >
-          {[
-            {
-              label: "SSL Issues",
-              value: sslIssues.length,
-              color: sslIssues.length > 0 ? "#fbbf24" : "#34d399",
-              icon: ShieldCheck,
-              sub: sslIssues.length > 0 ? `${sslIssues.length} certs expiring/erroring` : "All certs healthy",
-            },
-            { label: "Categories", value: categories.length - 1, color: "#38bdf8", icon: Globe2, sub: "Monitored groups" },
-            { label: "Slow Sites", value: urls.filter((u) => u.status === "SLOW").length, color: "#fbbf24", icon: Wifi, sub: "Latency detected" },
-          ].map((stat) => (
-            <motion.div
-              key={stat.label} whileHover={{ y: -2 }}
-              className="flex items-center gap-3 px-4 py-3 rounded-2xl"
-              style={{ background: "rgba(3,7,18,0.64)", border: `1px solid ${stat.color}10`, backdropFilter: "blur(15px)" }}
+          <stat.icon
+            size={12}
+            className="sm:hidden"
+            style={{ color: stat.color }}
+          />
+          <stat.icon
+            size={14}
+            className="hidden sm:block"
+            style={{ color: stat.color }}
+          />
+        </div>
+ 
+        {/* TEXT */}
+        <div className="min-w-0">
+          <div
+            className="text-[7px] sm:text-[8px]"
+            style={{
+              fontFamily: "'JetBrains Mono'",
+              color: "rgba(148,163,184,0.45)",
+            }}
+          >
+            {stat.label}
+          </div>
+ 
+          <div className="flex items-baseline gap-1 sm:gap-2 mt-0.5">
+            <span
+              className="text-[13px] sm:text-[18px]"
+              style={{
+                fontFamily: "'Orbitron'",
+                fontWeight: 700,
+                color: "white",
+              }}
             >
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${stat.color}09`, border: `1px solid ${stat.color}18` }}>
-                <stat.icon size={14} style={{ color: stat.color }} />
-              </div>
-              <div className="min-w-0">
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(148,163,184,0.45)", letterSpacing: "0.13em", textTransform: "uppercase" }}>{stat.label}</div>
-                <div className="flex items-baseline gap-2 mt-0.5">
-                  <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "18px", color: "white" }}>{stat.value}</span>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: `${stat.color}60` }}>{stat.sub}</span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-
+              {stat.value}
+            </span>
+ 
+            {/* Hide sub text on mobile to save space */}
+            <span
+              className="hidden sm:block"
+              style={{
+                fontSize: "8px",
+                color: `${stat.color}60`,
+              }}
+            >
+              {stat.sub}
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    ))}
+  </div>
+</motion.div>
+ 
         {/* ─── Panel Status Bar ─── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -455,7 +532,7 @@ const Dashboard = ({
           </div>
           <StatusDot color="#38bdf8" label="Live Feed" />
         </motion.div>
-
+ 
         {/* ─── Search + Controls ─── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -477,16 +554,10 @@ const Dashboard = ({
               onBlur={(e) => { e.target.style.border = "1px solid rgba(56,189,248,0.09)"; e.target.style.boxShadow = "none"; }}
             />
           </div>
-
-          {/* ─── Right controls ───────────────────────────────────────────────
-               Order (left → right): [Select All] [Delete] [Select/Cancel] [Columns]
-               • [Select/Cancel] and [Columns] are always present — they never move.
-               • [Select All] and [Delete] slide in from the right, pushing nothing —
-                 they appear to the LEFT of [Select/Cancel] via AnimatePresence.
-               • overflow:hidden on the wrapper clips the entrance animation cleanly.
-          ──────────────────────────────────────────────────────────────────── */}
+ 
+          {/* ─── Right controls ──────*/}
           <div className="flex items-center gap-3 justify-end">
-
+ 
             {/* Dynamic selection buttons — animate in/out without shifting siblings */}
             <div className="flex items-center gap-3 overflow-hidden">
               <AnimatePresence initial={false}>
@@ -512,7 +583,7 @@ const Dashboard = ({
                       <Square size={12} />
                       {urls.length > 0 && urls.every((u) => selectedIds.includes(u._id)) ? "Deselect All" : "Select All"}
                     </motion.button>
-
+ 
                     <motion.button
                       key="bulk-delete"
                       initial={{ opacity: 0, width: 0 }}
@@ -546,7 +617,7 @@ const Dashboard = ({
                 )}
               </AnimatePresence>
             </div>
-
+ 
             {/* Select / Cancel — always in place */}
             {!isViewer && (
               <motion.button
@@ -560,7 +631,7 @@ const Dashboard = ({
                 {selectionMode ? "Cancel" : "Select"}
               </motion.button>
             )}
-
+ 
             {/* Columns — always rightmost, always in place, desktop only */}
             <motion.button
               ref={columnBtnRef}
@@ -579,10 +650,10 @@ const Dashboard = ({
               <Settings2 size={13} />
               Columns
             </motion.button>
-
+ 
           </div>
         </motion.div>
-
+ 
         {/* ─── Table / Empty State ─── */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32, duration: 0.5 }}>
           {tableRows.length === 0 ? (
@@ -615,7 +686,7 @@ const Dashboard = ({
             />
           )}
         </motion.div>
-
+ 
         {/* ─── Pagination ─── */}
         {!filtersActive && totalPages > 1 && (
           <div className="mt-4 flex items-center justify-center gap-3">
@@ -638,7 +709,7 @@ const Dashboard = ({
             </button>
           </div>
         )}
-
+ 
         {/* ─── Popups ─── */}
         {popupData && <CrystalPopup popupData={popupData} onClose={() => setPopupData(null)} />}
         {popupOpen && <UptimePopup data={uptimeData} filter={filter} setFilter={setFilter} onClose={() => setPopupOpen(false)} />}
@@ -646,5 +717,6 @@ const Dashboard = ({
     </>
   );
 };
-
+ 
 export default Dashboard;
+ 
