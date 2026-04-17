@@ -509,6 +509,149 @@ const RefreshOverlay = ({ visible, progress = 0, phaseText = "SYNCING DATA" }) =
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Mobile Nav Button — production-grade pill with SVG icon + label
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MobileNavButton = ({ onClick, label, icon, accent = "#10b981", active = false }) => (
+  <motion.button
+    onClick={onClick}
+    whileTap={{ scale: 0.93 }}
+    whileHover={{ scale: 1.04 }}
+    className="relative flex flex-col items-center justify-center gap-[3px] rounded-xl px-3 py-2 overflow-hidden"
+    style={{
+      background: active
+        ? `linear-gradient(135deg, ${accent}22, ${accent}11)`
+        : "rgba(255,255,255,0.04)",
+      border: `1px solid ${active ? accent + "44" : "rgba(255,255,255,0.07)"}`,
+      minWidth: 48,
+    }}
+  >
+    {/* Shimmer on active */}
+    {active && (
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `linear-gradient(120deg, transparent 20%, ${accent}18 50%, transparent 80%)`,
+        }}
+        animate={{ x: ["-120%", "160%"] }}
+        transition={{ duration: 2.2, repeat: Infinity, ease: "linear" }}
+      />
+    )}
+
+    {/* Active dot */}
+    {active && (
+      <motion.div
+        className="absolute top-1 right-1 w-[5px] h-[5px] rounded-full"
+        style={{ background: accent, boxShadow: `0 0 6px ${accent}` }}
+        animate={{ opacity: [1, 0.4, 1] }}
+        transition={{ duration: 1.6, repeat: Infinity }}
+      />
+    )}
+
+    <div
+      className="relative z-10"
+      style={{ color: active ? accent : "rgba(148,163,184,0.75)" }}
+    >
+      {icon}
+    </div>
+
+    <span
+      className="relative z-10 font-medium"
+      style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "8px",
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        color: active ? accent : "rgba(100,116,139,0.7)",
+      }}
+    >
+      {label}
+    </span>
+  </motion.button>
+);
+
+// SVG icons — crisp, minimal, production-quality
+// ── UPDATED MOBILE ICONS (cleaner, thinner, more production feel) ──
+const IconUptimePulse = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    {/* Outer soft glow ring */}
+    <circle
+      cx="12"
+      cy="12"
+      r="9"
+      stroke="rgba(16,185,129,0.25)"
+      strokeWidth="1.5"
+    />
+
+    {/* Main dial */}
+    <circle
+      cx="12"
+      cy="12"
+      r="7"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    />
+
+    {/* Pulse line (monitoring identity) */}
+    <path
+      d="M5 12h2l1.5-3 3 6 2-4h5"
+      stroke="#10b981"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+
+    {/* Clock hand */}
+    <line
+      x1="12"
+      y1="12"
+      x2="12"
+      y2="8"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+
+    {/* Center */}
+    <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+  </svg>
+);
+
+const IconDashboard = ({ size = 14, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+    <rect x="3" y="3" width="5" height="5" rx="1.2" stroke={color} strokeWidth="1.4" />
+    <rect x="12" y="3" width="5" height="5" rx="1.2" stroke={color} strokeWidth="1.4" />
+    <rect x="3" y="12" width="5" height="5" rx="1.2" stroke={color} strokeWidth="1.4" />
+    <rect x="12" y="12" width="5" height="5" rx="1.2" stroke={color} strokeWidth="1.4" />
+  </svg>
+);
+
+const IconAdd = ({ size = 14, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+    <circle cx="10" cy="10" r="7" stroke={color} strokeWidth="1.4" />
+    <path d="M10 6V14M6 10H14" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+);
+
+const IconReport = ({ size = 14, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+    <rect x="4" y="3" width="12" height="14" rx="1.5" stroke={color} strokeWidth="1.4" />
+    <path d="M7 7H13M7 10H13M7 13H10" stroke={color} strokeWidth="1.3" strokeLinecap="round" />
+  </svg>
+);
+
+const IconAdmin = ({ size = 14, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+    <path
+      d="M10 3L12.2 7.2L17 7.8L13.5 11.1L14.3 15.8L10 13.6L5.7 15.8L6.5 11.1L3 7.8L7.8 7.2L10 3Z"
+      stroke={color}
+      strokeWidth="1.3"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main Header
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -524,8 +667,16 @@ const Header = ({
   const [localRefreshing, setLocalRefreshing] = useState(false);
   const [refreshProgress, setRefreshProgress] = useState(0);
   const [refreshPhase, setRefreshPhase] = useState("SYNCING DATA");
+  const [activePath, setActivePath] = useState(
+    typeof window !== "undefined" ? window.location.pathname : "/dashboard"
+  );
 
   const refreshLocked = isRefreshing || localRefreshing;
+
+  const handleNav = useCallback((path) => {
+    setActivePath(path);
+    navigate(path);
+  }, [navigate]);
 
   const runRefreshSequence = useCallback(async () => {
     if (refreshLocked) return;
@@ -599,165 +750,168 @@ const Header = ({
   }, [handleRefresh, refreshLocked]);
 
   return (
-    <>
-      <RefreshOverlay
-        visible={showRefreshOverlay}
-        progress={refreshProgress}
-        phaseText={refreshPhase}
-      />
+  <>
+    <RefreshOverlay
+      visible={showRefreshOverlay}
+      progress={refreshProgress}
+      phaseText={refreshPhase}
+    />
 
-      <header className="sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shadow-sm">
-        <div className="w-full flex items-center justify-between px-4 md:px-10 py-3">
-          <div className="w-full flex items-center justify-between px-3 md:px-8 py-2 md:py-4">
+    <header className="sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+      <div className="w-full px-4 md:px-10 py-3">
+        
+        <div className="w-full flex items-center justify-between px-2 md:px-8 py-2 md:py-4">
 
-            {/* LOGO */}
-            <div className="flex items-center gap-3">
-              {/* Icon */}
-              <div
-                className="w-9 h-9 flex items-center justify-center rounded-lg text-base font-semibold"
+          {/* ───────────────── LOGO ───────────────── */}
+          <div className="flex items-center">
+            <div
+              className="w-9 h-9 flex items-center justify-center rounded-xl"
+              style={{
+                background: "linear-gradient(135deg, rgba(16,185,129,0.15), rgba(56,189,248,0.12))",
+                boxShadow: "0 4px 20px rgba(16,185,129,0.15)",
+                color: "#10b981",
+              }}
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+              >
+                <IconUptimePulse size={18} />
+              </motion.div>
+            </div>
+
+            <div className="hidden md:flex flex-col leading-tight ml-3">
+              <span
                 style={{
-                  background: "hsl(var(--chart-4) / 0.12)",
-                  color: "hsl(var(--chart-4))",
+                  fontFamily: "'Orbitron', sans-serif",
+                  fontWeight: 800,
+                  fontSize: "14px",
+                  letterSpacing: "0.05em",
+                }}
+                className="text-gray-900 dark:text-white"
+              >
+                Uptime Monitor
+              </span>
+
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "9px",
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  color: "rgba(56,189,248,0.6)",
                 }}
               >
-                ⏱️
-              </div>
-
-              {/* Title — Orbitron + JetBrains Mono */}
-              <div className="hidden md:flex flex-col leading-tight">
-                <span
-                  style={{
-                    fontFamily: "'Orbitron', sans-serif",
-                    fontWeight: 800,
-                    fontSize: "14px",
-                    letterSpacing: "0.05em",
-                  }}
-                  className="text-gray-900 dark:text-white"
-                >
-                  Uptime Monitor
-                </span>
-                <span
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: "9px",
-                    letterSpacing: "0.18em",
-                    textTransform: "uppercase",
-                    color: "rgba(56,189,248,0.6)",
-                  }}
-                >
-                  Real-time Monitoring
-                </span>
-              </div>
-            </div>
-
-            {/* RIGHT SIDE */}
-   <div className="flex items-center gap-2 md:gap-4">
-  <div className="hidden md:flex items-center gap-2">
-    <CrystalButton
-      label="Dashboard"
-      onClick={() => navigate("/dashboard")}
-    />
-
-    {currentUser?.role !== "VIEWER" && (
-      <CrystalButton
-        label="Add URL"
-        onClick={() => navigate("/add")}
-      />
-    )}
-
-    <CrystalButton
-      label="Reports"
-      onClick={() => navigate("/reports")}
-    />
-
-    {currentUser?.role?.toUpperCase() === "SUPERADMIN" && (
-      <CrystalButton
-        label="Super Admin"
-        onClick={() => navigate("/superadmin")}
-      />
-    )}
-  </div>
-
-              <div className="flex md:hidden gap-2">
-                <button
-                  onClick={() => navigate("/dashboard")}
-                  className="px-3 py-2 rounded-lg bg-white/10 text-xs"
-                >
-                  📊
-                </button>
-
-                {currentUser?.role !== "VIEWER" && (
-                  <button
-                    onClick={() => navigate("/add")}
-                    className="px-3 py-2 rounded-lg bg-white/10 text-xs"
-                  >
-                    ➕
-                  </button>
-                )}
-
-                <button
-                  onClick={() => navigate("/reports")}
-                  className="px-3 py-2 rounded-lg bg-white/10 text-xs"
-                >
-                  📄
-                </button>
-
-                {currentUser?.role?.toUpperCase() === "SUPERADMIN" && (
-                  <button
-                    onClick={() => navigate("/superadmin")}
-                    className="px-3 py-2 rounded-lg bg-white/10 text-xs"
-                  >
-                    👑
-                  </button>
-                )}
-              </div>
-
-              {/* Refresh Button */}
-              <motion.button
-                whileTap={{ scale: refreshLocked ? 1 : 0.95 }}
-                whileHover={{ scale: refreshLocked ? 1 : 1.05 }}
-                onClick={runRefreshSequence}
-                disabled={refreshLocked}
-                className={`relative w-9 h-9 flex items-center justify-center rounded-lg text-white text-sm overflow-hidden
-                  ${refreshLocked ? "bg-gray-500" : "bg-gradient-to-r from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20"}`}
-              >
-                {!refreshLocked && (
-                  <motion.div
-                    className="absolute inset-0 opacity-30"
-                    style={{
-                      background:
-                        "linear-gradient(120deg, transparent 20%, rgba(255,255,255,0.45) 50%, transparent 80%)",
-                    }}
-                    animate={{ x: ["-120%", "140%"] }}
-                    transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
-                  />
-                )}
-
-                <motion.span
-                  animate={refreshLocked ? { rotate: 360 } : { rotate: 0 }}
-                  transition={
-                    refreshLocked
-                      ? { duration: 0.8, repeat: Infinity, ease: "linear" }
-                      : { duration: 0.25 }
-                  }
-                  className="relative z-10"
-                >
-                  🔄
-                </motion.span>
-              </motion.button>
-
-              {/* SETTINGS MENU */}
-              <div className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/10">
-                <SettingsMenu
-                  onLogout={handleLogout}
-                />
-              </div>
+                Real-time Monitoring
+              </span>
             </div>
           </div>
+
+          {/* ───────────────── RIGHT SIDE ───────────────── */}
+          <div className="flex items-center gap-3 md:gap-4">
+
+            {/* DESKTOP NAV (UNCHANGED) */}
+            <div className="hidden md:flex items-center gap-2">
+              <CrystalButton label="Dashboard" onClick={() => navigate("/dashboard")} />
+
+              {currentUser?.role !== "VIEWER" && (
+                <CrystalButton label="Add URL" onClick={() => navigate("/add")} />
+              )}
+
+              <CrystalButton label="Reports" onClick={() => navigate("/reports")} />
+
+              {currentUser?.role?.toUpperCase() === "SUPERADMIN" && (
+                <CrystalButton label="Super Admin" onClick={() => navigate("/superadmin")} />
+              )}
+            </div>
+
+            {/* ───────────── MOBILE NAV (FIXED SPACING) ───────────── */}
+            <div className="flex md:hidden items-center gap-2 ml-3">
+
+              <MobileNavButton
+                onClick={() => handleNav("/dashboard")}
+                label="Dash"
+                active={activePath === "/dashboard"}
+                accent="#10b981"
+                icon={<IconDashboard size={14} />}
+              />
+
+              {currentUser?.role !== "VIEWER" && (
+                <MobileNavButton
+                  onClick={() => handleNav("/add")}
+                  label="Add"
+                  active={activePath === "/add"}
+                  accent="#38bdf8"
+                  icon={<IconAdd size={14} />}
+                />
+              )}
+
+              <MobileNavButton
+                onClick={() => handleNav("/reports")}
+                label="Report"
+                active={activePath === "/reports"}
+                accent="#818cf8"
+                icon={<IconReport size={14} />}
+              />
+
+              {currentUser?.role?.toUpperCase() === "SUPERADMIN" && (
+                <MobileNavButton
+                  onClick={() => handleNav("/superadmin")}
+                  label="Admin"
+                  active={activePath === "/superadmin"}
+                  accent="#f59e0b"
+                  icon={<IconAdmin size={14} />}
+                />
+              )}
+            </div>
+
+            {/* REFRESH */}
+            <motion.button
+              whileTap={{ scale: refreshLocked ? 1 : 0.95 }}
+              whileHover={{ scale: refreshLocked ? 1 : 1.05 }}
+              onClick={runRefreshSequence}
+              disabled={refreshLocked}
+              className={`relative w-9 h-9 flex items-center justify-center rounded-lg text-white text-sm overflow-hidden
+              ${refreshLocked
+                ? "bg-gray-500"
+                : "bg-gradient-to-r from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20"}`}
+            >
+              {!refreshLocked && (
+                <motion.div
+                  className="absolute inset-0 opacity-30"
+                  style={{
+                    background:
+                      "linear-gradient(120deg, transparent 20%, rgba(255,255,255,0.45) 50%, transparent 80%)",
+                  }}
+                  animate={{ x: ["-120%", "140%"] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
+                />
+              )}
+
+              <motion.span
+                animate={refreshLocked ? { rotate: 360 } : { rotate: 0 }}
+                transition={
+                  refreshLocked
+                    ? { duration: 0.8, repeat: Infinity, ease: "linear" }
+                    : { duration: 0.25 }
+                }
+                className="relative z-10"
+              >
+                🔄
+              </motion.span>
+            </motion.button>
+
+            {/* SETTINGS */}
+            <div className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/10">
+              <SettingsMenu onLogout={handleLogout} />
+            </div>
+
+          </div>
         </div>
-      </header>
-    </>
-  );
+      </div>
+    </header>
+  </>
+);
 };
 
 export default Header;
