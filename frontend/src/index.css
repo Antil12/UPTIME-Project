@@ -4,102 +4,132 @@
 
 @layer base {
   :root {
-    /* Palette (only these hues will be used site-wide) */
-    --chart-1: 13 90% 44%; /* rgb(211,53,11) */
-    --chart-2: 6 86% 46%;  /* rgb(219,37,17) */
-    --chart-3: 358 76% 47%; /* rgb(212,29,36) */
-    --chart-4: 350 81% 46%; /* rgb(214,23,56) */
-    --chart-5: 291 87% 18%; /* rgb(75,6,87) */
-
-    /* Map semantic variables to the allowed palette */
-    --primary: var(--chart-1);
-    --secondary: var(--chart-2);
-    --destructive: var(--chart-3);
-    --accent: var(--chart-4);
-    --foreground: var(--chart-5);
-    --background: 0 0% 100%;
-    --card: 0 0% 100%;
-    --card-foreground: var(--foreground);
-    --popover: 0 0% 100%;
-    --popover-foreground: var(--foreground);
-    --primary-foreground: 0 0% 100%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: var(--chart-2);
-    --muted-foreground: var(--foreground);
-    --accent-foreground: 0 0% 100%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 90%;
-    --input: 0 0% 100%;
-    --ring: var(--chart-1);
-    --radius: 0.5rem;
-  }
-  .dark {
-    /* Dark mode: reuse the same palette hues but with darker backgrounds */
     --chart-1: 13 90% 44%;
     --chart-2: 6 86% 46%;
     --chart-3: 358 76% 47%;
     --chart-4: 350 81% 46%;
     --chart-5: 291 87% 18%;
 
-    --background: 240 10% 6%;
-    --foreground: var(--chart-1);
-    --card: 240 10% 6%;
-    --card-foreground: 0 0% 100%;
-    --popover: 240 10% 6%;
-    --popover-foreground: 0 0% 100%;
     --primary: var(--chart-1);
-    --primary-foreground: 0 0% 100%;
     --secondary: var(--chart-2);
-    --secondary-foreground: 0 0% 100%;
-    --muted: var(--chart-2);
-    --muted-foreground: 0 0% 100%;
-    --accent: var(--chart-4);
-    --accent-foreground: 0 0% 100%;
     --destructive: var(--chart-3);
-    --destructive-foreground: 0 0% 100%;
+    --accent: var(--chart-4);
+    --foreground: var(--chart-5);
+
+    --background: 240 10% 6%; /* force dashboard dark */
+    --card: 240 10% 6%;
+
     --border: 0 0% 10%;
     --input: 240 10% 12%;
     --ring: var(--chart-1);
+
+    --radius: 0.5rem;
+
+    /* 🔥 Scrollbar theme */
+    --scrollbar-thumb: 198 93% 60%; /* sky-400 (#38bdf8) */
+    --scrollbar-thumb-hover: 198 93% 70%;
+    --scrollbar-track: 240 10% 10%;
   }
 }
 
+/* ───────────────────────────────────────── */
+/* GLOBAL RESET */
+/* ───────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-white;
   }
 }
 
-/* Small helper utilities for palette-aware hover/backgrounds */
-.hover-bg-muted:hover { background: hsl(var(--muted) / 0.08); }
-.hover-bg-surface:hover { background: hsl(var(--card) / 0.06); }
-.bg-muted { background: hsl(var(--muted)); }
-.text-link { color: hsl(var(--chart-4)); }
-.overlay-bg { background: hsl(var(--chart-5) / 0.72); }
+/* ───────────────────────────────────────── */
+/* 🔥 MODERN SCROLLBAR */
+/* ───────────────────────────────────────── */
 
+/* Firefox */
+/* ─────────────────────────────────────────── */
+/* SCROLLBAR — Production Theme               */
+/* Tuned for: #030712 bg · #38bdf8 accent     */
+/* ─────────────────────────────────────────── */
 
-@keyframes gradientMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.3) transparent;
 }
 
-.animate-gradient-slow {
-  background-size: 300% 300%;
-  animation: gradientMove 15s ease infinite;
+/* WebKit (Chrome / Edge / Safari) */
+/* ─────────────────────────────────────────────── */
+/* SCROLLBAR — Production                          */
+/* ─────────────────────────────────────────────── */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.2) transparent;
 }
 
-@keyframes glowPulse {
-  0% { box-shadow: 0 0 10px #ff6700; }
-  50% { box-shadow: 0 0 25px #ff6700; }
-  100% { box-shadow: 0 0 10px #ff6700; }
+*:hover {
+  scrollbar-color: rgba(56, 189, 248, 0.45) transparent;
 }
 
-.animate-glow {
-  animation: glowPulse 3s infinite;
+/* WebKit */
+*::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
 }
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.2);
+  border-radius: 9999px;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.45);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: rgba(56, 189, 248, 0.65);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ───────────────────────────────────────── */
+/* UTILITIES */
+/* ───────────────────────────────────────── */
+
+.hover-bg-muted:hover {
+  background: hsl(var(--secondary) / 0.08);
+}
+
+.hover-bg-surface:hover {
+  background: hsl(var(--card) / 0.06);
+}
+
+.bg-muted {
+  background: hsl(var(--secondary));
+}
+
+.text-link {
+  color: hsl(var(--chart-4));
+}
+
+.overlay-bg {
+  background: hsl(var(--chart-5) / 0.72);
+}
+
+/* ───────────────────────────────────────── */
+/* ANIMATIONS */
+/* ───────────────────────────────────────── */
 
 @keyframes gradientMove {
   0% { background-position: 0% 50%; }
@@ -108,7 +138,21 @@
 }
 
 .animate-gradient {
+  background-size: 300% 300%;
   animation: gradientMove 15s ease infinite;
 }
 
+.animate-gradient-slow {
+  background-size: 300% 300%;
+  animation: gradientMove 25s ease infinite;
+}
 
+@keyframes glowPulse {
+  0% { box-shadow: 0 0 8px #38bdf8; }
+  50% { box-shadow: 0 0 20px #38bdf8; }
+  100% { box-shadow: 0 0 8px #38bdf8; }
+}
+
+.animate-glow {
+  animation: glowPulse 2.5s ease-in-out infinite;
+}
