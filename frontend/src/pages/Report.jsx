@@ -283,9 +283,9 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
       // Ignore abort errors — they're intentional cancellations
       if (axios.isCancel(err) || err?.code === "ERR_CANCELED") return;
       console.error("Report fetch error:", err);
-      
-      const errorMsg = err.response?.data?.message || 
-                       err.message || 
+
+      const errorMsg = err.response?.data?.message ||
+                       err.message ||
                        "Failed to load report data. Please try again.";
       setError(errorMsg);
     } finally {
@@ -300,32 +300,27 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
 
   // ─── Apply custom date range ─────────────────────────────────────────────
   const applyCustomRange = () => {
-    // Validation: check both dates are provided
     if (!tempFrom || !tempTo) {
       setError("Please select both 'From' and 'To' dates");
       setTimeout(() => setError(null), 4000);
       return;
     }
 
-    // Parse dates to validate
     const fromDate = new Date(tempFrom);
     const toDate = new Date(tempTo);
 
-    // Check if dates are valid
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
       setError("Invalid date format. Please use YYYY-MM-DD");
       setTimeout(() => setError(null), 4000);
       return;
     }
 
-    // Ensure from <= to
     if (fromDate > toDate) {
       setError("'From' date cannot be after 'To' date");
       setTimeout(() => setError(null), 4000);
       return;
     }
 
-    // Ensure date range is not too large (max 1 year)
     const oneYear = 365 * 24 * 60 * 60 * 1000;
     if (toDate.getTime() - fromDate.getTime() > oneYear) {
       setError("Date range cannot exceed 1 year");
@@ -340,7 +335,6 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
 
   const handleRangeChange = (val) => {
     setRange(val);
-    // Clear custom dates when switching to a preset
     if (val !== "custom") {
       setCustomFrom("");
       setCustomTo("");
@@ -395,11 +389,22 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
             className="mb-4 rounded-xl p-3 sm:p-4 relative z-50 overflow-visible"
             style={{ background: "rgba(3,7,18,0.72)", border: "1px solid rgba(56,189,248,0.07)", backdropFilter: "blur(14px)", boxShadow: "0 0 14px rgba(56,189,248,0.02)" }}
           >
-            <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 overflow-visible">
-              <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
+            {/*
+              LAYOUT STRATEGY
+              ─────────────────────────────────────────────────────────────────
+              Mobile  (<xl): Two-row layout inside the controls card.
+                Row 1: Search input (left) + Export button (pushed to far right)
+                Row 2: Range selector pills (full width, wrapping)
+              Desktop (≥xl): Original single-row layout — search + range pills
+                on the left, Export block on the far right. Unchanged.
+              ─────────────────────────────────────────────────────────────────
+            */}
 
+            {/* ── Desktop layout (xl+): exactly as original ── */}
+            <div className="hidden xl:flex xl:items-start xl:justify-between gap-4 overflow-visible">
+              <div className="flex flex-row gap-3">
                 {/* Search */}
-                <div className="relative w-full md:w-72">
+                <div className="relative w-72">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-400/60" />
                   <input
                     value={reportSearch}
@@ -409,64 +414,55 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                     style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", color: "white", fontFamily: "'JetBrains Mono', monospace" }}
                   />
                 </div>
-{/* ── Range Selector (Upgraded UI) ── */}
-<div className="flex items-center gap-2 flex-wrap">
 
-  {[
-    { key: "24h", label: "24H" },
-    { key: "7d", label: "7D" },
-    { key: "30d", label: "30D" },
-    { key: "custom", label: "CUSTOM" },
-  ].map((item) => {
-    const active = range === item.key;
+                {/* Range pills */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {[
+                    { key: "24h", label: "24H" },
+                    { key: "7d",  label: "7D"  },
+                    { key: "30d", label: "30D" },
+                    { key: "custom", label: "CUSTOM" },
+                  ].map((item) => {
+                    const active = range === item.key;
+                    return (
+                      <motion.button
+                        key={item.key}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleRangeChange(item.key)}
+                        className="relative px-4 py-2 rounded-lg overflow-hidden"
+                        style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: "11px",
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          color: active ? "#38bdf8" : "rgba(148,163,184,0.6)",
+                          border: active ? "1px solid rgba(56,189,248,0.3)" : "1px solid rgba(56,189,248,0.07)",
+                          background: active ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.02)",
+                        }}
+                      >
+                        {active && (
+                          <motion.div
+                            layoutId="rangeGlow-desktop"
+                            className="absolute inset-0 rounded-lg"
+                            style={{
+                              background: "linear-gradient(90deg, rgba(56,189,248,0.15), rgba(129,140,248,0.15))",
+                              filter: "blur(8px)",
+                              zIndex: 0,
+                            }}
+                          />
+                        )}
+                        <span className="relative z-10 flex items-center gap-2">
+                          <CalendarRange size={12} className={active ? "text-sky-400" : "text-slate-400"} />
+                          {item.label}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
 
-    return (
-      <motion.button
-        key={item.key}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => handleRangeChange(item.key)}
-        className="relative px-4 py-2 rounded-lg overflow-hidden"
-        style={{
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: "11px",
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: active ? "#38bdf8" : "rgba(148,163,184,0.6)",
-          border: active
-            ? "1px solid rgba(56,189,248,0.3)"
-            : "1px solid rgba(56,189,248,0.07)",
-          background: active
-            ? "rgba(56,189,248,0.12)"
-            : "rgba(255,255,255,0.02)",
-        }}
-      >
-        {/* Glow effect */}
-        {active && (
-          <motion.div
-            layoutId="rangeGlow"
-            className="absolute inset-0 rounded-lg"
-            style={{
-              background:
-                "linear-gradient(90deg, rgba(56,189,248,0.15), rgba(129,140,248,0.15))",
-              filter: "blur(8px)",
-              zIndex: 0,
-            }}
-          />
-        )}
-
-        <span className="relative z-10 flex items-center gap-2">
-          <CalendarRange size={12} className={active ? "text-sky-400" : "text-slate-400"} />
-          {item.label}
-        </span>
-      </motion.button>
-    );
-  })}
-
-</div>
-</div>
-
-              {/* Export */}
+              {/* Export — desktop: far right, exactly as original */}
               <div className="relative z-[9999] overflow-visible self-start">
                 <div className="rounded-lg px-3 py-2 overflow-visible" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", backdropFilter: "blur(12px)" }}>
                   <div className="mb-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.12em", color: "rgba(56,189,248,0.58)", textTransform: "uppercase" }}>
@@ -479,87 +475,153 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
               </div>
             </div>
 
-            {/* Custom Range Picker */}
-           {range === "custom" && (
-  <motion.div
-    initial={{ opacity: 0, y: 6 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="mt-3 rounded-lg px-3 py-3"
-    style={{
-      background: "rgba(3,7,18,0.65)",
-      border: "1px solid rgba(56,189,248,0.06)",
-      backdropFilter: "blur(14px)",
-    }}
-  >
-    <div className="flex flex-col sm:flex-row items-end gap-2.5">
+            {/* ── Mobile / tablet layout (<xl) ── */}
+            <div className="flex xl:hidden flex-col gap-3 overflow-visible">
 
-      {/* Inputs */}
-      {[ 
-        { label: "FROM", val: tempFrom, set: setTempFrom },
-        { label: "TO", val: tempTo, set: setTempTo }
-      ].map((f) => (
-        <div key={f.label} className="flex flex-col flex-1 min-w-[120px]">
+              {/* Row 1: Search (left) + Export (far right) */}
+              <div className="flex items-center gap-2">
+                {/* Search — grows to fill available space */}
+                <div className="relative flex-1">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-400/60" />
+                  <input
+                    value={reportSearch}
+                    onChange={(e) => setReportSearch(e.target.value)}
+                    placeholder="Search domain or URL"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-lg outline-none text-sm"
+                    style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", color: "white", fontFamily: "'JetBrains Mono', monospace" }}
+                  />
+                </div>
 
-          <label
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: "8px",
-              color: "rgba(148,163,184,0.45)",
-              letterSpacing: "0.14em",
-              marginBottom: "4px",
-            }}
-          >
-            {f.label}
-          </label>
+                {/* Export — pushed to far right on mobile */}
+                <div className="relative z-[9999] overflow-visible flex-shrink-0 self-start">
+                  <div className="rounded-lg px-3 py-2 overflow-visible" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", backdropFilter: "blur(12px)" }}>
+                    <div className="mb-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.12em", color: "rgba(56,189,248,0.58)", textTransform: "uppercase" }}>
+                      Export Data
+                    </div>
+                    <div className="relative z-[9999] overflow-visible">
+                      <ExportButtons urls={filteredSites} range={range} customFrom={customFrom} customTo={customTo} />
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-          <div className="relative">
-            <input
-              type="date"
-              value={f.val}
-              onChange={(e) => f.set(e.target.value)}
-              className="w-full px-2.5 py-2 rounded-md outline-none text-[11px]"
-              style={{
-                background: "rgba(255,255,255,0.015)",
-                border: "1px solid rgba(56,189,248,0.06)",
-                color: "rgba(226,232,240,0.9)",
-                fontFamily: "'JetBrains Mono', monospace",
-              }}
-            />
+              {/* Row 2: Range selector pills */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {[
+                  { key: "24h", label: "24H" },
+                  { key: "7d",  label: "7D"  },
+                  { key: "30d", label: "30D" },
+                  { key: "custom", label: "CUSTOM" },
+                ].map((item) => {
+                  const active = range === item.key;
+                  return (
+                    <motion.button
+                      key={item.key}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleRangeChange(item.key)}
+                      className="relative px-4 py-2 rounded-lg overflow-hidden"
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "11px",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: active ? "#38bdf8" : "rgba(148,163,184,0.6)",
+                        border: active ? "1px solid rgba(56,189,248,0.3)" : "1px solid rgba(56,189,248,0.07)",
+                        background: active ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.02)",
+                      }}
+                    >
+                      {active && (
+                        <motion.div
+                          layoutId="rangeGlow-mobile"
+                          className="absolute inset-0 rounded-lg"
+                          style={{
+                            background: "linear-gradient(90deg, rgba(56,189,248,0.15), rgba(129,140,248,0.15))",
+                            filter: "blur(8px)",
+                            zIndex: 0,
+                          }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center gap-2">
+                        <CalendarRange size={12} className={active ? "text-sky-400" : "text-slate-400"} />
+                        {item.label}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
 
-            {/* subtle focus glow */}
-            <div
-              className="pointer-events-none absolute inset-0 rounded-md opacity-0 focus-within:opacity-100 transition"
-              style={{
-                boxShadow: "0 0 0 1px rgba(56,189,248,0.25), 0 0 8px rgba(56,189,248,0.12)",
-              }}
-            />
-          </div>
-        </div>
-      ))}
+            {/* Custom Range Picker — shared across both breakpoints */}
+            {range === "custom" && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-3 rounded-lg px-3 py-3"
+                style={{
+                  background: "rgba(3,7,18,0.65)",
+                  border: "1px solid rgba(56,189,248,0.06)",
+                  backdropFilter: "blur(14px)",
+                }}
+              >
+                <div className="flex flex-col sm:flex-row items-end gap-2.5">
+                  {[
+                    { label: "FROM", val: tempFrom, set: setTempFrom },
+                    { label: "TO",   val: tempTo,   set: setTempTo   },
+                  ].map((f) => (
+                    <div key={f.label} className="flex flex-col flex-1 min-w-[120px]">
+                      <label
+                        style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: "8px",
+                          color: "rgba(148,163,184,0.45)",
+                          letterSpacing: "0.14em",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        {f.label}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="date"
+                          value={f.val}
+                          onChange={(e) => f.set(e.target.value)}
+                          className="w-full px-2.5 py-2 rounded-md outline-none text-[11px]"
+                          style={{
+                            background: "rgba(255,255,255,0.015)",
+                            border: "1px solid rgba(56,189,248,0.06)",
+                            color: "rgba(226,232,240,0.9)",
+                            fontFamily: "'JetBrains Mono', monospace",
+                          }}
+                        />
+                        <div
+                          className="pointer-events-none absolute inset-0 rounded-md opacity-0 focus-within:opacity-100 transition"
+                          style={{ boxShadow: "0 0 0 1px rgba(56,189,248,0.25), 0 0 8px rgba(56,189,248,0.12)" }}
+                        />
+                      </div>
+                    </div>
+                  ))}
 
-      {/* Apply Button */}
-      <motion.button
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ scale: 0.96 }}
-        onClick={applyCustomRange}
-        className="h-[34px] px-4 rounded-md flex items-center justify-center"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(56,189,248,0.18), rgba(129,140,248,0.18))",
-          border: "1px solid rgba(56,189,248,0.22)",
-          color: "#38bdf8",
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: "10px",
-          letterSpacing: "0.12em",
-          whiteSpace: "nowrap",
-        }}
-      >
-        APPLY
-      </motion.button>
-
-    </div>
-  </motion.div>
-)}
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={applyCustomRange}
+                    className="h-[34px] px-4 rounded-md flex items-center justify-center"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(56,189,248,0.18), rgba(129,140,248,0.18))",
+                      border: "1px solid rgba(56,189,248,0.22)",
+                      color: "#38bdf8",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "10px",
+                      letterSpacing: "0.12em",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    APPLY
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
           </motion.div>
 
           {/* ── Page Info Bar ───────────────────────────────────────────────── */}
@@ -597,15 +659,15 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                   <SkeletonCard key={i} index={i} />
                 ))
               : paginatedSites.map((site, index) => {
-                  const logs = logsBySite[site._id] || [];
-                  const stats = statsMap[site._id] || {};
+                  const logs  = logsBySite[site._id] || [];
+                  const stats = statsMap[site._id]   || {};
                   const lastLog = logs.length ? logs[logs.length - 1] : null;
-                  const isDown = lastLog?.status === "DOWN";
+                  const isDown  = lastLog?.status === "DOWN";
                   const hasData = logs.length > 0;
 
                   return (
                     <motion.div
-                      key={`${site._id}-${page}`} // key includes page so cards re-animate on page change
+                      key={`${site._id}-${page}`}
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.04, duration: 0.4 }}
@@ -663,9 +725,9 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                           {[
                             { label: "Total Checks", value: hasData ? (stats.totalChecks ?? 0) : "—" },
-                            { label: "Failures", value: hasData ? (stats.downChecks ?? 0) : "—" },
+                            { label: "Failures",     value: hasData ? (stats.downChecks  ?? 0) : "—" },
                             { label: "Avg Response", value: hasData ? `${stats.avgResponse ?? 0} ms` : "—" },
-                            { label: "Fast / Slow", value: hasData ? `${stats.minResponse ?? 0} / ${stats.maxResponse ?? 0} ms` : "—" },
+                            { label: "Fast / Slow",  value: hasData ? `${stats.minResponse ?? 0} / ${stats.maxResponse ?? 0} ms` : "—" },
                           ].map((item, i) => (
                             <div key={i} className="rounded-lg px-3 py-3" style={{ background: "rgba(255,255,255,0.016)", border: "1px solid rgba(255,255,255,0.04)" }}>
                               <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(148,163,184,0.45)", textTransform: "uppercase", letterSpacing: "0.12em" }}>

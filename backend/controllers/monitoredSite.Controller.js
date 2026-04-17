@@ -492,16 +492,17 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
 
     let status = "UNKNOWN", statusCode = null, responseTimeMs = null, reason = null;
     const SLOW_THRESHOLD = site.responseThresholdMs || 15000;
-    const startTime = Date.now();
+  let startTime = Date.now();
 
-    try {
-      let response;
-      try {
-        response = await axios.head(site.url, { timeout: 10000, validateStatus: () => true });
-      } catch {
-        response = await axios.get(site.url, { timeout: 10000, validateStatus: () => true });
-      }
-      responseTimeMs = Date.now() - startTime;
+try {
+  let response;
+  try {
+    response = await axios.head(site.url, { timeout: 10000, validateStatus: () => true });
+  } catch {
+    startTime = Date.now(); // ✅ reset before GET
+    response = await axios.get(site.url, { timeout: 10000, validateStatus: () => true });
+  }
+  responseTimeMs = Date.now() - startTime;
       statusCode     = response.status;
       if (statusCode >= 200 && statusCode < 400) {
         status = responseTimeMs > SLOW_THRESHOLD ? "SLOW" : "UP";

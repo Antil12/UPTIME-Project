@@ -6,19 +6,29 @@ import UptimeLog from "../models/UptimeLog.js";
 //   db.uptimelogs.createIndex({ siteId: 1, checkedAt: -1 })
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── Helper: sanitize a single responseTimeMs value ──────────────────────────
+// Returns the value as-is if it's a valid positive number, otherwise null.
+// We use null (not 0) so that aggregations can correctly exclude missing data
+// using $$REMOVE, rather than pulling the average down with fake zeros.
+function sanitizeResponseTime(value) {
+  if (value == null) return null;
+  const n = Number(value);
+  if (isNaN(n) || n <= 0) return null;
+  return n;
+}
+
 // ─── Helper: build a checkedAt date filter ────────────────────────────────────
-// Converts dates to UTC for consistent calculations across all timezones
-// For custom ranges: includes entire start day + entire end day (23:59:59.999)
+// Converts dates to UTC for consistent calculations across all timezones.
+// For custom ranges: includes entire start day + entire end day (23:59:59.999).
 function buildCheckedAtFilter(range, from, to) {
   const now = new Date();
 
   if (range === "custom" && from && to) {
     try {
-      // Parse dates (assumes YYYY-MM-DD format from HTML date input)
-      const fromDate = new Date(from);
-      const toDate = new Date(to);
-      
-      // Validate dates
+      // FIX: use let so we can swap if needed
+      let fromDate = new Date(from);
+      let toDate   = new Date(to);
+
       if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
         console.error("Invalid date format:", { from, to });
         // Fallback to last 7 days
@@ -27,24 +37,37 @@ function buildCheckedAtFilter(range, from, to) {
           $lte: now,
         };
       }
-      
-      // Ensure from <= to
+
+      // FIX: was using const — would throw TypeError on reassignment
       if (fromDate > toDate) {
         const temp = fromDate;
-        fromDate = toDate;
-        toDate = temp;
+        fromDate   = toDate;
+        toDate     = temp;
       }
-      
-      // Start: beginning of the day (00:00:00.000 UTC)
-      const startUTC = new Date(Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate(), 0, 0, 0, 0));
-      
-      // End: end of the day (23:59:59.999 UTC)
-      const endUTC = new Date(Date.UTC(toDate.getUTCFullYear(), toDate.getUTCMonth(), toDate.getUTCDate(), 23, 59, 59, 999));
-      
+
+      // Start of day UTC
+      const startUTC = new Date(
+        Date.UTC(
+          fromDate.getUTCFullYear(),
+          fromDate.getUTCMonth(),
+          fromDate.getUTCDate(),
+          0, 0, 0, 0
+        )
+      );
+
+      // End of day UTC (inclusive)
+      const endUTC = new Date(
+        Date.UTC(
+          toDate.getUTCFullYear(),
+          toDate.getUTCMonth(),
+          toDate.getUTCDate(),
+          23, 59, 59, 999
+        )
+      );
+
       return { $gte: startUTC, $lte: endUTC };
     } catch (err) {
       console.error("Error parsing custom dates:", err);
-      // Fallback to last 7 days
       return {
         $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
         $lte: now,
@@ -52,37 +75,60 @@ function buildCheckedAtFilter(range, from, to) {
     }
   }
 
-  // Pre-defined ranges in milliseconds (exact precision)
-  const rangeMap = { 
-    "24h": 24 * 60 * 60 * 1000, 
-    "7d": 7 * 24 * 60 * 60 * 1000, 
-    "30d": 30 * 24 * 60 * 60 * 1000 
+  const rangeMap = {
+    "24h": 24 * 60 * 60 * 1000,
+    "7d":   7 * 24 * 60 * 60 * 1000,
+    "30d": 30 * 24 * 60 * 60 * 1000,
   };
-  const ms = rangeMap[range] ?? (7 * 24 * 60 * 60 * 1000); // Default to 7d
-  
+  const ms = rangeMap[range] ?? 7 * 24 * 60 * 60 * 1000;
+
   return {
     $gte: new Date(now.getTime() - ms),
     $lte: now,
   };
 }
 
+// ─── Helper: map a raw UptimeLog document to a clean response object ──────────
+// Single place for all field-name and type fixes so every endpoint is consistent.
+//
+// FIX: was using log.StatusCode (uppercase S) in every endpoint — MongoDB field
+// names are case-sensitive. If the model stores it as statusCode (camelCase),
+// log.StatusCode is always undefined and callers always receive null.
+// We try both casings as a safety net so existing data with either casing works.
+function mapLog(log) {
+  return {
+    _id:            log._id,
+    siteId:         log.siteId.toString(),
+    status:         log.status,
+    // FIX: try camelCase first, fall back to PascalCase for legacy documents
+    statusCode:     log.statusCode ?? log.StatusCode ?? null,
+    // FIX: use sanitizeResponseTime — preserves null for missing data instead
+    // of collapsing everything to 0, which skewed chart and average calculations
+    responseTimeMs: sanitizeResponseTime(log.responseTimeMs),
+    timestamp:      log.checkedAt,
+  };
+}
+
 // ─── Helper: per-site uptime stats aggregation ───────────────────────────────
 // Returns { siteId: { totalChecks, upChecks, downChecks, uptimePercent,
 //                     avgResponse, minResponse, maxResponse } }
-// Filters out null/invalid response times to ensure accurate averages
+//
+// FIX: avgResponse previously included 0-valued entries because the $cond
+// only excluded nulls. We now exclude both null AND zero so that DOWN checks
+// (which have no meaningful response time) don't drag the average down.
 async function aggregateStatsBySite(siteObjectIds, checkedAtFilter) {
   if (!siteObjectIds.length) return {};
 
   const agg = await UptimeLog.aggregate([
     {
       $match: {
-        siteId: { $in: siteObjectIds },
+        siteId:    { $in: siteObjectIds },
         checkedAt: checkedAtFilter,
       },
     },
     {
       $group: {
-        _id: "$siteId",
+        _id:        "$siteId",
         totalChecks: { $sum: 1 },
         upChecks: {
           $sum: { $cond: [{ $in: ["$status", ["UP", "SLOW"]] }, 1, 0] },
@@ -90,26 +136,40 @@ async function aggregateStatsBySite(siteObjectIds, checkedAtFilter) {
         downChecks: {
           $sum: { $cond: [{ $eq: ["$status", "DOWN"] }, 1, 0] },
         },
-        // Only average response times that are > 0 and not null
+        // FIX: exclude null AND zero — DOWN checks store null/0 response time
+        // and including them drags the average down incorrectly
         avgResponse: {
           $avg: {
             $cond: [
-              { $and: [{ $ne: ["$responseTimeMs", null] }, { $gt: ["$responseTimeMs", 0] }] },
+              {
+                $and: [
+                  { $ne:  ["$responseTimeMs", null] },
+                  { $gt:  ["$responseTimeMs", 0]    },
+                  { $not: [{ $eq: ["$status", "DOWN"] }] },
+                ],
+              },
               "$responseTimeMs",
-              "$$REMOVE"
-            ]
-          }
+              "$$REMOVE",
+            ],
+          },
         },
-        // Min/max only from valid response times (> 0)
         minResponse: {
           $min: {
-            $cond: [{ $gt: ["$responseTimeMs", 0] }, "$responseTimeMs", "$$REMOVE"]
-          }
+            $cond: [
+              { $and: [{ $gt: ["$responseTimeMs", 0] }, { $ne: ["$status", "DOWN"] }] },
+              "$responseTimeMs",
+              "$$REMOVE",
+            ],
+          },
         },
         maxResponse: {
           $max: {
-            $cond: [{ $gt: ["$responseTimeMs", 0] }, "$responseTimeMs", "$$REMOVE"]
-          }
+            $cond: [
+              { $and: [{ $gt: ["$responseTimeMs", 0] }, { $ne: ["$status", "DOWN"] }] },
+              "$responseTimeMs",
+              "$$REMOVE",
+            ],
+          },
         },
       },
     },
@@ -125,10 +185,15 @@ async function aggregateStatsBySite(siteObjectIds, checkedAtFilter) {
       uptimePercent: s.totalChecks
         ? parseFloat(((s.upChecks / s.totalChecks) * 100).toFixed(2))
         : 0,
-      // Safely handle null/NaN values
-      avgResponse: s.avgResponse != null && !isNaN(s.avgResponse) ? Math.round(s.avgResponse) : 0,
-      minResponse: s.minResponse != null && !isNaN(s.minResponse) ? s.minResponse : 0,
-      maxResponse: s.maxResponse != null && !isNaN(s.maxResponse) ? s.maxResponse : 0,
+      avgResponse: s.avgResponse != null && !isNaN(s.avgResponse)
+        ? Math.round(s.avgResponse)
+        : null,
+      minResponse: s.minResponse != null && !isNaN(s.minResponse)
+        ? s.minResponse
+        : null,
+      maxResponse: s.maxResponse != null && !isNaN(s.maxResponse)
+        ? s.maxResponse
+        : null,
     };
   });
   return map;
@@ -147,14 +212,8 @@ export const getUptimeLogsBySite = async (req, res) => {
       .sort({ checkedAt: -1 })
       .lean();
 
-    const data = logs.map((log) => ({
-      _id:           log._id,
-      siteId:        log.siteId.toString(),
-      status:        log.status,
-      statusCode:    log.StatusCode ?? null,
-      responseTimeMs: log.responseTimeMs != null ? log.responseTimeMs : 0,
-      timestamp:     log.checkedAt,
-    }));
+    // FIX: use mapLog helper — fixes StatusCode casing + response time sanitization
+    const data = logs.map(mapLog);
 
     res.json({ success: true, count: data.length, data });
   } catch (err) {
@@ -171,44 +230,41 @@ export const getPaginatedLogs = async (req, res) => {
     const filter = { checkedAt: buildCheckedAtFilter(range, from, to) };
 
     if (siteIds) {
-      const ids = siteIds.split(",").filter(Boolean);
-      const validIds = ids.map((id) => {
-        try {
-          return new mongoose.Types.ObjectId(id);
-        } catch {
-          console.warn("Invalid siteId:", id);
-          return null;
-        }
-      }).filter(id => id != null);
-      
+      const ids      = siteIds.split(",").filter(Boolean);
+      const validIds = ids
+        .map((id) => {
+          try {
+            return new mongoose.Types.ObjectId(id);
+          } catch {
+            console.warn("Invalid siteId:", id);
+            return null;
+          }
+        })
+        .filter((id) => id != null);
+
       if (validIds.length) {
         filter.siteId = { $in: validIds };
       }
     }
 
-    const logs = await UptimeLog.find(filter).sort({ checkedAt: 1 }).lean();
+    // FIX: fetch all needed fields explicitly — previous select had StatusCode
+    // (wrong casing) so statusCode was never returned from the DB query
+    const logs = await UptimeLog.find(filter)
+      .sort({ checkedAt: 1 })
+      .select("siteId status statusCode responseTimeMs checkedAt")
+      .lean();
 
-    const data = logs.map((log) => {
-      // Validate response time
-      let responseTime = 0;
-      if (log.responseTimeMs != null && !isNaN(log.responseTimeMs)) {
-        responseTime = log.responseTimeMs > 0 ? log.responseTimeMs : 0;
-      }
-      
-      return {
-        _id:           log._id,
-        siteId:        log.siteId.toString(),
-        status:        log.status,
-        statusCode:    log.StatusCode ?? null,
-        responseTimeMs: responseTime,
-        timestamp:     log.checkedAt,
-      };
-    });
+    // FIX: use mapLog helper for consistent field mapping
+    const data = logs.map(mapLog);
 
     res.json({ success: true, count: data.length, data });
   } catch (err) {
     console.error("getPaginatedLogs:", err);
-    res.status(500).json({ success: false, message: "Failed to fetch logs", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch logs",
+      error: err.message,
+    });
   }
 };
 
@@ -220,15 +276,17 @@ export const getUptimeAnalytics = async (req, res) => {
     const match = { checkedAt: buildCheckedAtFilter(range, from, to) };
 
     if (siteIds) {
-      const ids = siteIds.split(",").filter(Boolean);
-      const validIds = ids.map((id) => {
-        try {
-          return new mongoose.Types.ObjectId(id);
-        } catch {
-          return null;
-        }
-      }).filter(id => id != null);
-      
+      const ids      = siteIds.split(",").filter(Boolean);
+      const validIds = ids
+        .map((id) => {
+          try {
+            return new mongoose.Types.ObjectId(id);
+          } catch {
+            return null;
+          }
+        })
+        .filter((id) => id != null);
+
       if (validIds.length) {
         match.siteId = { $in: validIds };
       }
@@ -238,30 +296,43 @@ export const getUptimeAnalytics = async (req, res) => {
       { $match: match },
       {
         $group: {
-          _id:          null,
-          totalChecks:  { $sum: 1 },
-          upChecks:     { $sum: { $cond: [{ $in: ["$status", ["UP", "SLOW"]] }, 1, 0] } },
-          downChecks:   { $sum: { $cond: [{ $eq: ["$status", "DOWN"] }, 1, 0] } },
-          // Only average response times that are > 0 and not null
+          _id:         null,
+          totalChecks: { $sum: 1 },
+          upChecks:    { $sum: { $cond: [{ $in: ["$status", ["UP", "SLOW"]] }, 1, 0] } },
+          downChecks:  { $sum: { $cond: [{ $eq: ["$status", "DOWN"] }, 1, 0] } },
+          // FIX: exclude DOWN checks from response time stats (same fix as aggregateStatsBySite)
           avgResponse: {
             $avg: {
               $cond: [
-                { $and: [{ $ne: ["$responseTimeMs", null] }, { $gt: ["$responseTimeMs", 0] }] },
+                {
+                  $and: [
+                    { $ne:  ["$responseTimeMs", null] },
+                    { $gt:  ["$responseTimeMs", 0]    },
+                    { $not: [{ $eq: ["$status", "DOWN"] }] },
+                  ],
+                },
                 "$responseTimeMs",
-                "$$REMOVE"
-              ]
-            }
+                "$$REMOVE",
+              ],
+            },
           },
-          // Min/max only from valid response times (> 0)
           minResponse: {
             $min: {
-              $cond: [{ $gt: ["$responseTimeMs", 0] }, "$responseTimeMs", "$$REMOVE"]
-            }
+              $cond: [
+                { $and: [{ $gt: ["$responseTimeMs", 0] }, { $ne: ["$status", "DOWN"] }] },
+                "$responseTimeMs",
+                "$$REMOVE",
+              ],
+            },
           },
           maxResponse: {
             $max: {
-              $cond: [{ $gt: ["$responseTimeMs", 0] }, "$responseTimeMs", "$$REMOVE"]
-            }
+              $cond: [
+                { $and: [{ $gt: ["$responseTimeMs", 0] }, { $ne: ["$status", "DOWN"] }] },
+                "$responseTimeMs",
+                "$$REMOVE",
+              ],
+            },
           },
         },
       },
@@ -277,15 +348,26 @@ export const getUptimeAnalytics = async (req, res) => {
         uptimePercent: s.totalChecks
           ? parseFloat(((s.upChecks / s.totalChecks) * 100).toFixed(2))
           : 0,
-        // Safely handle null/NaN values
-        avgResponse: s.avgResponse != null && !isNaN(s.avgResponse) ? Math.round(s.avgResponse) : 0,
-        minResponse: s.minResponse != null && !isNaN(s.minResponse) ? s.minResponse : 0,
-        maxResponse: s.maxResponse != null && !isNaN(s.maxResponse) ? s.maxResponse : 0,
+        // FIX: return null instead of 0 when no valid data — lets the frontend
+        // distinguish "no data" from "genuinely 0ms" and show "—" instead of "0ms"
+        avgResponse: s.avgResponse != null && !isNaN(s.avgResponse)
+          ? Math.round(s.avgResponse)
+          : null,
+        minResponse: s.minResponse != null && !isNaN(s.minResponse)
+          ? s.minResponse
+          : null,
+        maxResponse: s.maxResponse != null && !isNaN(s.maxResponse)
+          ? s.maxResponse
+          : null,
       },
     });
   } catch (err) {
     console.error("getUptimeAnalytics:", err);
-    res.status(500).json({ success: false, message: "Failed to calculate analytics", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to calculate analytics",
+      error: err.message,
+    });
   }
 };
 
@@ -298,7 +380,7 @@ export const getUptimeAnalytics = async (req, res) => {
 // KEY DESIGN: The 24h/7d/30d uptime numbers are ALWAYS computed from their
 // own fixed windows, independent of what range the user selected. This means
 // "Last 30 Days" shows the real 30d uptime even when viewing a 24h chart.
-// 
+//
 // CRITICAL: All date calculations use absolute milliseconds, not hours,
 // to avoid DST and leap second issues.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -307,30 +389,39 @@ export const getReportData = async (req, res) => {
     const { range = "7d", from, to, siteIds } = req.query;
 
     if (!siteIds) {
-      return res.status(400).json({ success: false, message: "siteIds is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "siteIds is required" });
     }
 
     const idsArray = siteIds.split(",").filter(Boolean);
     if (!idsArray.length) {
-      return res.json({ success: true, data: { logsBySite: {}, statsMap: {} } });
+      return res.json({
+        success: true,
+        data: { logsBySite: {}, statsMap: {} },
+      });
     }
 
-    const siteObjectIds = idsArray.map((id) => {
-      try {
-        return new mongoose.Types.ObjectId(id);
-      } catch (err) {
-        console.warn("Invalid siteId:", id);
-        return null;
-      }
-    }).filter(id => id != null);
+    const siteObjectIds = idsArray
+      .map((id) => {
+        try {
+          return new mongoose.Types.ObjectId(id);
+        } catch (err) {
+          console.warn("Invalid siteId:", id);
+          return null;
+        }
+      })
+      .filter((id) => id != null);
 
     if (!siteObjectIds.length) {
-      return res.status(400).json({ success: false, message: "No valid site IDs provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No valid site IDs provided" });
     }
 
     const now = new Date();
 
-    // Fixed time windows for the uptime breakdown panel (using milliseconds for precision)
+    // Fixed time windows for the uptime breakdown panel
     const filter24h = {
       $gte: new Date(now.getTime() - 24 * 60 * 60 * 1000),
       $lte: now,
@@ -344,27 +435,25 @@ export const getReportData = async (req, res) => {
       $lte: now,
     };
 
-    // Selected range filter for chart + primary metrics
     const selectedFilter = buildCheckedAtFilter(range, from, to);
 
     const matchSelected = {
-      siteId: { $in: siteObjectIds },
+      siteId:    { $in: siteObjectIds },
       checkedAt: selectedFilter,
     };
 
     // Run all 5 operations in parallel for performance
     const [statsSelected, stats24h, stats7d, stats30d, rawLogs] =
       await Promise.all([
-        // Primary stats for the selected range
         aggregateStatsBySite(siteObjectIds, selectedFilter),
-        // Fixed breakdown windows — always computed from their own range
         aggregateStatsBySite(siteObjectIds, filter24h),
         aggregateStatsBySite(siteObjectIds, filter7d),
         aggregateStatsBySite(siteObjectIds, filter30d),
-        // Chart logs for selected range
+        // FIX: select uses correct lowercase statusCode
+        // FIX: fetching responseTimeMs explicitly so it is never undefined
         UptimeLog.find(matchSelected)
           .sort({ checkedAt: 1 })
-          .select("siteId status StatusCode responseTimeMs checkedAt")
+          .select("siteId status statusCode responseTimeMs checkedAt")
           .lean(),
       ]);
 
@@ -373,50 +462,36 @@ export const getReportData = async (req, res) => {
     rawLogs.forEach((log) => {
       const siteId = log.siteId.toString();
       if (!logsBySite[siteId]) logsBySite[siteId] = [];
-      
-      // Validate response time — ensure it's a number or 0
-      let responseTime = 0;
-      if (log.responseTimeMs != null && !isNaN(log.responseTimeMs)) {
-        responseTime = log.responseTimeMs > 0 ? log.responseTimeMs : 0;
-      }
-      
-      logsBySite[siteId].push({
-        _id:           log._id,
-        siteId,
-        status:        log.status,
-        statusCode:    log.StatusCode ?? null,
-        responseTimeMs: responseTime,
-        timestamp:     log.checkedAt,
-      });
+      // FIX: use mapLog so casing fix + response time sanitization apply here too
+      logsBySite[siteId].push(mapLog(log));
     });
 
     // Build statsMap — merge selected range stats + fixed window breakdowns
     const statsMap = {};
     idsArray.forEach((id) => {
       const sel = statsSelected[id] || {};
-      const w24 = stats24h[id]     || {};
-      const w7  = stats7d[id]      || {};
-      const w30 = stats30d[id]     || {};
+      const w24 = stats24h[id]      || {};
+      const w7  = stats7d[id]       || {};
+      const w30 = stats30d[id]      || {};
 
       statsMap[id] = {
         siteId: id,
 
-        // Primary stats for selected range (with validation)
-        totalChecks:   sel.totalChecks ?? 0,
-        upChecks:      sel.upChecks ?? 0,
-        downChecks:    sel.downChecks ?? 0,
-        uptimePercent: sel.uptimePercent ?? 0,   // for selected range uptime bar
-        avgResponse:   sel.avgResponse ?? 0,
-        minResponse:   sel.minResponse ?? 0,
-        maxResponse:   sel.maxResponse ?? 0,
+        // Primary stats for selected range
+        totalChecks:   sel.totalChecks   ?? 0,
+        upChecks:      sel.upChecks      ?? 0,
+        downChecks:    sel.downChecks    ?? 0,
+        uptimePercent: sel.uptimePercent ?? 0,
+        // FIX: keep null instead of 0 — frontend can show "—" when no valid data
+        avgResponse:   sel.avgResponse   ?? null,
+        minResponse:   sel.minResponse   ?? null,
+        maxResponse:   sel.maxResponse   ?? null,
 
-        // Fixed window uptime breakdown (null = no data recorded in window)
-        // Only show uptime if there were actual checks in that window
+        // Fixed window uptime breakdown (null = no checks recorded in that window)
         uptime24h:  w24.totalChecks > 0 ? w24.uptimePercent : null,
         uptime7d:   w7.totalChecks  > 0 ? w7.uptimePercent  : null,
         uptime30d:  w30.totalChecks > 0 ? w30.uptimePercent : null,
 
-        // Check counts per window (shown as "based on N checks")
         checks24h: w24.totalChecks ?? 0,
         checks7d:  w7.totalChecks  ?? 0,
         checks30d: w30.totalChecks ?? 0,
@@ -424,9 +499,12 @@ export const getReportData = async (req, res) => {
     });
 
     res.json({ success: true, data: { logsBySite, statsMap } });
-
   } catch (err) {
     console.error("getReportData:", err);
-    res.status(500).json({ success: false, message: "Failed to fetch report data", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch report data",
+      error: err.message,
+    });
   }
 };

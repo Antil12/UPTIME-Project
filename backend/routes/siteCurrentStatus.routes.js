@@ -1,15 +1,16 @@
-        import express from "express";
-        import {
-        getAllSiteStatus,
-        getStatusBySiteId,
-        } from "../controllers/siteCurrentStatus.controller.js";
+import express from "express";
+import { protect } from "../middleware/auth.middleware.js";
+import {
+  getAllSiteStatus,
+  getStatusBySiteId,
+} from "../controllers/siteCurrentStatus.controller.js";
 
-        const router = express.Router();
+const router = express.Router();
 
-        // GET all website status
-        router.get("/", getAllSiteStatus);
+// ✅ FIX: protect was missing — anyone could read all site statuses without auth
+router.use(protect);
 
-        // GET single website status
-        router.get("/:siteId", getStatusBySiteId);
+router.get("/",         getAllSiteStatus);
+router.get("/:siteId",  getStatusBySiteId);
 
-        export default router;
+export default router;

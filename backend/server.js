@@ -3,6 +3,8 @@ dotenv.config();
 
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import monitoredSiteRoutes from "./routes/monitoredSite.Routes.js";
@@ -15,7 +17,9 @@ import authRoutes from "./routes/auth.Routes.js";
 import userRoutes from "./routes/user.routes.js";
 import emailRoutes from "./routes/email.Routes.js";
 import regionReportRoutes from "./routes/regionReport.routes.js";
-import "./workers/emailWorker.js";
+import { emailWorker, workerStatus } from "./workers/emailWorker.js";
+import connection from "./queue/redisConnection.js";
+import logger from "./logger.js";
 
 // Import models to ensure they're registered with MongoDB
 // import RegionUptimeLog from "./models/RegionUptimeLog.js";
@@ -62,10 +66,16 @@ const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
   ? process.env.CORS_ALLOWED_ORIGINS.split(",").map((o) => o.trim())
   : [];
 
-console.log("✅ Allowed CORS origins:", allowedOrigins);
-console.log("✅ MongoDB URI:", process.env.MONGODB_URI);
+logger.info({ allowedOrigins }, "Allowed CORS origins");
+logger.info({ mongodbUri: process.env.MONGODB_URI ? "configured" : "missing" }, "MongoDB URI check");
 
 const isDev = process.env.NODE_ENV !== "production";
+
+app.use(helmet());
+app.use((req, res, next) => {
+  logger.info({ method: req.method, url: req.originalUrl, ip: req.ip }, "Incoming request");
+  next();
+});
 
 app.use(
   cors({
@@ -94,7 +104,8 @@ app.use(cookieParser());
 /* ======================
    BODY PARSER
 ====================== */
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
 /* ======================
    ROUTES
@@ -104,8 +115,39 @@ app.get("/", (req, res) => {
 });
 
 // Health check endpoint
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "Backend is running" });
+app.get("/api/health", async (req, res) => {
+  const mongoState = mongoose.connection.readyState;
+  const mongoStatus = mongoState === 1 ? "up" : mongoState === 2 ? "connecting" : "down";
+
+  let redisStatus = "unknown";
+  let redisDetail = null;
+  try {
+    const ping = await connection.ping();
+    redisStatus = ping === "PONG" ? "up" : "down";
+  } catch (err) {
+    redisStatus = "down";
+    redisDetail = err.message;
+  }
+
+  const queueStatus = {
+    running: workerStatus.running,
+    lastActivity: workerStatus.lastActivity,
+    error: workerStatus.error,
+  };
+
+  const overallStatus =
+    mongoStatus === "up" && redisStatus === "up" && queueStatus.running
+      ? "ok"
+      : "degraded";
+
+  res.json({
+    status: overallStatus,
+    checks: {
+      mongo: { status: mongoStatus, state: mongoState },
+      redis: { status: redisStatus, detail: redisDetail },
+      emailWorker: queueStatus,
+    },
+  });
 });
 
 // API root endpoint
@@ -134,19 +176,19 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   try {
     await connectDB();
-    console.log("✅ MongoDB connected");
+    logger.info("✅ MongoDB connected");
 
     startMonitoringCron();
-    console.log("🕒 Monitoring cron started");
+    logger.info("🕒 Monitoring cron started");
 
     startGlobalMonitoringCron();
-    console.log("🌍 Global monitoring cron started");
+    logger.info("🌍 Global monitoring cron started");
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+      logger.info({ port: PORT }, "🚀 Server running");
     });
   } catch (error) {
-    console.error("❌ Server startup failed:", error);
+    logger.error(error, "❌ Server startup failed");
     process.exit(1);
   }
 };

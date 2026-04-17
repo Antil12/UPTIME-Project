@@ -3,115 +3,161 @@ import { URL } from "url";
 import SslStatus from "../models/SslStatus.js";
 import AlertState from "../models/AlertState.js";
 
-export const checkSsl = async (site) => {
-  const hostname = new URL(site.url).hostname;
+const SSL_TIMEOUT_MS       = 10_000;
+const DEFAULT_ALERT_DAYS   = 30; // fallback if site.sslAlertBeforeDays is not set
 
+export const checkSsl = (site) => {
   return new Promise((resolve) => {
-    const socket = tls.connect(443, hostname, { servername: hostname }, async () => {
-      const cert = socket.getPeerCertificate();
-      socket.end();
+    let settled = false;
+    const done = () => { settled = true; };
 
-      if (!cert || !cert.valid_to) return resolve();
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(site.url);
+    } catch {
+      // Unparseable URL — mark ERROR and bail out
+      persist(site, { sslStatus: "ERROR", sslPriority: 1 }).then(resolve);
+      return;
+    }
 
-      const validTo = new Date(cert.valid_to);
-      const daysRemaining = Math.ceil(
-        (validTo - new Date()) / (1000 * 60 * 60 * 24)
-      );
+    // Only attempt TLS check for https: — http sites have no certificate
+    if (parsedUrl.protocol !== "https:") {
+      resolve();
+      return;
+    }
 
-      let sslStatus = "VALID";
-      if (daysRemaining <= 0) sslStatus = "EXPIRED";
-      else if (daysRemaining <= site.sslAlertBeforeDays) sslStatus = "EXPIRING";
-      let sslPriority = 5;
+    const hostname = parsedUrl.hostname;
+    // Use the explicit port in the URL, or fall back to 443
+    const port     = parsedUrl.port ? Number(parsedUrl.port) : 443;
 
-if (sslStatus === "ERROR") {
-  sslPriority = 1;
-}
-else if (daysRemaining >=1 && daysRemaining <=3) {
-  sslPriority = 2;
-}
-else if (daysRemaining >=4 && daysRemaining <=5) {
-  sslPriority = 3;
-}
-else if (daysRemaining >=6 && daysRemaining <=7) {
-  sslPriority = 4;
-}
-else {
-  sslPriority = 5; // valid
-}
-      
+    // ── Create the socket BEFORE registering any event listeners ────────────
+    // DO NOT use the tls.connect callback for certificate work — the callback
+    // fires when the TCP connection is established, which can be before the
+    // TLS handshake completes, causing getPeerCertificate() to return {}.
+    // Use the 'secureConnect' event instead, which fires only after the full
+    // TLS handshake succeeds and the peer certificate is available.
+    const socket = tls.connect(
+      port,
+      hostname,
+      { servername: hostname, rejectUnauthorized: false }, // rejectUnauthorized:false
+      // so we can inspect expired/self-signed certs rather than throwing
+    );
 
-      await SslStatus.findOneAndUpdate(
-{ siteId: site._id },
-{
-  siteId: site._id,
-  sslStatus,
-  sslPriority,
-  validTo,
-  daysRemaining,
-  lastCheckedAt: new Date()
-},
-{ upsert: true }
-);
-
-
-      await handleSslAlert(site._id, sslStatus);
-
+    // ── Timeout ──────────────────────────────────────────────────────────────
+    socket.setTimeout(SSL_TIMEOUT_MS);
+    socket.on("timeout", async () => {
+      if (settled) return;
+      done();
+      socket.destroy();
+      await persist(site, { sslStatus: "ERROR", sslPriority: 1 });
+      await handleSslAlert(site._id, "ERROR");
       resolve();
     });
 
-     /* 👇👇 PASTE THIS PART EXACTLY HERE 👇👇 */
+    // ── Connection / TLS error ───────────────────────────────────────────────
+    socket.on("error", async (err) => {
+      if (settled) return;
+      done();
+      socket.destroy();
+      // ECONNRESET / ECONNREFUSED / cert verify errors all land here
+      console.warn(`SSL check error for ${hostname}:`, err.code || err.message);
+      await persist(site, { sslStatus: "ERROR", sslPriority: 1 });
+      await handleSslAlert(site._id, "ERROR");
+      resolve();
+    });
 
-    socket.setTimeout(10000);
+    // ── Successful TLS handshake ─────────────────────────────────────────────
+    // 'secureConnect' fires AFTER the handshake — certificate is fully available
+    socket.on("secureConnect", async () => {
+      if (settled) return;
+      done();
 
-    socket.on("timeout", async () => {
+      const cert = socket.getPeerCertificate(false); // false = don't include chain
       socket.destroy();
 
-      await SslStatus.findOneAndUpdate(
-  { siteId: site._id },
-  {
-    siteId: site._id,
-    sslStatus: "ERROR",
-sslPriority: 1,
-    lastCheckedAt: new Date()
-  },
-  { upsert: true }
-);
+      if (!cert || !cert.valid_to) {
+        // Connected but no certificate info — treat as error
+        await persist(site, { sslStatus: "ERROR", sslPriority: 1 });
+        await handleSslAlert(site._id, "ERROR");
+        return resolve();
+      }
 
-      await handleSslAlert(site._id, "ERROR");
-      resolve();
-    });
+      const validTo        = new Date(cert.valid_to);
+      const daysRemaining  = Math.ceil((validTo - Date.now()) / (1000 * 60 * 60 * 24));
+      const alertThreshold = site.sslAlertBeforeDays ?? DEFAULT_ALERT_DAYS;
 
-    socket.on("error", async () => {
-    await SslStatus.findOneAndUpdate(
-  { siteId: site._id },
-  {
-    siteId: site._id,
-    sslStatus: "ERROR",
-sslPriority: 1,
-    lastCheckedAt: new Date()
-  },
-  { upsert: true }
-);
+      let sslStatus;
+      if (daysRemaining <= 0) {
+        sslStatus = "EXPIRED";
+      } else if (daysRemaining <= alertThreshold) {
+        sslStatus = "EXPIRING";
+      } else {
+        sslStatus = "VALID";
+      }
 
-      await handleSslAlert(site._id, "ERROR");
+      // ── Priority (lower number = more urgent) ───────────────────────────
+      // 1 = ERROR (handled in error paths above)
+      // 2 = EXPIRED or 1-3 days remaining
+      // 3 = EXPIRING 4-7 days
+      // 4 = EXPIRING 8-14 days
+      // 5 = VALID (> threshold or well within threshold)
+      let sslPriority;
+      if (sslStatus === "EXPIRED" || daysRemaining <= 3) {
+        sslPriority = 2;
+      } else if (daysRemaining <= 7) {
+        sslPriority = 3;
+      } else if (daysRemaining <= 14) {
+        sslPriority = 4;
+      } else {
+        sslPriority = 5;
+      }
+
+      await persist(site, { sslStatus, sslPriority, validTo, daysRemaining });
+      await handleSslAlert(site._id, sslStatus);
       resolve();
     });
   });
 };
+
+/* ─── Helpers ──────────────────────────────────────────────────────────────── */
+
+/**
+ * Upsert the SslStatus document for a site.
+ */
+async function persist(site, fields) {
+  try {
+    await SslStatus.findOneAndUpdate(
+      { siteId: site._id },
+      { siteId: site._id, lastCheckedAt: new Date(), ...fields },
+      { upsert: true, new: true }
+    );
+  } catch (err) {
+    console.error("SslStatus persist error:", err.message);
+  }
+}
+
+/**
+ * Fire an alert when the SSL status changes.
+ * Only logs/notifies on a transition — avoids repeat spam.
+ */
 const handleSslAlert = async (siteId, sslStatus) => {
-  const state = await AlertState.findOneAndUpdate(
-    { siteId },
-    {},
-    { upsert: true, new: true }
-  );
+  try {
+    const state = await AlertState.findOneAndUpdate(
+      { siteId },
+      {},
+      { upsert: true, new: true }
+    );
 
-  if (state.lastSslStatus !== sslStatus) {
-    if (sslStatus !== "VALID") {
-      console.log(`🔐 SSL ALERT (${sslStatus}) for site ${siteId}`);
+    if (state.lastSslStatus !== sslStatus) {
+      if (sslStatus !== "VALID") {
+        console.log(`🔐 SSL ALERT (${sslStatus}) for site ${siteId}`);
+        // TODO: plug in your emailQueue / notification call here
+      }
+      state.lastSslStatus     = sslStatus;
+      state.lastSslNotifiedAt = new Date();
+      await state.save();
     }
-
-    state.lastSslStatus = sslStatus;
-    state.lastSslNotifiedAt = new Date();
-    await state.save();
+  } catch (err) {
+    console.error("handleSslAlert error:", err.message);
   }
 };

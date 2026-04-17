@@ -1,4 +1,6 @@
 import axios from "axios";
+import https from "https";
+import logger from "../logger.js";
 import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import UptimeLog from "../models/UptimeLog.js";
@@ -11,6 +13,56 @@ import { emailQueue } from "../queue/emailQueue.js";
 
 import fs from "fs";
 import path from "path";
+
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+const RETRYABLE_AXIOS_CODES = [408, 429, 500, 502, 503, 504];
+const RETRYABLE_AXIOS_ERRORS = [
+  "ECONNABORTED",
+  "ECONNRESET",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "ETIMEDOUT",
+  "ECONNREFUSED",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+];
+
+const isRetryableError = (err) => {
+  if (!err) return false;
+  if (err.response && RETRYABLE_AXIOS_CODES.includes(err.response.status)) {
+    return true;
+  }
+  if (RETRYABLE_AXIOS_ERRORS.includes(err.code)) {
+    return true;
+  }
+  if (err.message && /timeout|network|dns|TLS|certificate|ECONN/i.test(err.message)) {
+    return true;
+  }
+  return false;
+};
+
+const axiosRequestWithRetry = async (axiosConfig, retries = 2) => {
+  let attempt = 0;
+  let lastError;
+
+  while (attempt <= retries) {
+    try {
+      return await axios(axiosConfig);
+    } catch (err) {
+      lastError = err;
+      if (attempt === retries || !isRetryableError(err)) {
+        throw err;
+      }
+      const delay = 300 * (attempt + 1);
+      logger.warn({ url: axiosConfig.url, method: axiosConfig.method, attempt, err: err.message }, "Retrying failed request");
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      attempt += 1;
+    }
+  }
+
+  throw lastError;
+};
 
 let sslRunCounter = 0; // 👈 controls SSL frequency
 
@@ -49,24 +101,31 @@ try {
   const SHOULD_FALLBACK_TO_GET = [403, 405, 408, 429, 500, 501, 502, 503, 504];
 
   let response;
-
-  // HEAD check
+  let triedGet = false;
   let start = Date.now();
-  response = await axios.head(site.url, {
+
+  const baseConfig = {
     timeout: 15000,
     validateStatus: () => true,
-  });
+    httpsAgent,
+    headers: { "User-Agent": "UptimeMonitor/1.0" },
+  };
+
+  try {
+    response = await axiosRequestWithRetry({ ...baseConfig, method: "head", url: site.url });
+  } catch (headErr) {
+    logger.warn({ url: site.url, err: headErr.message }, "HEAD request failed, trying GET fallback");
+    triedGet = true;
+    start = Date.now();
+    response = await axiosRequestWithRetry({ ...baseConfig, method: "get", url: site.url });
+  }
+
   let measuredTime = Date.now() - start;
 
-  // fallback to GET if HEAD is unreliable
-  if (SHOULD_FALLBACK_TO_GET.includes(response.status)) {
-    console.log(`HEAD not reliable for ${site.url} (${response.status}) → trying GET fallback`);
-
+  if (!triedGet && SHOULD_FALLBACK_TO_GET.includes(response.status)) {
+    logger.info({ url: site.url, status: response.status }, "HEAD returned fallback status, trying GET");
     start = Date.now();
-    response = await axios.get(site.url, {
-      timeout: 15000,
-      validateStatus: () => true,
-    });
+    response = await axiosRequestWithRetry({ ...baseConfig, method: "get", url: site.url });
     measuredTime = Date.now() - start;
   }
 
@@ -76,7 +135,6 @@ try {
   if (statusCode >= 200 && statusCode < 400) {
     if (responseTimeMs > SLOW_THRESHOLD) {
       status = "SLOW";
-
       slowSitesTemp.push({
         domain: site.domain,
         url: site.url,
@@ -92,6 +150,7 @@ try {
     status = "DOWN";
   }
 } catch (err) {
+  logger.error({ url: site.url, err: err.message }, "Uptime check failed");
   status = "DOWN";
   statusCode = 0;
   responseTimeMs = null;
@@ -261,7 +320,7 @@ else statusPriority = 4;
 
       console.log(`✅ Checked ${sites.length} sites`);
     },
-    1 * 60 * 1000,
-  ); // 1 minute
+    2 * 60 * 1000,
+  ); // 21 minutes
 };
 
