@@ -501,8 +501,8 @@ export default function SiteReport({
                 </span>
               </div>
             </div>
-            <div style={{ width:"100%", height:280 }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <div style={{ width:"100%", height:280, minWidth:0 }}>
+  <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={series} margin={{ top:6, right:12, left:0, bottom:4 }}>
                   <defs>
                     <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
