@@ -1,29 +1,73 @@
 # lambda-worker/serverless.yml
+#
+# Deploy one Lambda per region using these commands:
+#
+#   cd lambda-worker
+#
+#   serverless deploy \
+#     --param="awsRegion=ap-south-1" \
+#     --param="regionName=Asia" \
+#     --param="backendUrl=https://your-api.com" \
+#     --param="lambdaSecret=your-secret"
+#
+#   serverless deploy \
+#     --param="awsRegion=us-east-1" \
+#     --param="regionName=North America" \
+#     --param="backendUrl=https://your-api.com" \
+#     --param="lambdaSecret=your-secret"
+#
+#   serverless deploy \
+#     --param="awsRegion=eu-west-1" \
+#     --param="regionName=Europe" \
+#     --param="backendUrl=https://your-api.com" \
+#     --param="lambdaSecret=your-secret"
+#
+#   serverless deploy \
+#     --param="awsRegion=sa-east-1" \
+#     --param="regionName=South America" \
+#     --param="backendUrl=https://your-api.com" \
+#     --param="lambdaSecret=your-secret"
+#
+#   serverless deploy \
+#     --param="awsRegion=ap-southeast-2" \
+#     --param="regionName=Australia" \
+#     --param="backendUrl=https://your-api.com" \
+#     --param="lambdaSecret=your-secret"
+#
+#   serverless deploy \
+#     --param="awsRegion=af-south-1" \
+#     --param="regionName=Africa" \
+#     --param="backendUrl=https://your-api.com" \
+#     --param="lambdaSecret=your-secret"
+#
+# After ALL workers are deployed, add to your backend .env:
+#   LAMBDA_WORKERS_ACTIVE=true
+
 service: uptime-region-checker
 
 provider:
   name: aws
   runtime: nodejs20.x
-  region: ${param:awsRegion, "ap-south-1"}  # default: India (ap-south-1)
-  memorySize: 256                             # MB — plenty for HTTP checks
-  timeout: 60                                 # seconds (well under Lambda's 900s max)
+  region: ${param:awsRegion, "ap-south-1"}
+  memorySize: 256   # MB — sufficient for HTTP checks
+  timeout: 60       # seconds (well under Lambda's 900s max)
   environment:
-    # ⚠️  Env var names MUST match what index.js reads via process.env.*
-    BACKEND_API_URL: ${param:backendUrl}      # process.env.BACKEND_API_URL
-    REGION: ${param:regionName}               # process.env.REGION
-    LAMBDA_SECRET: ${param:lambdaSecret}      # process.env.LAMBDA_SECRET
+    BACKEND_API_URL: ${param:backendUrl}   # process.env.BACKEND_API_URL
+    REGION: ${param:regionName}            # process.env.REGION  — must match MongoDB enum exactly
+    LAMBDA_SECRET: ${param:lambdaSecret}   # process.env.LAMBDA_SECRET
 
 functions:
   checker:
     handler: index.handler
+    # Name includes region so multiple deploys don't overwrite each other
     name: uptime-checker-${param:regionName}
     description: "Uptime checker for ${param:regionName}"
     events:
       - schedule:
-          rate: rate(2 minutes)
+          rate: rate(2 minutes)   # fires every 2 minutes via EventBridge
           enabled: true
 
-# Serverless v3+ package syntax — exclude dev/config files from the ZIP
+# Exclude dev/config files from the ZIP uploaded to AWS
 package:
   patterns:
     - "!.gitignore"
@@ -32,3 +76,4 @@ package:
     - "!*.yml"
     - "!*.yaml"
     - "!.env*"
+    - "!deploy.sh"

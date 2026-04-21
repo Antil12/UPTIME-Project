@@ -1,6 +1,14 @@
-import express from "express";
-import { lambdaAuth } from "../middleware/lambdaAuth.js";
-import { protect } from "../middleware/auth.middleware.js";
+/**
+ * regionReport.routes.js
+ *
+ * ⚠️  Route order matters:
+ *     /manual and /sites must be registered BEFORE /:siteId
+ *     otherwise Express matches "manual" or "sites" as a siteId param.
+ */
+
+import express       from "express";
+import { lambdaAuth }from "../middleware/lambdaAuth.js";
+import { protect }   from "../middleware/auth.middleware.js";
 import {
   getSitesByRegion,
   receiveRegionReport,
@@ -10,12 +18,13 @@ import {
 
 const router = express.Router();
 
-// Lambda-only endpoints (require Bearer token)
-router.get("/sites", lambdaAuth, getSitesByRegion);
-router.post("/", lambdaAuth, receiveRegionReport);
+// ── Lambda-only (LAMBDA_SECRET bearer token) ──────────────────────────────────
+router.get("/sites", lambdaAuth, getSitesByRegion);    // GET  /api/region-report/sites?region=
+router.post("/",     lambdaAuth, receiveRegionReport); // POST /api/region-report
 
-// Frontend endpoints
-router.get("/:siteId", getRegionStatusForSite);
-router.post("/manual/:region", protect, manualRegionCheck);
+// ── Frontend (JWT) ─────────────────────────────────────────────────────────────
+// /manual MUST come before /:siteId — otherwise "manual" is treated as a siteId
+router.post("/manual", protect, manualRegionCheck);    // POST /api/region-report/manual
+router.get("/:siteId", getRegionStatusForSite);        // GET  /api/region-report/:siteId
 
 export default router;

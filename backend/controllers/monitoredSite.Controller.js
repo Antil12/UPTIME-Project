@@ -7,6 +7,7 @@ import RegionCurrentStatus from "../models/RegionCurrentStatus.js";
 import { getSlowBatch, clearSlowBatch } from "../services/slowBatchStore.js";
 import User from "../models/User.js";
 import { emailQueue } from "../queue/emailQueue.js";
+import { checkRegion } from "../services/regionChecker.js";
 import fs from "fs";
 import csv from "csv-parser";
 
@@ -22,7 +23,6 @@ export const getMonitoredSites = async (req, res) => {
     const LIMIT = Math.max(1, parseInt(limit, 10) || 20);
     const skip  = (PAGE - 1) * LIMIT;
 
-    // ── Base match ──────────────────────────────────────────────────────────
     const matchStage = { isActive: 1 };
 
     const searchOr = q
@@ -36,7 +36,6 @@ export const getMonitoredSites = async (req, res) => {
       matchStage.category = category;
     }
 
-    // ── RBAC ────────────────────────────────────────────────────────────────
     const role   = req.user?.role;
     const userId = req.user?._id;
 
@@ -64,7 +63,6 @@ export const getMonitoredSites = async (req, res) => {
       matchStage.$or = searchOr;
     }
 
-    // ── Aggregation pipeline ─────────────────────────────────────────────────
     const pipeline = [
       { $match: matchStage },
       {
@@ -210,7 +208,7 @@ export const getSitesByRegionForLambda = async (req, res) => {
 };
 
 /* =====================================================
-   GET GLOBAL STATUS STATS (FOR STAT CARDS)
+   GET GLOBAL STATUS STATS
 ===================================================== */
 export const getStatusStats = async (req, res) => {
   try {
@@ -480,7 +478,7 @@ export const assignUsersToSite = async (req, res) => {
 };
 
 /* =====================================================
-   CHECK & UPDATE SITE CURRENT STATUS (single-site direct check)
+   CHECK & UPDATE SITE STATUS (single-site direct check)
 ===================================================== */
 export const checkAndUpdateSiteStatus = async (req, res) => {
   const { siteId } = req.params;
@@ -492,17 +490,17 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
 
     let status = "UNKNOWN", statusCode = null, responseTimeMs = null, reason = null;
     const SLOW_THRESHOLD = site.responseThresholdMs || 15000;
-  let startTime = Date.now();
+    let startTime = Date.now();
 
-try {
-  let response;
-  try {
-    response = await axios.head(site.url, { timeout: 10000, validateStatus: () => true });
-  } catch {
-    startTime = Date.now(); // ✅ reset before GET
-    response = await axios.get(site.url, { timeout: 10000, validateStatus: () => true });
-  }
-  responseTimeMs = Date.now() - startTime;
+    try {
+      let response;
+      try {
+        response = await axios.head(site.url, { timeout: 10000, validateStatus: () => true });
+      } catch {
+        startTime = Date.now();
+        response = await axios.get(site.url, { timeout: 10000, validateStatus: () => true });
+      }
+      responseTimeMs = Date.now() - startTime;
       statusCode     = response.status;
       if (statusCode >= 200 && statusCode < 400) {
         status = responseTimeMs > SLOW_THRESHOLD ? "SLOW" : "UP";
@@ -537,7 +535,7 @@ try {
 };
 
 /* =====================================================
-   COMPUTE GLOBAL STATUS FOR ALL SITES (called by Lambda + cron)
+   COMPUTE GLOBAL STATUS FOR ALL SITES
 ===================================================== */
 export const computeGlobalStatus = async (req, res) => {
   try {
@@ -557,6 +555,26 @@ export const computeGlobalStatus = async (req, res) => {
 
 /* =====================================================
    MANUAL GLOBAL CHECK FOR A SINGLE SITE
+   ─────────────────────────────────────────────────────
+   REWRITTEN: performs a REAL HTTP check per region instead of
+   one India-sourced check stamped on every region.
+
+   - If the site has regions assigned: calls checkRegion() for each
+     region independently, persists each result separately, then
+     recalculates globalStatus from fresh regional data.
+   - If the site has no regions: falls back to a single direct check.
+   - Results are tagged isBackendDirect=true when Lambda is not active,
+     so the frontend can show an honest warning in the modal.
+===================================================== */
+/* =====================================================
+   MANUAL GLOBAL CHECK FOR A SINGLE SITE
+   
+   LAMBDA INACTIVE → checkRegion() per region from India backend.
+                      isBackendDirect: true in response so frontend
+                      shows the warning banner.
+   
+   LAMBDA ACTIVE   → POST to each Lambda endpoint and collect results.
+                      isBackendDirect: false, real regional latency.
 ===================================================== */
 export const globalCheckSite = async (req, res) => {
   try {
@@ -567,16 +585,17 @@ export const globalCheckSite = async (req, res) => {
       return res.status(404).json({ success: false, message: "Site not found" });
     }
 
+    // ── RBAC ─────────────────────────────────────────────────────────────────
     const role   = (req.user && req.user.role) || "";
     const userId = req.user?._id?.toString();
+
     if (role === "USER" || role === "VIEWER") {
       const user = await User.findById(userId).select("assignedSites assignedCategories");
       const ownerId  = site.owner ? site.owner.toString() : null;
       const assigned = Array.isArray(site.assignedUsers)
-        ? site.assignedUsers.map((a) => a.toString())
-        : [];
-      const assignedSiteIds    = (user?.assignedSites       || []).map((id) => id.toString());
-      const assignedCategories = user?.assignedCategories   || [];
+        ? site.assignedUsers.map((a) => a.toString()) : [];
+      const assignedSiteIds    = (user?.assignedSites    || []).map((id) => id.toString());
+      const assignedCategories =  user?.assignedCategories || [];
       const hasAccess =
         ownerId === userId ||
         assigned.includes(userId) ||
@@ -587,81 +606,122 @@ export const globalCheckSite = async (req, res) => {
       }
     }
 
-    const SLOW_THRESHOLD = site.responseThresholdMs || 15_000;
-    const TIMEOUT_MS     = 20_000;
+    // ── Config ────────────────────────────────────────────────────────────────
+    const { calculateGlobalStatus } = await import("../services/globalStatusService.js");
+    const { REGION_MAP }            = await import("../config/Regionconfig.js");
 
-    async function liveCheck(url) {
-      const start = Date.now();
-      let response = null, methodUsed = "HEAD";
-      try {
-        response = await axios.head(url, { timeout: TIMEOUT_MS, validateStatus: () => true, headers: { "User-Agent": "UptimeMonitor/1.0 ManualCheck" } });
-        if (response.status === 405) throw new Error("HEAD not allowed (405)");
-      } catch {
-        methodUsed = "GET";
+    const LAMBDA_ACTIVE  = process.env.LAMBDA_WORKERS_ACTIVE === "true";
+    const LAMBDA_SECRET  = process.env.LAMBDA_SECRET;
+    const siteRegions    = Array.isArray(site.regions) && site.regions.length > 0
+      ? site.regions : null;
+    const now            = new Date();
+    const regionalBreakdown = [];
+    // isBackendDirect is true when we are NOT using real Lambda workers
+    const isBackendDirect = !LAMBDA_ACTIVE;
+
+    if (siteRegions) {
+      for (const regionName of siteRegions) {
         try {
-          response = await axios.get(url, { timeout: TIMEOUT_MS, validateStatus: () => true, headers: { "User-Agent": "UptimeMonitor/1.0 ManualCheck" } });
-        } catch (getErr) {
-          return { status: "DOWN", statusCode: null, responseTimeMs: Date.now() - start, reason: getErr.code === "ECONNABORTED" ? "TIMEOUT" : (getErr.message || "REQUEST_FAILED"), methodUsed };
+          let result;
+
+          if (LAMBDA_ACTIVE) {
+            // ── PATH A: real Lambda worker ────────────────────────────────────
+            // Each Lambda is deployed at its own endpoint. We POST a single-site
+            // check request and wait for the result synchronously.
+            // Lambda env: BACKEND_API_URL is its callback URL, not our endpoint.
+            // We call the Lambda function URL directly (set LAMBDA_ENDPOINT_<REGION>
+            // in backend .env, e.g. LAMBDA_ENDPOINT_ASIA=https://xxx.lambda-url.ap-south-1.on.aws)
+            const envKey       = `LAMBDA_ENDPOINT_${regionName.toUpperCase().replace(/ /g, "_")}`;
+            const lambdaUrl    = process.env[envKey];
+
+            if (!lambdaUrl) {
+              // Lambda URL not configured — fall back to direct for this region
+              console.warn(`[globalCheckSite] ${envKey} not set, falling back to direct check for ${regionName}`);
+              result = await checkDirectForRegion(site, regionName, now);
+              result.source = "BACKEND_DIRECT"; // honest flag
+            } else {
+              // Invoke Lambda function URL with a single-site payload
+              const lambdaRes = await axios.post(
+                lambdaUrl,
+                { siteId: site._id.toString(), url: site.url, responseThresholdMs: site.responseThresholdMs },
+                {
+                  headers: {
+                    Authorization: `Bearer ${LAMBDA_SECRET}`,
+                    "Content-Type": "application/json",
+                  },
+                  timeout: 25_000, // Lambda has up to 60s but we cap at 25s for UX
+                }
+              );
+              // Lambda returns { status, statusCode, responseTimeMs }
+              const lr = lambdaRes.data;
+              result = {
+                siteId:         site._id,
+                region:         regionName,
+                status:         lr.status         || "UNKNOWN",
+                statusCode:     lr.statusCode      ?? null,
+                responseTimeMs: lr.responseTimeMs  ?? null,
+                source:         "LAMBDA",
+              };
+            }
+          } else {
+            // ── PATH B: backend direct (India) ────────────────────────────────
+            result = await checkDirectForRegion(site, regionName, now);
+          }
+
+          // ── Persist result ────────────────────────────────────────────────
+          await RegionCurrentStatus.findOneAndUpdate(
+            { siteId: site._id, region: regionName },
+            {
+              status:         result.status,
+              statusCode:     result.statusCode,
+              responseTimeMs: result.responseTimeMs,
+              lastCheckedAt:  now,
+            },
+            { upsert: true, new: true }
+          );
+
+          const RegionUptimeLog = (await import("../models/RegionUptimeLog.js")).default;
+          await RegionUptimeLog.create({
+            siteId:         site._id,
+            region:         regionName,
+            status:         result.status,
+            statusCode:     result.statusCode,
+            responseTimeMs: result.responseTimeMs,
+            checkedAt:      now,
+          });
+
+          regionalBreakdown.push({
+            region:         regionName,
+            status:         result.status,
+            statusCode:     result.statusCode      ?? null,
+            responseTimeMs: result.responseTimeMs  ?? null,
+            lastCheckedAt:  now.toISOString(),
+            source:         result.source,
+          });
+
+        } catch (err) {
+          console.error(`[globalCheckSite] Region "${regionName}" failed:`, err.message);
+          regionalBreakdown.push({
+            region:        regionName,
+            status:        "UNKNOWN",
+            error:         err.message,
+            lastCheckedAt: null,
+          });
         }
       }
-      const responseTimeMs = Date.now() - start;
-      const httpStatus     = response.status;
-      let status, reason = null;
-      if (httpStatus >= 200 && httpStatus < 400) {
-        status = responseTimeMs > SLOW_THRESHOLD ? "SLOW" : "UP";
-        reason = status === "SLOW" ? "HIGH_RESPONSE_TIME" : null;
-      } else if (httpStatus >= 400 && httpStatus < 500) {
-        status = "DOWN"; reason = "CLIENT_ERROR";
-      } else if (httpStatus >= 500) {
-        status = "DOWN"; reason = "SERVER_ERROR";
-      } else {
-        status = "DOWN"; reason = "INVALID_RESPONSE";
-      }
-      return { status, statusCode: httpStatus, responseTimeMs, reason, methodUsed };
+    } else {
+      // ── No regions configured: single direct check ────────────────────────
+      const directResult = await checkDirectForSite(site, now);
+      regionalBreakdown.push(directResult);
     }
 
-    const checkResult = await liveCheck(site.url);
-    const checkedAt   = new Date();
-
-    let statusPriority = 4;
-    if (checkResult.status === "DOWN")      statusPriority = 1;
-    else if (checkResult.status === "SLOW") statusPriority = 2;
-    else if (checkResult.status === "UP")   statusPriority = 3;
-
-    await SiteCurrentStatus.findOneAndUpdate(
-      { siteId: site._id },
-      { siteId: site._id, status: checkResult.status, statusPriority, statusCode: checkResult.statusCode, reason: checkResult.reason, responseTimeMs: checkResult.responseTimeMs, lastCheckedAt: checkedAt },
-      { upsert: true, new: true }
-    );
-
-    const regions = Array.isArray(site.regions) ? site.regions : [];
-    if (regions.length > 0) {
-      await Promise.all(
-        regions.map((region) =>
-          RegionCurrentStatus.findOneAndUpdate(
-            { siteId: site._id, region },
-            { siteId: site._id, region, status: checkResult.status, statusCode: checkResult.statusCode, responseTimeMs: checkResult.responseTimeMs, reason: checkResult.reason, lastCheckedAt: checkedAt },
-            { upsert: true, new: true }
-          )
-        )
-      );
-    }
-
-    const { calculateGlobalStatus } = await import("../services/globalStatusService.js");
+    // ── Recalculate global status from the fresh regional data ────────────────
     const globalResult = await calculateGlobalStatus(siteId);
 
-    const regionalBreakdown = await Promise.all(
-      regions.map(async (region) => {
-        const rs = await RegionCurrentStatus.findOne({ siteId: site._id, region }).lean();
-        return {
-          region,
-          status:         rs?.status         || "UNKNOWN",
-          statusCode:     rs?.statusCode     || null,
-          responseTimeMs: rs?.responseTimeMs || null,
-          reason:         rs?.reason         || null,
-          lastCheckedAt:  rs?.lastCheckedAt  || null,
-        };
-      })
+    console.log(
+      `[globalCheckSite] ${site.domain} — global: ${globalResult?.globalStatus} | ` +
+      `regions: ${siteRegions?.join(", ") || "none (direct)"} | ` +
+      `source: ${LAMBDA_ACTIVE ? "LAMBDA" : "BACKEND_DIRECT"}`
     );
 
     return res.json({
@@ -671,14 +731,15 @@ export const globalCheckSite = async (req, res) => {
         siteId:           site._id,
         domain:           site.domain,
         url:              site.url,
-        liveStatus:       checkResult.status,
-        liveStatusCode:   checkResult.statusCode,
-        liveResponseTime: checkResult.responseTimeMs,
-        methodUsed:       checkResult.methodUsed,
-        globalStatus:     globalResult?.globalStatus || checkResult.status,
+        globalStatus:     globalResult?.globalStatus || "UNKNOWN",
         downRegions:      globalResult?.downRegions  || [],
         regionalBreakdown,
-        checkTimestamp:   checkedAt.toISOString(),
+        checkTimestamp:   now.toISOString(),
+        isBackendDirect,
+        warning: isBackendDirect
+          ? "Response times reflect your backend server location (India), not true regional latency. " +
+            "Deploy Lambda workers and set LAMBDA_WORKERS_ACTIVE=true for accurate geographic checks."
+          : null,
       },
     });
   } catch (error) {
@@ -687,6 +748,69 @@ export const globalCheckSite = async (req, res) => {
   }
 };
 
+// ─── Helper: direct HTTP check for one region (backend = India source) ────────
+async function checkDirectForRegion(site, regionName, now) {
+  const { checkRegion } = await import("../services/regionChecker.js");
+  let results = await checkRegion(regionName);
+  results = results.filter((r) => String(r.siteId) === String(site._id));
+
+  if (results.length === 0) {
+    return { siteId: site._id, region: regionName, status: "UNKNOWN", statusCode: null, responseTimeMs: null, source: "BACKEND_DIRECT" };
+  }
+  return { ...results[0], source: "BACKEND_DIRECT" };
+}
+
+// ─── Helper: direct HTTP check when no regions configured ────────────────────
+async function checkDirectForSite(site, now) {
+  const TIMEOUT_MS     = 20_000;
+  // FIX: use the same 15s default as monitorCron
+  const SLOW_THRESHOLD = site.responseThresholdMs || 15_000;
+  let   start          = Date.now();
+
+  try {
+    let response;
+    try {
+      response = await axios.head(site.url, { timeout: TIMEOUT_MS, validateStatus: () => true });
+      if (response.status === 405) throw new Error("HEAD not allowed");
+    } catch {
+      start    = Date.now();
+      response = await axios.get(site.url, { timeout: TIMEOUT_MS, validateStatus: () => true });
+    }
+
+    const responseTimeMs = Date.now() - start;
+    const httpStatus     = response.status;
+    let   status;
+    if      (httpStatus >= 200 && httpStatus < 400) status = responseTimeMs > SLOW_THRESHOLD ? "SLOW" : "UP";
+    else if (httpStatus >= 400 && httpStatus < 500) status = "DOWN";
+    else                                            status = "DOWN";
+
+    let statusPriority = status === "DOWN" ? 1 : status === "SLOW" ? 2 : 3;
+
+    await SiteCurrentStatus.findOneAndUpdate(
+      { siteId: site._id },
+      { siteId: site._id, status, statusPriority, statusCode: httpStatus, responseTimeMs, lastCheckedAt: now },
+      { upsert: true, new: true }
+    );
+
+    return {
+      region:         "Direct Check",
+      status,
+      statusCode:     httpStatus,
+      responseTimeMs,
+      lastCheckedAt:  now.toISOString(),
+      source:         "BACKEND_DIRECT",
+    };
+  } catch {
+    return {
+      region:         "Direct Check",
+      status:         "DOWN",
+      statusCode:     null,
+      responseTimeMs: Date.now() - start,
+      lastCheckedAt:  now.toISOString(),
+      source:         "BACKEND_DIRECT",
+    };
+  }
+}
 /* =====================================================
    GET ALL CATEGORIES
 ===================================================== */
@@ -706,8 +830,9 @@ export const getCategories = async (req, res) => {
 ===================================================== */
 export const getRegions = async (req, res) => {
   try {
-    const regions = ["South America", "Australia", "North America", "Europe", "Asia", "Africa"];
-    return res.json({ success: true, data: regions });
+    // Import from config so there's one source of truth
+    const { REGION_NAMES } = await import("../config/Regionconfig.js");
+    return res.json({ success: true, data: REGION_NAMES });
   } catch (err) {
     console.error("getRegions error:", err);
     return res.status(500).json({ success: false, message: "Failed to fetch regions" });
@@ -774,38 +899,18 @@ export const getSlowAlertBatch = async (req, res) => {
 };
 
 /* =====================================================
-   DELETED SITE LOGS  ← FIXED
-   
-   Bugs fixed:
-   1. toDate was only applied to "Deleted" events, not "Created"/"Updated"
-   2. fromDate/toDate used new Date("YYYY-MM-DD") which parses as UTC midnight,
-      so events on the boundary day could be excluded due to timezone offset.
-      Fix: fromDate → start of that day (00:00:00.000 UTC),
-           toDate   → end of that day  (23:59:59.999 UTC)
-   3. Stats were computed on search-filtered results, so they changed when
-      the user typed in the search box. Stats now always reflect only the
-      date-range filter (consistent with what the stat cards should show).
+   DELETED SITE LOGS
 ===================================================== */
 export const getDeletedLogs = async (req, res) => {
   try {
     const { fromDate, toDate, q, page = 1, limit = 10 } = req.query;
 
-    // ── Build inclusive UTC date boundaries ──────────────────────────────────
-    // "2025-01-15" → fromMs = start of that day UTC, toMs = end of that day UTC
-    // This ensures events at any time on the boundary dates are always included.
     let fromMs = null;
     let toMs   = null;
 
-    if (fromDate) {
-      // e.g. "2025-01-15" → 2025-01-15T00:00:00.000Z
-      fromMs = new Date(`${fromDate}T00:00:00.000Z`).getTime();
-    }
-    if (toDate) {
-      // e.g. "2025-01-20" → 2025-01-20T23:59:59.999Z  (inclusive end-of-day)
-      toMs = new Date(`${toDate}T23:59:59.999Z`).getTime();
-    }
+    if (fromDate) fromMs = new Date(`${fromDate}T00:00:00.000Z`).getTime();
+    if (toDate)   toMs   = new Date(`${toDate}T23:59:59.999Z`).getTime();
 
-    // ── Helper: is a given Date within the requested range? ─────────────────
     const inRange = (date) => {
       if (!date) return false;
       const ms = new Date(date).getTime();
@@ -814,7 +919,6 @@ export const getDeletedLogs = async (req, res) => {
       return true;
     };
 
-    // ── Fetch all relevant sites ─────────────────────────────────────────────
     const sites = await MonitoredSite.find({
       $or: [{ isActive: 1 }, { isActive: 0, deletedBy: { $ne: null } }],
     })
@@ -822,11 +926,9 @@ export const getDeletedLogs = async (req, res) => {
       .populate("updatedBy", "email role")
       .populate("deletedBy", "email role");
 
-    // ── Build raw log entries ────────────────────────────────────────────────
     const formattedLogs = [];
 
     sites.forEach((site) => {
-      // ✅ "Created" — apply BOTH fromDate and toDate
       if (inRange(site.createdAt)) {
         formattedLogs.push({
           domain:    site.domain,
@@ -837,7 +939,6 @@ export const getDeletedLogs = async (req, res) => {
         });
       }
 
-      // ✅ "Updated" — apply BOTH fromDate and toDate
       if (site.lastManualUpdateAt && site.updatedBy && inRange(site.lastManualUpdateAt)) {
         formattedLogs.push({
           domain:    site.domain,
@@ -848,7 +949,6 @@ export const getDeletedLogs = async (req, res) => {
         });
       }
 
-      // ✅ "Deleted" — apply BOTH fromDate and toDate
       if (site.isActive === 0 && site.deletedBy && site.deletedAt && inRange(site.deletedAt)) {
         formattedLogs.push({
           domain:    site.domain,
@@ -860,18 +960,14 @@ export const getDeletedLogs = async (req, res) => {
       }
     });
 
-    // Sort newest-first
     formattedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    // ── Stats — computed on DATE-RANGE filtered data BEFORE text search ──────
-    // This keeps stat card numbers stable while the user types in the search box.
     const stats = {
       created: formattedLogs.filter((l) => l.action === "Created").length,
       updated: formattedLogs.filter((l) => l.action === "Updated").length,
       deleted: formattedLogs.filter((l) => l.action === "Deleted").length,
     };
 
-    // ── Text search filter (applied AFTER stats so stats don't change) ───────
     const qStr = q ? String(q).trim().toLowerCase() : "";
     const filtered = qStr
       ? formattedLogs.filter((l) =>
@@ -882,7 +978,6 @@ export const getDeletedLogs = async (req, res) => {
         )
       : formattedLogs;
 
-    // ── Paginate ─────────────────────────────────────────────────────────────
     const PAGE       = Math.max(1, parseInt(page,  10) || 1);
     const LIMIT      = Math.max(1, parseInt(limit, 10) || 10);
     const totalCount = filtered.length;

@@ -320,7 +320,7 @@ else statusPriority = 4;
 
       console.log(`✅ Checked ${sites.length} sites`);
     },
-    2 * 60 * 1000,
+    1 * 60 * 1000,
   ); // 21 minutes
 };
 

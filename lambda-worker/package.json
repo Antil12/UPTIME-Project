@@ -1,7 +1,7 @@
 {
   "name": "uptime-region-lambda",
-  "version": "1.0.0",
-  "description": "AWS Lambda worker for geo-distributed uptime checks",
+  "version": "2.0.0",
+  "description": "AWS Lambda worker for geo-distributed uptime checks across 6 regions",
   "main": "index.js",
   "dependencies": {
     "axios": "^1.6.0"

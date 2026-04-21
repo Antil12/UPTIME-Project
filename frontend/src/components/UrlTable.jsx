@@ -111,9 +111,6 @@ const FilterDropdown = ({ anchorRef, open, options, value, onSelect, onClear }) 
 );
 
 // ─── Domain Filter Dropdown ───────────────────────────────────────────────────
-// KEY FIX: uses local draft state so interactions don't close the dropdown.
-// The dropdown now also closes when a click occurs outside of the button or the
-// dropdown content itself.
 const DomainFilterDropdown = ({
   anchorRef, open, onClose,
   categories,
@@ -122,11 +119,9 @@ const DomainFilterDropdown = ({
   chipStyle,
   dropdownRef,
 }) => {
-  // Draft state — does NOT write to parent until Apply
   const [draftCategories, setDraftCategories] = useState(selectedCategories);
   const [draftSortOrder,  setDraftSortOrder]  = useState(sortOrder);
 
-  // Sync draft when dropdown opens
   useEffect(() => {
     if (open) {
       setDraftCategories(selectedCategories);
@@ -182,7 +177,6 @@ const DomainFilterDropdown = ({
         </div>
 
         <div className="p-4 space-y-4">
-          {/* Sort Order */}
           <div>
             <p style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)", marginBottom: "10px" }}>Sort Order</p>
             <div className="flex gap-2">
@@ -204,11 +198,9 @@ const DomainFilterDropdown = ({
             </div>
           </div>
 
-          {/* Category */}
           <div>
             <p style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)", marginBottom: "10px" }}>Category</p>
 
-            {/* Active category chips */}
             {!draftCategories.includes("ALL") && draftCategories.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "10px" }}>
                 {draftCategories.map((cat) => (
@@ -251,7 +243,6 @@ const DomainFilterDropdown = ({
           </div>
         </div>
 
-        {/* Footer actions */}
         <div className="flex gap-2 px-4 py-3" style={{ borderTop: "1px solid rgba(56,189,248,0.07)" }}>
           <button
             onClick={handleReset}
@@ -438,12 +429,12 @@ const UrlTable = forwardRef(({
     col.toLowerCase().includes(searchColumn.toLowerCase())
   );
 
-  const columnBtnRef = useRef(null);
-  const domainBtnRef = useRef(null);
-  const sslBtnRef    = useRef(null);
-  const statusBtnRef = useRef(null);
-  const roleBtnRef   = useRef(null);
-  const columnMenuRef= useRef(null);
+  const columnBtnRef      = useRef(null);
+  const domainBtnRef      = useRef(null);
+  const sslBtnRef         = useRef(null);
+  const statusBtnRef      = useRef(null);
+  const roleBtnRef        = useRef(null);
+  const columnMenuRef     = useRef(null);
   const domainDropdownRef = useRef(null);
 
   const [hiddenColumns,      setHiddenColumns]      = useState([]);
@@ -504,7 +495,6 @@ const UrlTable = forwardRef(({
     return () => { cancelled = true; };
   }, []);
 
-  // ── Close dropdowns on outside click ──────────────────────────────────────────
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (showColumnMenu && columnMenuRef.current && !columnMenuRef.current.contains(e.target) && !columnBtnRef.current?.contains(e.target)) {
@@ -552,11 +542,19 @@ const UrlTable = forwardRef(({
     }
   };
 
+  // ── handleGlobalCheck — calls the rewritten globalCheckSite endpoint ──────────
+  // The backend now runs a real HTTP check for each region independently.
+  // Results are different per region (not India stamped on all).
+  // The modal shows a warning banner when Lambda is not yet deployed.
   const handleGlobalCheck = async (siteId) => {
     setGlobalCheckLoading(siteId);
     try {
       const token = localStorage.getItem("loginToken");
-      const res   = await axios.post(`${API_BASE}/monitoredsite/global-check/${siteId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      const res   = await axios.post(
+        `${API_BASE}/monitoredsite/global-check/${siteId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setGlobalCheckModalData(res.data.data);
     } catch (err) {
       console.error("Failed to perform global check:", err);
@@ -566,14 +564,12 @@ const UrlTable = forwardRef(({
     }
   };
 
-  // Only closes ssl/status/role — not domain (which is controlled by its own Apply button)
   const closeNonDomainFilters = useCallback(() => {
     setShowSslFilter(false);
     setShowStatusFilter(false);
     setShowRoleFilter(false);
   }, []);
 
-  // Full close including domain (used when another filter opens)
   const closeAllFilters = useCallback(() => {
     setShowDomainFilter(false);
     setShowSslFilter(false);
@@ -608,7 +604,7 @@ const UrlTable = forwardRef(({
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              style={{ background: "rgba(3,7,18,0.95)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: "20px", backdropFilter: "blur(20px)", boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(56,189,248,0.1)", padding: "32px", maxWidth: "600px", maxHeight: "80vh", overflowY: "auto" }}
+              style={{ background: "rgba(3,7,18,0.95)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: "20px", backdropFilter: "blur(20px)", boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(56,189,248,0.1)", padding: "32px", maxWidth: "600px", width: "90%", maxHeight: "80vh", overflowY: "auto" }}
             >
               <div className="flex items-center justify-between mb-6 gap-4">
                 <div>
@@ -616,16 +612,33 @@ const UrlTable = forwardRef(({
                   <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>{globalCheckModalData.domain}</p>
                 </div>
                 <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setGlobalCheckModalData(null)}
-                  style={{ background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: "8px", padding: "8px 12px", color: "#38bdf8", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontSize: "18px" }}>
+                  style={{ background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: "8px", padding: "8px 12px", color: "#38bdf8", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontSize: "18px", flexShrink: 0 }}>
                   ✕
                 </motion.button>
               </div>
+
+              {/* ── Warning banner: shown when Lambda workers are not deployed ── */}
+              {globalCheckModalData.isBackendDirect && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                  className="mb-5 p-3 rounded-xl flex items-start gap-3"
+                  style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.25)" }}
+                >
+                  <span style={{ fontSize: "14px", flexShrink: 0, marginTop: "1px" }}>⚠️</span>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(251,191,36,0.8)", lineHeight: 1.6 }}>
+                    Response times reflect your backend server location, not true regional latency.
+                    Deploy Lambda workers for accurate geographic checks.
+                  </p>
+                </motion.div>
+              )}
 
               <div className="mb-6 p-4 rounded-xl" style={{ background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.15)" }}>
                 <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(56,189,248,0.5)", marginBottom: "8px", letterSpacing: "0.06em" }}>GLOBAL STATUS</p>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <StatusBadge status={globalCheckModalData.globalStatus} />
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>{new Date(globalCheckModalData.checkTimestamp).toLocaleString()}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>
+                    {new Date(globalCheckModalData.checkTimestamp).toLocaleString()}
+                  </span>
                 </div>
               </div>
 
@@ -636,7 +649,7 @@ const UrlTable = forwardRef(({
                   const color        = statusColors[region.status] || "#94a3b8";
                   return (
                     <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
-                      className="p-3 rounded-lg transition-all"
+                      className="p-3 rounded-lg"
                       style={{ background: `${color}12`, border: `1px solid ${color}30` }}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -644,13 +657,19 @@ const UrlTable = forwardRef(({
                           <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: color, boxShadow: `0 0 8px ${color}`, flexShrink: 0 }} />
                           <div className="flex-1 min-w-0">
                             <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", fontWeight: 600, color }}>{region.region}</p>
-                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>{region.lastCheckedAt ? new Date(region.lastCheckedAt).toLocaleTimeString() : "Never"}</p>
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>
+                              {region.lastCheckedAt ? new Date(region.lastCheckedAt).toLocaleTimeString() : "Never"}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color, fontWeight: 600 }}>{region.status}</p>
-                          {region.responseTimeMs && <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>{region.responseTimeMs}ms</p>}
-                          {region.statusCode && <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>HTTP {region.statusCode}</p>}
+                          {region.responseTimeMs && (
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>{region.responseTimeMs}ms</p>
+                          )}
+                          {region.statusCode && (
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>HTTP {region.statusCode}</p>
+                          )}
                         </div>
                       </div>
                     </motion.div>
@@ -691,7 +710,6 @@ const UrlTable = forwardRef(({
                   {selectionMode && <Th style={{ width: "40px" }} />}
                   {!hiddenColumns.includes("sno") && <Th style={{ width: "50px" }}>S.No</Th>}
 
-                  {/* ── Domain column ── */}
                   {!hiddenColumns.includes("domain") && (
                     <Th>
                       <div className="flex items-center gap-2">
@@ -700,7 +718,6 @@ const UrlTable = forwardRef(({
                           btnRef={domainBtnRef}
                           active={!selectedCategories.includes("ALL") || sortOrder !== "ASC"}
                           onClick={() => {
-                            // Toggling domain filter: close all OTHER filters first, then toggle
                             closeNonDomainFilters();
                             setShowColumnMenu(false);
                             setShowDomainFilter((v) => !v);
@@ -728,7 +745,6 @@ const UrlTable = forwardRef(({
 
                   {!hiddenColumns.includes("url") && <Th>URL</Th>}
 
-                  {/* ── SSL column ── */}
                   {!hiddenColumns.includes("ssl") && (
                     <Th>
                       <div className="flex items-center gap-2">
@@ -750,7 +766,6 @@ const UrlTable = forwardRef(({
                     </Th>
                   )}
 
-                  {/* ── Status column ── */}
                   {!hiddenColumns.includes("status") && (
                     <Th>
                       <div className="flex items-center gap-2">
@@ -772,10 +787,8 @@ const UrlTable = forwardRef(({
                     </Th>
                   )}
 
-                  {/* ── Global Status column ── */}
                   {!hiddenColumns.includes("globalStatus") && <Th><span>Global Status</span></Th>}
 
-                  {/* ── SuperAdmin columns ── */}
                   {isSuperAdmin && (
                     <>
                       {!hiddenColumns.includes("userEmail") && <Th>User Email</Th>}
@@ -992,9 +1005,14 @@ const FragmentRow = ({
                 whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
                 onClick={() => handleGlobalCheck(item._id)}
                 disabled={globalCheckLoading === item._id}
-                title="Manual Global Check"
+                title="Manual Global Check — runs real HTTP check for each region"
                 className="w-5 h-5 flex items-center justify-center rounded transition-all"
-                style={{ background: globalCheckLoading === item._id ? "rgba(56,189,248,0.2)" : "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.2)", color: globalCheckLoading === item._id ? "#38bdf8" : "rgba(56,189,248,0.6)", cursor: globalCheckLoading === item._id ? "wait" : "pointer" }}
+                style={{
+                  background: globalCheckLoading === item._id ? "rgba(56,189,248,0.2)" : "rgba(56,189,248,0.08)",
+                  border: "1px solid rgba(56,189,248,0.2)",
+                  color: globalCheckLoading === item._id ? "#38bdf8" : "rgba(56,189,248,0.6)",
+                  cursor: globalCheckLoading === item._id ? "wait" : "pointer",
+                }}
               >
                 {globalCheckLoading === item._id ? (
                   <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} style={{ fontSize: "10px" }}>⟳</motion.span>

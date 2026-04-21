@@ -208,7 +208,8 @@ const RangeDropdown = ({ anchorRef, open, value, onChange, onClose }) => {
     document.body
   );
 };
-const UptimePopup = ({ data, filter, setFilter, onClose }) => {
+const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
+  if (userRole !== "superadmin") return null;
   const [showRangeDropdown, setShowRangeDropdown] = useState(false);
   const rangeBtnRef = useRef(null);
   const dropdownRef = useRef(null);

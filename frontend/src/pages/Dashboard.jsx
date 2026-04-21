@@ -142,14 +142,14 @@ const StatusDot = ({ color = "#34d399", label }) => (
 );
  
 // ─── HUD Stat Card ────────────────────────────────────────────────────────────
-const HudStatCard = ({ icon: Icon, label, value, accentColor = "#38bdf8", onClick, index = 0, sublabel }) => (
+const HudStatCard = ({ icon: Icon, label, value, accentColor = "#38bdf8", onClick, index = 0, sublabel, disabled = false }) => (
   <motion.div
     initial={{ opacity: 0, y: 18 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-    whileHover={{ y: -3, scale: 1.01 }}
-    onClick={onClick}
-    className="relative rounded-2xl p-4 overflow-hidden group cursor-pointer"
+    whileHover={disabled ? {} : { y: -3, scale: 1.01 }}
+    onClick={disabled ? undefined : onClick}
+    className={`relative rounded-2xl p-4 overflow-hidden group ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     style={{ background: "rgba(3,7,18,0.74)", border: `1px solid ${accentColor}12`, backdropFilter: "blur(18px)", boxShadow: `0 0 22px ${accentColor}06, inset 0 1px 0 ${accentColor}06` }}
   >
     <div className="absolute top-0 left-0 right-0 h-[1px]" style={{ background: `linear-gradient(90deg, transparent 0%, ${accentColor}45 35%, ${accentColor}22 70%, transparent 100%)` }} />
@@ -393,7 +393,14 @@ const Dashboard = ({
             index={3} icon={Activity} label="Uptime %"
             value={uptimePercent} accentColor="#a78bfa"
             sublabel="Current Percentage"
-            onClick={() => setPopupOpen(true)}
+            onClick={() => {
+              if (currentUser?.role?.toUpperCase() === "SUPERADMIN") {
+                setPopupOpen(true);
+              } else {
+                alert("Only Super Admin can access analytics");
+              }
+            }}
+            disabled={currentUser?.role?.toUpperCase() !== "SUPERADMIN"}
           />
         </section>
  
@@ -712,7 +719,7 @@ const Dashboard = ({
  
         {/* ─── Popups ─── */}
         {popupData && <CrystalPopup popupData={popupData} onClose={() => setPopupData(null)} />}
-        {popupOpen && <UptimePopup data={uptimeData} filter={filter} setFilter={setFilter} onClose={() => setPopupOpen(false)} />}
+        {popupOpen && currentUser?.role?.toUpperCase() === "SUPERADMIN" && <UptimePopup data={uptimeData} filter={filter} setFilter={setFilter} onClose={() => setPopupOpen(false)} userRole={currentUser?.role?.toLowerCase()} />}
       </main>
     </>
   );

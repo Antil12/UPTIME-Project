@@ -1,3 +1,16 @@
+/**
+ * lambda-worker/index.js
+ *
+ * AWS Lambda handler — runs on a schedule (every 2 minutes via EventBridge).
+ * Deployed once per AWS region. Each deployment has its own REGION env var.
+ *
+ * Flow:
+ *  1. Fetch active sites for this region  →  GET /api/region-report/sites?region=
+ *  2. Check each site in parallel         →  HEAD → GET fallback
+ *  3. POST results to backend             →  POST /api/region-report
+ *  4. Trigger global status recalculate   →  POST /api/monitoredsite/compute-global-status
+ */
+
 const axios = require("axios");
 
 // ─── Configuration ────────────────────────────────────────────────────────────
@@ -5,9 +18,9 @@ const BACKEND_URL   = process.env.BACKEND_API_URL;
 const REGION_NAME   = process.env.REGION;
 const LAMBDA_SECRET = process.env.LAMBDA_SECRET;
 
-const DEFAULT_SLOW_THRESHOLD = 15_000;
-const TIMEOUT_MS             = 20_000;
-const BACKEND_TIMEOUT        = 15_000;
+const DEFAULT_SLOW_THRESHOLD = 15_000; // ms
+const TIMEOUT_MS             = 20_000; // per-site HTTP timeout
+const BACKEND_TIMEOUT        = 15_000; // backend API call timeout
 const POST_RETRIES           = 2;
 
 const AUTH_HEADER = { Authorization: `Bearer ${LAMBDA_SECRET}` };
@@ -33,7 +46,9 @@ async function postWithRetry(url, data, headers, retries = POST_RETRIES) {
     } catch (err) {
       if (attempt === retries) throw err;
       const delay = 1_000 * (attempt + 1);
-      console.warn(`[Lambda] POST attempt ${attempt + 1} failed (${err.message}). Retrying in ${delay}ms…`);
+      console.warn(
+        `[Lambda] POST attempt ${attempt + 1} failed (${err.message}). Retrying in ${delay}ms…`
+      );
       await new Promise((r) => setTimeout(r, delay));
     }
   }
@@ -43,14 +58,13 @@ async function postWithRetry(url, data, headers, retries = POST_RETRIES) {
 async function checkSite(site) {
   const slowThreshold = site.responseThresholdMs || DEFAULT_SLOW_THRESHOLD;
   const label         = site.domain || site.url;
-
   const commonHeaders = { "User-Agent": "UptimeMonitor/1.0 Lambda" };
 
-  // ── HEAD attempt ────────────────────────────────────────────────────────────
-  let response   = null;
+  let response;
   let methodUsed = "HEAD";
   let start      = Date.now();
 
+  // ── HEAD attempt ─────────────────────────────────────────────────────────────
   try {
     response = await axios.head(site.url, {
       timeout:        TIMEOUT_MS,
@@ -58,12 +72,11 @@ async function checkSite(site) {
       headers:        commonHeaders,
     });
 
-    // 405 = HEAD not supported → fall through to GET
     if (response.status === 405) throw new Error("HEAD not allowed (405)");
   } catch (headErr) {
-    // ── GET fallback ──────────────────────────────────────────────────────────
+    // ── GET fallback ────────────────────────────────────────────────────────────
     methodUsed = "GET";
-    start      = Date.now(); // ✅ FIX: reset timer before GET so response time is accurate
+    start      = Date.now(); // reset timer so GET response time is accurate
     console.log(`[Lambda][${REGION_NAME}] ${label}: HEAD failed (${headErr.message}), trying GET…`);
 
     try {
@@ -75,12 +88,19 @@ async function checkSite(site) {
     } catch (getErr) {
       const responseTimeMs = Date.now() - start;
       const reason = getErr.code === "ECONNABORTED" ? "TIMEOUT" : (getErr.message || "REQUEST_FAILED");
-      console.log(`[Lambda][${REGION_NAME}] ${label}: BOTH failed | ${responseTimeMs}ms | DOWN | ${reason}`);
-      return { siteId: site._id, region: REGION_NAME, status: "DOWN", statusCode: null, responseTimeMs, reason };
+      console.log(`[Lambda][${REGION_NAME}] ${label}: BOTH failed | ${responseTimeMs}ms | DOWN`);
+      return {
+        siteId: site._id,
+        region: REGION_NAME,
+        status: "DOWN",
+        statusCode: null,
+        responseTimeMs,
+        reason,
+      };
     }
   }
 
-  // ── Classify ─────────────────────────────────────────────────────────────────
+  // ── Classify ──────────────────────────────────────────────────────────────────
   const responseTimeMs = Date.now() - start;
   const httpStatus     = response.status;
   let   status;
@@ -101,12 +121,21 @@ async function checkSite(site) {
     status = "DOWN"; reason = "INVALID_RESPONSE";
   }
 
-  console.log(`[Lambda][${REGION_NAME}] ${label}: HTTP ${httpStatus} | ${responseTimeMs}ms | ${status} [${methodUsed}]`);
+  console.log(
+    `[Lambda][${REGION_NAME}] ${label}: HTTP ${httpStatus} | ${responseTimeMs}ms | ${status} [${methodUsed}]`
+  );
 
-  return { siteId: site._id, region: REGION_NAME, status, statusCode: httpStatus, responseTimeMs, reason };
+  return {
+    siteId: site._id,
+    region: REGION_NAME,
+    status,
+    statusCode:     httpStatus,
+    responseTimeMs,
+    reason,
+  };
 }
 
-// ─── Handler ──────────────────────────────────────────────────────────────────
+// ─── Lambda handler ───────────────────────────────────────────────────────────
 exports.handler = async (event) => {
   console.log(`\n🚀 [Lambda] ${REGION_NAME || "UNCONFIGURED"} — starting check run`);
 
@@ -118,16 +147,15 @@ exports.handler = async (event) => {
 
   console.log(`   Backend : ${BACKEND_URL}`);
   console.log(`   Region  : ${REGION_NAME}`);
-  console.log(`   Timeout : ${TIMEOUT_MS}ms`);
 
-  // ── Step 1: Fetch site list ─────────────────────────────────────────────────
+  // ── Step 1: Fetch site list ───────────────────────────────────────────────────
   let sites;
   try {
     const resp = await axios.get(
-      `${BACKEND_URL}/api/monitoredsite/by-region/${encodeURIComponent(REGION_NAME)}`,
+      `${BACKEND_URL}/api/region-report/sites?region=${encodeURIComponent(REGION_NAME)}`,
       { headers: AUTH_HEADER, timeout: BACKEND_TIMEOUT }
     );
-    sites = resp.data?.data || resp.data?.sites || [];
+    sites = resp.data?.sites || [];
     console.log(`\n📋 [Lambda][${REGION_NAME}] ${sites.length} site(s) to check`);
   } catch (err) {
     console.error(`[Lambda] Failed to fetch site list: ${err.message}`);
@@ -139,44 +167,70 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: `No sites configured for region: ${REGION_NAME}` };
   }
 
-  // ── Step 2: Check all sites ─────────────────────────────────────────────────
+  // ── Step 2: Check all sites in parallel ───────────────────────────────────────
   console.log(`\n🔍 [Lambda] Checking ${sites.length} site(s) in parallel…`);
   const results = await Promise.all(sites.map(checkSite));
 
   const upCount   = results.filter((r) => r.status === "UP").length;
   const slowCount = results.filter((r) => r.status === "SLOW").length;
   const downCount = results.filter((r) => r.status === "DOWN").length;
-  console.log(`\n📊 [Lambda][${REGION_NAME}] UP: ${upCount} | SLOW: ${slowCount} | DOWN: ${downCount}`);
+  console.log(
+    `\n📊 [Lambda][${REGION_NAME}] UP: ${upCount} | SLOW: ${slowCount} | DOWN: ${downCount}`
+  );
 
-  // ── Step 3: POST results to backend ────────────────────────────────────────
+  // ── Step 3: POST results to backend (with retry) ──────────────────────────────
   console.log(`\n📤 [Lambda] Posting ${results.length} result(s) to backend…`);
+  let postFailed = false;
   try {
     const resp = await postWithRetry(
       `${BACKEND_URL}/api/region-report`,
-      { results, region: REGION_NAME, timestamp: new Date().toISOString(), checkType: "CRON" },
+      {
+        results,
+        region:    REGION_NAME,
+        timestamp: new Date().toISOString(),
+        checkType: "CRON",
+      },
       { ...AUTH_HEADER, "Content-Type": "application/json" }
     );
     console.log(`✅ [Lambda] Saved: ${resp.data?.saved ?? results.length}`);
   } catch (err) {
     console.error(`[Lambda] Failed to POST results: ${err.message}`);
-    return { statusCode: 500, body: `Failed to report results: ${err.message}` };
+    postFailed = true;
+    // Continue to Step 4 even if POST failed
   }
 
-  // ── Step 4: Trigger global status recompute (non-fatal) ────────────────────
+  // ── Step 4: Trigger global status recompute ───────────────────────────────────
+  // Always runs regardless of Step 3 outcome
   try {
     const gResp = await axios.post(
       `${BACKEND_URL}/api/monitoredsite/compute-global-status`,
       { region: REGION_NAME },
       { headers: AUTH_HEADER, timeout: BACKEND_TIMEOUT }
     );
-    console.log(`✅ [Lambda] Global status: ${gResp.data?.updatedCount ?? 0} updated`);
+    console.log(
+      `✅ [Lambda] Global status: ${gResp.data?.updatedCount ?? 0} updated`
+    );
   } catch (err) {
     console.warn(`[Lambda] Global status trigger failed (non-fatal): ${err.message}`);
+  }
+
+  // ── Response ──────────────────────────────────────────────────────────────────
+  if (postFailed) {
+    return {
+      statusCode: 500,
+      body: `Failed to report results for region: ${REGION_NAME}`,
+    };
   }
 
   console.log(`\n✨ [Lambda][${REGION_NAME}] Run complete\n`);
   return {
     statusCode: 200,
-    body: JSON.stringify({ region: REGION_NAME, checked: results.length, up: upCount, slow: slowCount, down: downCount }),
+    body: JSON.stringify({
+      region:  REGION_NAME,
+      checked: results.length,
+      up:      upCount,
+      slow:    slowCount,
+      down:    downCount,
+    }),
   };
 };
