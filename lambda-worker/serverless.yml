@@ -1,44 +1,4 @@
-# lambda-worker/serverless.yml
-#
-# Deploy one Lambda per region using these commands:
-#
-#   cd lambda-worker
-#
-#   serverless deploy \
-#     --param="awsRegion=ap-south-1" \
-#     --param="regionName=Asia" \
-#     --param="backendUrl=https://your-api.com" \
-#     --param="lambdaSecret=your-secret"
-#
-#   serverless deploy \
-#     --param="awsRegion=us-east-1" \
-#     --param="regionName=North America" \
-#     --param="backendUrl=https://your-api.com" \
-#     --param="lambdaSecret=your-secret"
-#
-#   serverless deploy \
-#     --param="awsRegion=eu-west-1" \
-#     --param="regionName=Europe" \
-#     --param="backendUrl=https://your-api.com" \
-#     --param="lambdaSecret=your-secret"
-#
-#   serverless deploy \
-#     --param="awsRegion=sa-east-1" \
-#     --param="regionName=South America" \
-#     --param="backendUrl=https://your-api.com" \
-#     --param="lambdaSecret=your-secret"
-#
-#   serverless deploy \
-#     --param="awsRegion=ap-southeast-2" \
-#     --param="regionName=Australia" \
-#     --param="backendUrl=https://your-api.com" \
-#     --param="lambdaSecret=your-secret"
-#
-#   serverless deploy \
-#     --param="awsRegion=af-south-1" \
-#     --param="regionName=Africa" \
-#     --param="backendUrl=https://your-api.com" \
-#     --param="lambdaSecret=your-secret"
+
 #
 # After ALL workers are deployed, add to your backend .env:
 #   LAMBDA_WORKERS_ACTIVE=true

@@ -260,7 +260,7 @@ const HUDPanel = ({ side }) => {
 };
 
 // ─── Glitch Title ─────────────────────────────────────────────────────────────
-const WORD = "UPTIME";
+const WORD = "PULSE";
 
 const GlitchTitle = () => {
   const [glitchIdx, setGlitchIdx] = useState(-1);

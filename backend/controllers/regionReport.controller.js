@@ -12,7 +12,7 @@
  *                                               Body: { regions: ["Asia","Europe"] }
  *                                               Omit regions to check ALL regions
  */
-
+import axios from "axios";
 import MonitoredSite        from "../models/MonitoredSite.js";
 import RegionUptimeLog      from "../models/RegionUptimeLog.js";
 import RegionCurrentStatus  from "../models/RegionCurrentStatus.js";
@@ -75,7 +75,7 @@ export async function getSitesByRegion(req, res) {
     }
 
     const sites = await MonitoredSite.find(
-      { regions: region, isActive: true },
+      { regions: region, isActive: 1 },
       { _id: 1, url: 1, name: 1, responseThresholdMs: 1 }
     ).lean();
 

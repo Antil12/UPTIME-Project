@@ -21,42 +21,7 @@ import { emailWorker, workerStatus } from "./workers/emailWorker.js";
 import connection from "./queue/redisConnection.js";
 import logger from "./logger.js";
 
-// Import models to ensure they're registered with MongoDB
-// import RegionUptimeLog from "./models/RegionUptimeLog.js";
-// import RegionCurrentStatus from "./models/RegionCurrentStatus.js";
-
-import rateLimit from "express-rate-limit";
-
 const app = express();
-
-/* ======================
-   RATE LIMITERS
-====================== */
-
-// General limiter for public endpoints
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 1000,
-  message: {
-    success: false,
-    message: "Too many requests from this IP, please try again later.",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Strict limiter for auth routes (excluding login)
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: {
-    success: false,
-    message:
-      "Too many attempts from this IP, please try again after 15 minutes.",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 /* ======================
    CORS — MUST BE FIRST
@@ -94,9 +59,6 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-
-// Apply general rate limiter to all requests
-app.use(generalLimiter);
 
 // Parse cookies for refresh token support
 app.use(cookieParser());
@@ -154,10 +116,6 @@ app.get("/api/health", async (req, res) => {
 app.get("/api", (req, res) => {
   res.json({ message: "API is running" });
 });
-
-// Apply authLimiter only to endpoints that need brute-force protection.
-app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/signup", authLimiter);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/monitoredsite", monitoredSiteRoutes);

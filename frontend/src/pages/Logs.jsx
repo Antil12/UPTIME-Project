@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FilterX,
+  SlidersHorizontal,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -177,15 +178,21 @@ const Logs = () => {
   const [totalCount, setTotalCount]   = useState(0);
   const [totalPages, setTotalPages]   = useState(1);
 
-  // ── Search: local state for the input, debounced value sent to API ─────────
-  const [searchInput, setSearchInput]   = useState("");
-  const [searchQuery, setSearchQuery]   = useState("");
-  const debounceTimer                   = useRef(null);
+  // ── Search: instant with debounce ─────────────────────────────────────────
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const debounceTimer                 = useRef(null);
 
-  const [fromDate, setFromDate] = useState("");
-  const [toDate,   setToDate]   = useState("");
+  // ── Date: staged (input) vs applied (sent to API) ─────────────────────────
+  const [fromDateInput, setFromDateInput] = useState("");
+  const [toDateInput,   setToDateInput]   = useState("");
+  const [appliedFrom,   setAppliedFrom]   = useState("");
+  const [appliedTo,     setAppliedTo]     = useState("");
 
-  // Stats always reflect the current date-range (not search-filtered)
+  // Dirty flag: true when staged dates differ from applied dates
+  const datesDirty =
+    fromDateInput !== appliedFrom || toDateInput !== appliedTo;
+
   const [stats, setStats] = useState({ created: 0, updated: 0, deleted: 0 });
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
@@ -216,42 +223,43 @@ const Logs = () => {
     }
   }, []);
 
-  // Re-fetch whenever effective query params change
+  // Re-fetch on page / rowsPerPage / searchQuery / appliedFrom / appliedTo change
   useEffect(() => {
-    fetchLogs(currentPage, rowsPerPage, searchQuery, fromDate, toDate);
-  }, [currentPage, rowsPerPage, searchQuery, fromDate, toDate, fetchLogs]);
+    fetchLogs(currentPage, rowsPerPage, searchQuery, appliedFrom, appliedTo);
+  }, [currentPage, rowsPerPage, searchQuery, appliedFrom, appliedTo, fetchLogs]);
 
-  // ── Debounce search input → reset to page 1 when query changes ────────────
+  // ── Debounced search — resets to page 1 ───────────────────────────────────
   const handleSearchChange = (value) => {
     setSearchInput(value);
     clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
-      setCurrentPage(1);   // ✅ always go back to page 1 on new search
+      setCurrentPage(1);
       setSearchQuery(value);
     }, 350);
   };
 
-  // ── Date change handlers — reset to page 1 ────────────────────────────────
-  const handleFromDate = (value) => {
-    setFromDate(value);
-    setCurrentPage(1);  // ✅ reset page
-  };
-
-  const handleToDate = (value) => {
-    setToDate(value);
-    setCurrentPage(1);  // ✅ reset page
+  // ── Apply date filters ────────────────────────────────────────────────────
+  const handleApplyFilters = () => {
+    setCurrentPage(1);
+    setAppliedFrom(fromDateInput);
+    setAppliedTo(toDateInput);
   };
 
   // ── Clear all filters ─────────────────────────────────────────────────────
   const handleClear = () => {
     setSearchInput("");
     setSearchQuery("");
-    setFromDate("");
-    setToDate("");
+    setFromDateInput("");
+    setToDateInput("");
+    setAppliedFrom("");
+    setAppliedTo("");
     setCurrentPage(1);
   };
 
   const indexOfFirstRow = (currentPage - 1) * rowsPerPage;
+
+  // Active chips use *applied* values (not staged)
+  const hasActiveFilters = searchQuery || appliedFrom || appliedTo;
 
   return (
     <>
@@ -300,17 +308,17 @@ const Logs = () => {
 
           {/* ── Stats ── */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-            <StatCard icon={FileClock}  label="Total Logs" value={totalCount}      />
-            <StatCard icon={PlusCircle} label="Created"    value={stats.created}   color="text-emerald-400" />
-            <StatCard icon={RefreshCcw} label="Updated"    value={stats.updated}   color="text-sky-400" />
-            <StatCard icon={Trash2}     label="Deleted"    value={stats.deleted}   color="text-red-400" />
+            <StatCard icon={FileClock}  label="Total Logs" value={totalCount}    />
+            <StatCard icon={PlusCircle} label="Created"    value={stats.created} color="text-emerald-400" />
+            <StatCard icon={RefreshCcw} label="Updated"    value={stats.updated} color="text-sky-400" />
+            <StatCard icon={Trash2}     label="Deleted"    value={stats.deleted} color="text-red-400" />
           </div>
 
           {/* ── Filters ── */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.45 }} className="mb-6 rounded-2xl p-4" style={{ background: "rgba(3,7,18,0.64)", border: "1px solid rgba(56,189,248,0.08)", backdropFilter: "blur(14px)", boxShadow: "0 0 18px rgba(56,189,248,0.02)" }}>
-            <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_220px_220px_auto] gap-3">
 
-              {/* Search — uses local input state with debounce */}
+            {/* Row 1: Search (full width) */}
+            <div className="mb-3">
               <GlassInput icon={Search}>
                 <input
                   type="text"
@@ -321,28 +329,70 @@ const Logs = () => {
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 />
               </GlassInput>
+            </div>
+
+            {/* Row 2: Date pickers + Apply + Clear */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto_auto] gap-3 items-center">
 
               {/* From Date */}
               <GlassInput icon={CalendarDays}>
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => handleFromDate(e.target.value)}
-                  className="w-full bg-transparent outline-none text-sm text-white"
-                  style={{ fontFamily: "'JetBrains Mono', monospace", colorScheme: "dark" }}
-                />
+                <div className="flex flex-col w-full">
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "2px" }}>From</span>
+                  <input
+                    type="date"
+                    value={fromDateInput}
+                    onChange={(e) => setFromDateInput(e.target.value)}
+                    className="w-full bg-transparent outline-none text-sm text-white"
+                    style={{ fontFamily: "'JetBrains Mono', monospace", colorScheme: "dark" }}
+                  />
+                </div>
               </GlassInput>
 
               {/* To Date */}
               <GlassInput icon={CalendarDays}>
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => handleToDate(e.target.value)}
-                  className="w-full bg-transparent outline-none text-sm text-white"
-                  style={{ fontFamily: "'JetBrains Mono', monospace", colorScheme: "dark" }}
-                />
+                <div className="flex flex-col w-full">
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "2px" }}>To</span>
+                  <input
+                    type="date"
+                    value={toDateInput}
+                    onChange={(e) => setToDateInput(e.target.value)}
+                    className="w-full bg-transparent outline-none text-sm text-white"
+                    style={{ fontFamily: "'JetBrains Mono', monospace", colorScheme: "dark" }}
+                  />
+                </div>
               </GlassInput>
+
+              {/* Apply Button */}
+              <motion.button
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleApplyFilters}
+                disabled={!datesDirty}
+                className="rounded-xl px-5 py-2.5 flex items-center justify-center gap-2 text-sm relative overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  background: datesDirty
+                    ? "linear-gradient(135deg, rgba(56,189,248,0.18) 0%, rgba(129,140,248,0.14) 100%)"
+                    : "rgba(255,255,255,0.025)",
+                  border: datesDirty
+                    ? "1px solid rgba(56,189,248,0.35)"
+                    : "1px solid rgba(56,189,248,0.08)",
+                  color: datesDirty ? "#e0f2fe" : "#64748b",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  boxShadow: datesDirty ? "0 0 14px rgba(56,189,248,0.12)" : "none",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <SlidersHorizontal size={14} />
+                Apply
+                {datesDirty && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-sky-400"
+                    style={{ boxShadow: "0 0 6px rgba(56,189,248,0.8)" }}
+                  />
+                )}
+              </motion.button>
 
               {/* Clear */}
               <motion.button
@@ -357,25 +407,38 @@ const Logs = () => {
               </motion.button>
             </div>
 
-            {/* ── Active filter chips ── */}
-            {(fromDate || toDate || searchQuery) && (
+            {/* ── Active filter chips (reflect applied state) ── */}
+            {hasActiveFilters && (
               <div className="flex flex-wrap gap-2 mt-3">
                 {searchQuery && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px]" style={{ background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", fontFamily: "'JetBrains Mono', monospace" }}>
                     <Search size={10} /> {searchQuery}
                   </span>
                 )}
-                {fromDate && (
+                {appliedFrom && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px]" style={{ background: "rgba(129,140,248,0.1)", border: "1px solid rgba(129,140,248,0.2)", color: "#818cf8", fontFamily: "'JetBrains Mono', monospace" }}>
-                    <CalendarDays size={10} /> From: {fromDate}
+                    <CalendarDays size={10} /> From: {appliedFrom}
                   </span>
                 )}
-                {toDate && (
+                {appliedTo && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px]" style={{ background: "rgba(129,140,248,0.1)", border: "1px solid rgba(129,140,248,0.2)", color: "#818cf8", fontFamily: "'JetBrains Mono', monospace" }}>
-                    <CalendarDays size={10} /> To: {toDate}
+                    <CalendarDays size={10} /> To: {appliedTo}
                   </span>
                 )}
               </div>
+            )}
+
+            {/* ── Pending (unapplied) date hint ── */}
+            {datesDirty && (fromDateInput || toDateInput) && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-2 flex items-center gap-2"
+              >
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(250,204,21,0.65)", letterSpacing: "0.06em" }}>
+                  ⚠ Date range not applied yet — click Apply to filter
+                </span>
+              </motion.div>
             )}
           </motion.div>
 

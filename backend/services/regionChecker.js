@@ -101,7 +101,7 @@ async function checkOneSite(site, region) {
  */
 export async function checkRegion(regionName) {
   const sites = await MonitoredSite.find(
-    { regions: regionName, isActive: true },
+    { regions: regionName, isActive: 1 },
     { _id: 1, url: 1, name: 1, responseThresholdMs: 1 }
   ).lean();
 

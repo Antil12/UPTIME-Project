@@ -422,7 +422,7 @@ const Login = ({ onLogin }) => {
                     textShadow: "0 0 40px rgba(56,189,248,0.2)",
                     marginBottom: "6px",
                   }}>
-                    UPTIME
+                    PULSE
                   </h1>
                   <p style={{
                     fontFamily: "'JetBrains Mono', monospace",
