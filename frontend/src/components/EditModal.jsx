@@ -11,6 +11,7 @@ import {
   TimerReset,
   MapPin,
   Check,
+  ChevronDown,
 } from "lucide-react";
 
 const REGIONS = [
@@ -21,6 +22,104 @@ const REGIONS = [
   "Asia",
   "Africa",
 ];
+
+const CATEGORY_OPTIONS = [
+  "JOURNALS",
+  "E-JAYPEE",
+  "JPMEDPUB",
+  "JP-DIGITAL",
+  "DIGINERVE",
+  "Others",
+];
+
+// ─── Category Select Dropdown ─────────────────────────────────────────────────
+const CategorySelect = ({ value, onChange }) => {
+  const [open, setOpen] = useState(false);
+
+  const handleSelect = (opt) => {
+    onChange(opt);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full px-4 py-3 rounded-2xl outline-none transition-all duration-200 flex items-center justify-between"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: open
+            ? "1px solid rgba(56,189,248,0.30)"
+            : "1px solid rgba(56,189,248,0.10)",
+          color: value ? "white" : "rgba(100,116,139,1)",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "14px",
+          boxShadow: open ? "0 0 0 2px rgba(56,189,248,0.15)" : "none",
+          textAlign: "left",
+        }}
+      >
+        <span style={{ fontSize: "14px" }}>{value || "Select Category (optional)"}</span>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ color: "rgba(56,189,248,0.5)", flexShrink: 0 }}
+        >
+          <ChevronDown size={14} />
+        </motion.span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 right-0 mt-2 rounded-2xl overflow-hidden z-[60]"
+            style={{
+              background: "rgba(3,7,18,0.97)",
+              border: "1px solid rgba(56,189,248,0.14)",
+              backdropFilter: "blur(28px)",
+              boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 0 24px rgba(56,189,248,0.05)",
+            }}
+          >
+            {CATEGORY_OPTIONS.map((opt, idx) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => handleSelect(opt)}
+                className="w-full px-4 py-3 text-left transition-all duration-150 flex items-center justify-between"
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "12px",
+                  letterSpacing: "0.04em",
+                  color: value === opt ? "#38bdf8" : "rgba(148,163,184,0.75)",
+                  background: value === opt ? "rgba(56,189,248,0.07)" : "transparent",
+                  borderTop: idx === 0 ? "none" : "1px solid rgba(56,189,248,0.045)",
+                  borderLeft: value === opt ? "2px solid rgba(56,189,248,0.45)" : "2px solid transparent",
+                }}
+                onMouseEnter={(e) => { if (value !== opt) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
+                onMouseLeave={(e) => { if (value !== opt) e.currentTarget.style.background = "transparent"; }}
+              >
+                <span>{opt}</span>
+                {value === opt && <span style={{ color: "#38bdf8", fontSize: "10px" }}>✓</span>}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Backdrop to close dropdown */}
+      {open && (
+        <div
+          className="fixed inset-0 z-50"
+          onClick={() => setOpen(false)}
+        />
+      )}
+    </div>
+  );
+};
 
 export default function EditModal({
   item,
@@ -208,13 +307,9 @@ export default function EditModal({
                   />
                 </FieldWrapper>
 
+                {/* ── Category Dropdown ── */}
                 <FieldWrapper label="Category" icon={Tag}>
-                  <input
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    placeholder="E-commerce, Blog, SaaS..."
-                    className={inputClass}
-                  />
+                  <CategorySelect value={category} onChange={setCategory} />
                 </FieldWrapper>
 
                 <FieldWrapper label="Website URL" icon={Link2} full>

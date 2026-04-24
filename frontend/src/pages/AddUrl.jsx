@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 import {
   Globe2,
@@ -11,6 +12,7 @@ import {
   Plus,
   X,
   CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
 
 
@@ -183,16 +185,14 @@ const SectionLabel = ({ icon: Icon, label }) => (
 );
 
 // ─── HUD Input ────────────────────────────────────────────────────────────────
-const HudInput = ({ type = "text", placeholder, value, onChange, ...rest }) => (
+const HudInput = ({ type = "text", placeholder, value, onChange, required, ...rest }) => (
   <div className="relative group">
-    <div className="absolute left-0 top-0 bottom-0 w-[2px] rounded-l-full"
-      style={{ background: "rgba(56,189,248,0.0)", transition: "background 0.3s" }}
-    />
     <input
       type={type}
       placeholder={placeholder}
       value={value}
       onChange={onChange}
+      required={required}
       {...rest}
       className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-300"
       style={{
@@ -215,6 +215,137 @@ const HudInput = ({ type = "text", placeholder, value, onChange, ...rest }) => (
     />
   </div>
 );
+
+// ─── HUD Select Dropdown ──────────────────────────────────────────────────────
+const CATEGORY_OPTIONS = [
+  "JOURNALS",
+  "E-JAYPEE",
+  "JPMEDPUB",
+  "JP-DIGITAL",
+  "DIGINERVE",
+  "Others",
+];
+
+const HudSelect = ({ value, onChange, placeholder = "Select category" }) => {
+  const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
+  const triggerRef = useRef(null);
+
+  const calcPos = () => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setDropPos({
+      top:   rect.bottom + window.scrollY + 6,
+      left:  rect.left   + window.scrollX,
+      width: rect.width,
+    });
+  };
+
+  const handleOpen = () => {
+    if (!open) calcPos();
+    setOpen((v) => !v);
+  };
+
+  const handleSelect = (opt) => {
+    onChange(opt);
+    setOpen(false);
+  };
+
+  // Keep position in sync while dropdown is open
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", calcPos, true);
+    window.addEventListener("resize", calcPos);
+    return () => {
+      window.removeEventListener("scroll", calcPos, true);
+      window.removeEventListener("resize", calcPos);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={handleOpen}
+        className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-300 flex items-center justify-between"
+        style={{
+          background: "rgba(255,255,255,0.022)",
+          border: open ? "1px solid rgba(56,189,248,0.35)" : "1px solid rgba(56,189,248,0.09)",
+          color: value ? "white" : "rgba(148,163,184,0.45)",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "12px",
+          letterSpacing: "0.02em",
+          backdropFilter: "blur(12px)",
+          boxShadow: open ? "0 0 0 3px rgba(56,189,248,0.06), 0 0 20px rgba(56,189,248,0.04)" : "none",
+          textAlign: "left",
+        }}
+      >
+        <span>{value || placeholder}</span>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ color: "rgba(56,189,248,0.5)", flexShrink: 0 }}
+        >
+          <ChevronDown size={14} />
+        </motion.span>
+      </button>
+
+      {open && createPortal(
+        <>
+          {/* Backdrop */}
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+            onClick={() => setOpen(false)}
+          />
+          {/* Dropdown panel — rendered in <body>, escapes all overflow:hidden parents */}
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              position: "absolute",
+              top:      dropPos.top,
+              left:     dropPos.left,
+              width:    dropPos.width,
+              zIndex:   9999,
+              background: "rgba(3,7,18,0.97)",
+              border: "1px solid rgba(56,189,248,0.14)",
+              backdropFilter: "blur(28px)",
+              boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 24px rgba(56,189,248,0.05)",
+              borderRadius: "16px",
+              overflow: "hidden",
+            }}
+          >
+            {CATEGORY_OPTIONS.map((opt, idx) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => handleSelect(opt)}
+                className="w-full px-5 py-3 text-left transition-all duration-150 flex items-center justify-between"
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "11px",
+                  letterSpacing: "0.06em",
+                  color: value === opt ? "#38bdf8" : "rgba(148,163,184,0.75)",
+                  background: value === opt ? "rgba(56,189,248,0.07)" : "transparent",
+                  borderTop: idx === 0 ? "none" : "1px solid rgba(56,189,248,0.045)",
+                  borderLeft: value === opt ? "2px solid rgba(56,189,248,0.45)" : "2px solid transparent",
+                }}
+                onMouseEnter={(e) => { if (value !== opt) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
+                onMouseLeave={(e) => { if (value !== opt) e.currentTarget.style.background = "transparent"; }}
+              >
+                <span>{opt}</span>
+                {value === opt && <span style={{ color: "#38bdf8", fontSize: "9px" }}>✓</span>}
+              </button>
+            ))}
+          </motion.div>
+        </>,
+        document.body
+      )}
+    </div>
+  );
+};
 
 // ─── Toggle Chip ─────────────────────────────────────────────────────────────
 const ToggleChip = ({ label, active, onClick, activeColor = "#38bdf8" }) => (
@@ -251,7 +382,8 @@ const AddUrl = ({
   onSave,
   urls = [],
 }) => {
-  const [responseThresholdMs, setResponseThresholdMs] = useState("");
+  // Default responseThresholdMs to 15000
+  const [responseThresholdMs, setResponseThresholdMs] = useState("15000");
   const [alertChannels, setAlertChannels] = useState([]);
   const [regions, setRegions] = useState([]);
   const [alertIfAllRegionsDown, setAlertIfAllRegionsDown] = useState(false);
@@ -272,6 +404,10 @@ const AddUrl = ({
     const nd = normalize(domain);
     const nu = normalize(url);
     if (!nd || !nu) { setLocalError("Domain and URL are required."); return; }
+    if (!responseThresholdMs || responseThresholdMs === "") {
+      setLocalError("Response threshold is required.");
+      return;
+    }
     if (urls.some((u) => normalize(u.domain) === nd)) { setLocalError("Domain name already exists."); return; }
     if (urls.some((u) => normalize(u.url) === nu)) { setLocalError("URL already exists."); return; }
 
@@ -287,6 +423,7 @@ const AddUrl = ({
     setTimeout(() => setSubmitted(false), 2000);
     setCategory(""); setEmailContacts([]); setEmailInput("");
     setPhoneContact(""); setAlertChannels([]);
+    setResponseThresholdMs("15000");
   };
 
   const toggleChannel = (ch) =>
@@ -303,8 +440,6 @@ const AddUrl = ({
         className="relative min-h-screen w-full overflow-hidden px-4 sm:px-6 lg:px-8 py-6 text-white"
         style={{ background: "transparent" }}
       >
-        {/* Backgrounds & effects */}
-       
         <Background />
         <CursorGlow />
 
@@ -391,7 +526,7 @@ const AddUrl = ({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.12, duration: 0.45 }}
-                className="rounded-2xl p-6 relative overflow-hidden"
+                className="rounded-2xl p-6 relative overflow-visible"
                 style={{
                   background: "rgba(3,7,18,0.72)",
                   border: "1px solid rgba(56,189,248,0.09)",
@@ -406,7 +541,13 @@ const AddUrl = ({
                 <div className="space-y-3">
                   <HudInput placeholder="Domain Name (e.g. myapp.com)" value={domain} onChange={(e) => setDomain(e.target.value)} />
                   <HudInput type="url" placeholder="https://example.com" value={url} onChange={(e) => setUrl(e.target.value)} />
-                  <HudInput placeholder="Category (optional)" value={category} onChange={(e) => setCategory(e.target.value)} />
+
+                  {/* ── Category Dropdown ── */}
+                  <HudSelect
+                    value={category}
+                    onChange={setCategory}
+                    placeholder="Select Category (optional)"
+                  />
                 </div>
               </motion.div>
 
@@ -445,12 +586,37 @@ const AddUrl = ({
                   </label>
                 </div>
 
-                <HudInput
-                  type="number"
-                  placeholder="Max Response Time (ms)"
-                  value={responseThresholdMs}
-                  onChange={(e) => setResponseThresholdMs(e.target.value)}
-                />
+                {/* Response threshold — required, default 15000 */}
+                <div className="relative">
+                  <HudInput
+                    type="number"
+                    placeholder="Max Response Time (ms) *"
+                    value={responseThresholdMs}
+                    onChange={(e) => setResponseThresholdMs(e.target.value)}
+                    required
+                    min="1"
+                  />
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span style={{
+                      fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+                      color: "rgba(56,189,248,0.35)", letterSpacing: "0.08em",
+                    }}>
+                      Default: 15000 ms · Required field
+                    </span>
+                    {responseThresholdMs && (
+                      <motion.span
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        style={{
+                          fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+                          color: "rgba(52,211,153,0.6)",
+                        }}
+                      >
+                        ✓ {Number(responseThresholdMs).toLocaleString()} ms
+                      </motion.span>
+                    )}
+                  </div>
+                </div>
               </motion.div>
 
               {/* ── Notification Channels ── */}
