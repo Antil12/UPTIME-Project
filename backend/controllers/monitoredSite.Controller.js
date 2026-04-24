@@ -11,9 +11,14 @@ import { checkRegion } from "../services/regionChecker.js";
 import fs from "fs";
 import csv from "csv-parser";
 
-/* =====================================================
+// ── Allowed check-frequency range ─────────────────────────────────────────────
+const MIN_FREQUENCY_MS = 10_000;       // 10 seconds
+const MAX_FREQUENCY_MS = 86_400_000;   // 1 day
+const DEFAULT_FREQUENCY_MS = 60_000;   // 1 minute
+
+/* =====================================================================
    GET ALL MONITORED SITES — with server-side pagination
-===================================================== */
+===================================================================== */
 export const getMonitoredSites = async (req, res) => {
   try {
     const { category, status, q, page = 1, limit = 20, noPagination } = req.query;
@@ -109,6 +114,8 @@ export const getMonitoredSites = async (req, res) => {
           alertChannels: 1,
           alertIfAllRegionsDown: 1,
           createdAt: 1,
+          checkFrequency: 1,
+          nextCheckAt: 1,
 
           ownerEmail: "$ownerData.email",
           ownerRole:  "$ownerData.role",
@@ -187,9 +194,9 @@ export const getMonitoredSites = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    GET SITES BY REGION — used by Lambda to fetch its site list
-===================================================== */
+===================================================================== */
 export const getSitesByRegionForLambda = async (req, res) => {
   try {
     const region = req.params.region;
@@ -207,9 +214,9 @@ export const getSitesByRegionForLambda = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    GET GLOBAL STATUS STATS
-===================================================== */
+===================================================================== */
 export const getStatusStats = async (req, res) => {
   try {
     const stats = await SiteCurrentStatus.aggregate([
@@ -224,9 +231,9 @@ export const getStatusStats = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    GET SITE BY ID
-===================================================== */
+===================================================================== */
 export const getSiteById = async (req, res) => {
   try {
     const site = await MonitoredSite.findById(req.params.id);
@@ -258,20 +265,39 @@ export const getSiteById = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    ADD SITE
-===================================================== */
+   ── NEW: accepts `checkFrequency` from request body.
+           Validates range, stores it, and sets nextCheckAt accordingly.
+           All existing logic (regions, alerts, emails) is untouched.
+===================================================================== */
 export const addSite = async (req, res) => {
   try {
     const {
       domain, url, category, responseThresholdMs,
       alertChannels, regions, alertIfAllRegionsDown,
       emailContact, phoneContact, priority,
+      checkFrequency,   // ← NEW
     } = req.body;
 
     if (!url) {
       return res.status(400).json({ success: false, message: "URL is required" });
     }
+
+    // ── Validate and resolve checkFrequency ──────────────────────────────────
+    let resolvedFrequency = DEFAULT_FREQUENCY_MS;
+    if (checkFrequency !== undefined && checkFrequency !== null && checkFrequency !== "") {
+      const freq = Number(checkFrequency);
+      if (isNaN(freq) || freq < MIN_FREQUENCY_MS || freq > MAX_FREQUENCY_MS) {
+        return res.status(400).json({
+          success: false,
+          message: `checkFrequency must be between ${MIN_FREQUENCY_MS} ms (10 sec) and ${MAX_FREQUENCY_MS} ms (1 day)`,
+        });
+      }
+      resolvedFrequency = freq;
+    }
+
+    const now = Date.now();
 
     const site = await MonitoredSite.create({
       domain,
@@ -287,6 +313,8 @@ export const addSite = async (req, res) => {
       phoneContact: phoneContact || null,
       priority:     Number(priority ?? 0),
       owner:        req.user?._id,
+      checkFrequency: resolvedFrequency,
+      nextCheckAt:    new Date(now + resolvedFrequency),  // ← first check after one interval
     });
 
     if (Array.isArray(site.regions) && site.regions.length > 0) {
@@ -303,31 +331,20 @@ export const addSite = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    UPDATE SITE
-===================================================== */
+   ── NEW: if `checkFrequency` is provided and valid, store it and
+           immediately reset `nextCheckAt` so the new interval takes
+           effect without waiting for the old schedule to expire.
+           All existing change-detection and region-sync logic retained.
+===================================================================== */
 export const updateSite = async (req, res) => {
   try {
     const {
       domain, url, category, regions,
       emailContact, phoneContact, priority, responseThresholdMs,
+      checkFrequency,   // ← NEW
     } = req.body;
-
-    const updatedData = {
-      domain,
-      url,
-      category,
-      regions: Array.isArray(regions) ? regions : undefined,
-      emailContact: emailContact
-        ? Array.isArray(emailContact) ? emailContact : [emailContact]
-        : [],
-      phoneContact:        phoneContact || null,
-      priority:            priority !== undefined ? Number(priority) : 0,
-      responseThresholdMs:
-        responseThresholdMs !== undefined && responseThresholdMs !== null
-          ? Number(responseThresholdMs)
-          : null,
-    };
 
     const site = await MonitoredSite.findById(req.params.id);
     if (!site) {
@@ -353,6 +370,37 @@ export const updateSite = async (req, res) => {
       if (!hasAccess) {
         return res.status(403).json({ success: false, message: "Not authorized to update this site" });
       }
+    }
+
+    // ── Build the update object (existing fields) ────────────────────────────
+    const updatedData = {
+      domain,
+      url,
+      category,
+      regions: Array.isArray(regions) ? regions : undefined,
+      emailContact: emailContact
+        ? Array.isArray(emailContact) ? emailContact : [emailContact]
+        : [],
+      phoneContact:        phoneContact || null,
+      priority:            priority !== undefined ? Number(priority) : 0,
+      responseThresholdMs:
+        responseThresholdMs !== undefined && responseThresholdMs !== null
+          ? Number(responseThresholdMs)
+          : null,
+    };
+
+    // ── Handle checkFrequency update ─────────────────────────────────────────
+    if (checkFrequency !== undefined && checkFrequency !== null && checkFrequency !== "") {
+      const freq = Number(checkFrequency);
+      if (isNaN(freq) || freq < MIN_FREQUENCY_MS || freq > MAX_FREQUENCY_MS) {
+        return res.status(400).json({
+          success: false,
+          message: `checkFrequency must be between ${MIN_FREQUENCY_MS} ms (10 sec) and ${MAX_FREQUENCY_MS} ms (1 day)`,
+        });
+      }
+      updatedData.checkFrequency = freq;
+      // Reset schedule immediately so new frequency is honoured right away
+      updatedData.nextCheckAt = new Date(Date.now() + freq);
     }
 
     const hasChanges = Object.keys(updatedData).some(
@@ -397,9 +445,9 @@ export const updateSite = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    DELETE SITE (soft delete)
-===================================================== */
+===================================================================== */
 export const deleteSite = async (req, res) => {
   try {
     const site = await MonitoredSite.findById(req.params.id);
@@ -420,9 +468,9 @@ export const deleteSite = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    ASSIGN / UNASSIGN USERS TO SITE
-===================================================== */
+===================================================================== */
 export const assignUsersToSite = async (req, res) => {
   try {
     const { userId, action, assignedUsers } = req.body;
@@ -477,9 +525,9 @@ export const assignUsersToSite = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    CHECK & UPDATE SITE STATUS (single-site direct check)
-===================================================== */
+===================================================================== */
 export const checkAndUpdateSiteStatus = async (req, res) => {
   const { siteId } = req.params;
   try {
@@ -534,9 +582,9 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    COMPUTE GLOBAL STATUS FOR ALL SITES
-===================================================== */
+===================================================================== */
 export const computeGlobalStatus = async (req, res) => {
   try {
     const { recalculateAllGlobalStatuses } = await import("../services/globalStatusService.js");
@@ -553,29 +601,9 @@ export const computeGlobalStatus = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    MANUAL GLOBAL CHECK FOR A SINGLE SITE
-   ─────────────────────────────────────────────────────
-   REWRITTEN: performs a REAL HTTP check per region instead of
-   one India-sourced check stamped on every region.
-
-   - If the site has regions assigned: calls checkRegion() for each
-     region independently, persists each result separately, then
-     recalculates globalStatus from fresh regional data.
-   - If the site has no regions: falls back to a single direct check.
-   - Results are tagged isBackendDirect=true when Lambda is not active,
-     so the frontend can show an honest warning in the modal.
-===================================================== */
-/* =====================================================
-   MANUAL GLOBAL CHECK FOR A SINGLE SITE
-   
-   LAMBDA INACTIVE → checkRegion() per region from India backend.
-                      isBackendDirect: true in response so frontend
-                      shows the warning banner.
-   
-   LAMBDA ACTIVE   → POST to each Lambda endpoint and collect results.
-                      isBackendDirect: false, real regional latency.
-===================================================== */
+===================================================================== */
 export const globalCheckSite = async (req, res) => {
   try {
     const { siteId } = req.params;
@@ -585,7 +613,6 @@ export const globalCheckSite = async (req, res) => {
       return res.status(404).json({ success: false, message: "Site not found" });
     }
 
-    // ── RBAC ─────────────────────────────────────────────────────────────────
     const role   = (req.user && req.user.role) || "";
     const userId = req.user?._id?.toString();
 
@@ -606,7 +633,6 @@ export const globalCheckSite = async (req, res) => {
       }
     }
 
-    // ── Config ────────────────────────────────────────────────────────────────
     const { calculateGlobalStatus } = await import("../services/globalStatusService.js");
     const { REGION_MAP }            = await import("../config/Regionconfig.js");
 
@@ -616,7 +642,6 @@ export const globalCheckSite = async (req, res) => {
       ? site.regions : null;
     const now            = new Date();
     const regionalBreakdown = [];
-    // isBackendDirect is true when we are NOT using real Lambda workers
     const isBackendDirect = !LAMBDA_ACTIVE;
 
     if (siteRegions) {
@@ -625,34 +650,22 @@ export const globalCheckSite = async (req, res) => {
           let result;
 
           if (LAMBDA_ACTIVE) {
-            // ── PATH A: real Lambda worker ────────────────────────────────────
-            // Each Lambda is deployed at its own endpoint. We POST a single-site
-            // check request and wait for the result synchronously.
-            // Lambda env: BACKEND_API_URL is its callback URL, not our endpoint.
-            // We call the Lambda function URL directly (set LAMBDA_ENDPOINT_<REGION>
-            // in backend .env, e.g. LAMBDA_ENDPOINT_ASIA=https://xxx.lambda-url.ap-south-1.on.aws)
-            const envKey       = `LAMBDA_ENDPOINT_${regionName.toUpperCase().replace(/ /g, "_")}`;
-            const lambdaUrl    = process.env[envKey];
+            const envKey    = `LAMBDA_ENDPOINT_${regionName.toUpperCase().replace(/ /g, "_")}`;
+            const lambdaUrl = process.env[envKey];
 
             if (!lambdaUrl) {
-              // Lambda URL not configured — fall back to direct for this region
               console.warn(`[globalCheckSite] ${envKey} not set, falling back to direct check for ${regionName}`);
               result = await checkDirectForRegion(site, regionName, now);
-              result.source = "BACKEND_DIRECT"; // honest flag
+              result.source = "BACKEND_DIRECT";
             } else {
-              // Invoke Lambda function URL with a single-site payload
               const lambdaRes = await axios.post(
                 lambdaUrl,
                 { siteId: site._id.toString(), url: site.url, responseThresholdMs: site.responseThresholdMs },
                 {
-                  headers: {
-                    Authorization: `Bearer ${LAMBDA_SECRET}`,
-                    "Content-Type": "application/json",
-                  },
-                  timeout: 25_000, // Lambda has up to 60s but we cap at 25s for UX
+                  headers: { Authorization: `Bearer ${LAMBDA_SECRET}`, "Content-Type": "application/json" },
+                  timeout: 25_000,
                 }
               );
-              // Lambda returns { status, statusCode, responseTimeMs }
               const lr = lambdaRes.data;
               result = {
                 siteId:         site._id,
@@ -664,11 +677,9 @@ export const globalCheckSite = async (req, res) => {
               };
             }
           } else {
-            // ── PATH B: backend direct (India) ────────────────────────────────
             result = await checkDirectForRegion(site, regionName, now);
           }
 
-          // ── Persist result ────────────────────────────────────────────────
           await RegionCurrentStatus.findOneAndUpdate(
             { siteId: site._id, region: regionName },
             {
@@ -710,12 +721,10 @@ export const globalCheckSite = async (req, res) => {
         }
       }
     } else {
-      // ── No regions configured: single direct check ────────────────────────
       const directResult = await checkDirectForSite(site, now);
       regionalBreakdown.push(directResult);
     }
 
-    // ── Recalculate global status from the fresh regional data ────────────────
     const globalResult = await calculateGlobalStatus(siteId);
 
     console.log(
@@ -748,22 +757,18 @@ export const globalCheckSite = async (req, res) => {
   }
 };
 
-// ─── Helper: direct HTTP check for one region (backend = India source) ────────
 async function checkDirectForRegion(site, regionName, now) {
   const { checkRegion } = await import("../services/regionChecker.js");
   let results = await checkRegion(regionName);
   results = results.filter((r) => String(r.siteId) === String(site._id));
-
   if (results.length === 0) {
     return { siteId: site._id, region: regionName, status: "UNKNOWN", statusCode: null, responseTimeMs: null, source: "BACKEND_DIRECT" };
   }
   return { ...results[0], source: "BACKEND_DIRECT" };
 }
 
-// ─── Helper: direct HTTP check when no regions configured ────────────────────
 async function checkDirectForSite(site, now) {
   const TIMEOUT_MS     = 20_000;
-  // FIX: use the same 15s default as monitorCron
   const SLOW_THRESHOLD = site.responseThresholdMs || 15_000;
   let   start          = Date.now();
 
@@ -811,9 +816,10 @@ async function checkDirectForSite(site, now) {
     };
   }
 }
-/* =====================================================
+
+/* =====================================================================
    GET ALL CATEGORIES
-===================================================== */
+===================================================================== */
 export const getCategories = async (req, res) => {
   try {
     const categories = await MonitoredSite.distinct("category", { isActive: 1 });
@@ -825,12 +831,11 @@ export const getCategories = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    GET AVAILABLE REGIONS
-===================================================== */
+===================================================================== */
 export const getRegions = async (req, res) => {
   try {
-    // Import from config so there's one source of truth
     const { REGION_NAMES } = await import("../config/Regionconfig.js");
     return res.json({ success: true, data: REGION_NAMES });
   } catch (err) {
@@ -839,9 +844,9 @@ export const getRegions = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    GET SITES FOR A GIVEN REGION (user-facing, with RBAC)
-===================================================== */
+===================================================================== */
 export const getSitesByRegion = async (req, res) => {
   try {
     const region = req.params.region;
@@ -882,9 +887,9 @@ export const getSitesByRegion = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    SLOW ALERT BATCH
-===================================================== */
+===================================================================== */
 export const getSlowAlertBatch = async (req, res) => {
   const batch = getSlowBatch();
   if (!batch) return res.json({ success: true, data: null });
@@ -898,9 +903,9 @@ export const getSlowAlertBatch = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    DELETED SITE LOGS
-===================================================== */
+===================================================================== */
 export const getDeletedLogs = async (req, res) => {
   try {
     const { fromDate, toDate, q, page = 1, limit = 10 } = req.query;
@@ -1001,9 +1006,9 @@ export const getDeletedLogs = async (req, res) => {
   }
 };
 
-/* =====================================================
+/* =====================================================================
    BULK IMPORT SITES
-===================================================== */
+===================================================================== */
 export const bulkImportSites = async (req, res) => {
   let filePath = "";
   try {

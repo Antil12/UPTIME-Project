@@ -19,10 +19,13 @@ setupaxios();
 const API_BASE = "/monitoredsite";
 const PAGE_SIZE = 20;
 
+// ─── Default check frequency (1 minute, matches backend default) ──────────────
+const DEFAULT_FREQUENCY_MS = 60_000;
+
 // ─── Module-level in-flight deduplication ────────────────────────────────────
 let pinnedSitesFlight = null;
-let pagedSitesFlight = null; // dedup for the current paged request
-let allSitesFullFlight = null; // dedup for the full-list request (reports/popups)
+let pagedSitesFlight = null;
+let allSitesFullFlight = null;
 
 /** Returns a Set of pinned _id strings. Only one request at a time. */
 const fetchPinnedIds = async () => {
@@ -52,12 +55,8 @@ const fetchPinnedIds = async () => {
 
 /**
  * Fetches ONE page of monitored sites from the server.
- * Returns { data: [], totalCount: N } from the API response.
- * Only one request in-flight at a time (last one wins via reset).
  */
 const fetchPagedSites = async (status, searchQuery, pageNum) => {
-  // Cancel any previous in-flight paged request by resetting the ref —
-  // the new promise simply overwrites it so only the latest result is used.
   pagedSitesFlight = (async () => {
     try {
       let url = `${API_BASE}?page=${pageNum}&limit=${PAGE_SIZE}`;
@@ -85,10 +84,7 @@ const fetchPagedSites = async (status, searchQuery, pageNum) => {
 };
 
 /**
- * Fetches ALL monitored sites (no pagination) — used exclusively for
- * popups and the report page so their data is never affected by the
- * dashboard's current page/filter state.
- * Only one request in-flight at a time.
+ * Fetches ALL monitored sites (no pagination).
  */
 const isAbortError = (err) =>
   err?.code === "ERR_CANCELED" ||
@@ -103,12 +99,8 @@ const fetchAllSitesFull = async () => {
       const res = await axios.get(`${API_BASE}?status=ALL&page=1&limit=10000`);
       return res.data?.data || [];
     } catch (err) {
-      if (err.response?.status === 401) {
-        return [];
-      }
-      if (isAbortError(err)) {
-        return [];
-      }
+      if (err.response?.status === 401) return [];
+      if (isAbortError(err)) return [];
       console.error("Fetch all sites (full) failed:", err);
       return [];
     } finally {
@@ -139,7 +131,6 @@ function App() {
   const [urls, setUrls] = useState([]);
 
   // ─── Full data store — for popups & reports ONLY ─────────────────────────
-  // Never re-filtered by dashboard state; always the complete list with pins.
   const [allUrls, setAllUrls] = useState([]);
 
   // ─── Filter / pagination state ───────────────────────────────────────────
@@ -162,103 +153,85 @@ function App() {
   const [editPriority, setEditPriority] = useState(0);
   const [editResponseThresholdMs, setEditResponseThresholdMs] = useState("");
   const [editRegions, setEditRegions] = useState([]);
+  // ─── NEW: check frequency edit state ─────────────────────────────────────
+  const [editCheckFrequency, setEditCheckFrequency] = useState(DEFAULT_FREQUENCY_MS);
+
   const [popupData, setPopupData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   /* ================= HELPERS ================= */
 
-  /**
-   * Loads ONE page of data from the server and updates the table slice.
-   * Also refreshes the full list (allUrls) in parallel so popups/reports
-   * always have complete, up-to-date data.
-   */
- const loadData = useCallback(
-  async (status, searchQuery, pageNum) => {
-    const token = localStorage.getItem("loginToken");
-    if (!token) return;
+  const loadData = useCallback(
+    async (status, searchQuery, pageNum) => {
+      const token = localStorage.getItem("loginToken");
+      if (!token) return;
 
-    const resolvedStatus = status ?? selectedStatus;
-    const resolvedSearch = searchQuery ?? search;
-    const resolvedPage = pageNum ?? page;
+      const resolvedStatus = status ?? selectedStatus;
+      const resolvedSearch = searchQuery ?? search;
+      const resolvedPage = pageNum ?? page;
 
-    try {
-      // 🟢 1. Get paginated data (MAIN SOURCE)
-      const { data: pagedData, totalCount } =
-        await fetchPagedSites(resolvedStatus, resolvedSearch, resolvedPage);
+      try {
+        const { data: pagedData, totalCount } =
+          await fetchPagedSites(resolvedStatus, resolvedSearch, resolvedPage);
 
-      // 🟢 2. Get pinned IDs
-      const pinnedIds = await fetchPinnedIds();
+        const pinnedIds = await fetchPinnedIds();
 
-      // 🟢 3. Mark pinned in current page
-      let pageData = pagedData.map((u) => ({
-        ...u,
-        pinned: pinnedIds.has(u._id),
-      }));
-
-      // 🔥 4. PAGE 1 → inject pinned
-      if (resolvedPage === 1 && pinnedIds.size > 0) {
-        const rawAll = await fetchAllSitesFull(); // ONLY for pinned extraction
-
-        let pinnedFull = rawAll
-          .filter((u) => pinnedIds.has(u._id))
-          .map((u) => ({ ...u, pinned: true }));
-
-        // 👉 Apply SAME filters (IMPORTANT)
-        if (resolvedSearch && resolvedSearch.trim()) {
-          const q = resolvedSearch.toLowerCase();
-          pinnedFull = pinnedFull.filter(
-            (u) =>
-              (u.domain || "").toLowerCase().includes(q) ||
-              (u.url || "").toLowerCase().includes(q)
-          );
-        }
-
-        if (resolvedStatus && resolvedStatus !== "ALL") {
-          pinnedFull = pinnedFull.filter(
-            (u) => u.status === resolvedStatus
-          );
-        }
-
-        // 👉 Remove duplicates from page
-        const pinnedSet = new Set(pinnedFull.map((p) => p._id));
-
-        const unpinnedPage = pageData.filter(
-          (u) => !pinnedSet.has(u._id)
-        );
-
-        // 👉 Final merge
-        pageData = [...pinnedFull, ...unpinnedPage].slice(0, PAGE_SIZE);
-      } else {
-        // 👉 Other pages → remove pinned
-        pageData = pageData.filter((u) => !u.pinned);
-      }
-
-      // 🟢 5. Update table
-      setUrls(pageData);
-
-      // 🟢 6. Keep backend pagination untouched
-      const pages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-      setTotalCount(totalCount);
-      setTotalPages(pages);
-      setPage(Math.min(resolvedPage, pages));
-
-      // 🟢 7. Keep popup data EXACTLY as before (no change)
-      fetchAllSitesFull().then((rawAll) => {
-        const allWithPinned = rawAll.map((u) => ({
+        let pageData = pagedData.map((u) => ({
           ...u,
           pinned: pinnedIds.has(u._id),
         }));
-        setAllUrls(allWithPinned);
-      });
 
-    } catch (err) {
-      if (!isAbortError(err)) {
-        console.error("Load data failed:", err);
+        if (resolvedPage === 1 && pinnedIds.size > 0) {
+          const rawAll = await fetchAllSitesFull();
+
+          let pinnedFull = rawAll
+            .filter((u) => pinnedIds.has(u._id))
+            .map((u) => ({ ...u, pinned: true }));
+
+          if (resolvedSearch && resolvedSearch.trim()) {
+            const q = resolvedSearch.toLowerCase();
+            pinnedFull = pinnedFull.filter(
+              (u) =>
+                (u.domain || "").toLowerCase().includes(q) ||
+                (u.url || "").toLowerCase().includes(q)
+            );
+          }
+
+          if (resolvedStatus && resolvedStatus !== "ALL") {
+            pinnedFull = pinnedFull.filter(
+              (u) => u.status === resolvedStatus
+            );
+          }
+
+          const pinnedSet = new Set(pinnedFull.map((p) => p._id));
+          const unpinnedPage = pageData.filter((u) => !pinnedSet.has(u._id));
+          pageData = [...pinnedFull, ...unpinnedPage].slice(0, PAGE_SIZE);
+        } else {
+          pageData = pageData.filter((u) => !u.pinned);
+        }
+
+        setUrls(pageData);
+
+        const pages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+        setTotalCount(totalCount);
+        setTotalPages(pages);
+        setPage(Math.min(resolvedPage, pages));
+
+        fetchAllSitesFull().then((rawAll) => {
+          const allWithPinned = rawAll.map((u) => ({
+            ...u,
+            pinned: pinnedIds.has(u._id),
+          }));
+          setAllUrls(allWithPinned);
+        });
+      } catch (err) {
+        if (!isAbortError(err)) {
+          console.error("Load data failed:", err);
+        }
       }
-    }
-  },
-  [selectedStatus, search, page]
-);
+    },
+    [selectedStatus, search, page]
+  );
 
   /* ================= EFFECTS ================= */
 
@@ -266,21 +239,18 @@ function App() {
     document.documentElement.classList.add("dark");
   }, []);
 
-  // Initial load on login
   useEffect(() => {
     if (!isLoggedIn) return;
     loadData(selectedStatus, search, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
 
-  // Re-fetch whenever filter or page changes
   useEffect(() => {
     if (!isLoggedIn) return;
     loadData(selectedStatus, search, page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStatus, search, page]);
 
-  // Reset to first page whenever filter criteria change
   useEffect(() => {
     setPage(1);
   }, [search, selectedStatus]);
@@ -290,9 +260,17 @@ function App() {
   // ADD SITE
   const handleAddUrl = async (data) => {
     const {
-      domain, url, category, responseThresholdMs,
-      alertChannels, regions, alertIfAllRegionsDown,
-      emailContact, phoneContact, priority,
+      domain,
+      url,
+      category,
+      responseThresholdMs,
+      alertChannels,
+      regions,
+      alertIfAllRegionsDown,
+      emailContact,
+      phoneContact,
+      priority,
+      checkFrequency,
     } = data;
 
     if (!domain || !url) {
@@ -306,9 +284,17 @@ function App() {
 
     try {
       await axios.post(API_BASE, {
-        domain, url, category, responseThresholdMs,
-        alertChannels, regions, alertIfAllRegionsDown,
-        emailContact, phoneContact, priority,
+        domain,
+        url,
+        category,
+        responseThresholdMs,
+        alertChannels,
+        regions,
+        alertIfAllRegionsDown,
+        emailContact,
+        phoneContact,
+        priority,
+        checkFrequency,
       });
       setDomain("");
       setUrl("");
@@ -357,14 +343,12 @@ function App() {
   const handlePin = async (id) => {
     try {
       const token = localStorage.getItem("loginToken");
-
-      // Find site in either list
-      const site = urls.find((u) => u._id === id) || allUrls.find((u) => u._id === id);
+      const site =
+        urls.find((u) => u._id === id) || allUrls.find((u) => u._id === id);
       if (!site) return;
 
       const isCurrentlyPinned = site.pinned || false;
 
-      // Optimistic update on both lists
       const togglePin = (list) =>
         list.map((u) =>
           u._id === id ? { ...u, pinned: !isCurrentlyPinned } : u
@@ -384,7 +368,6 @@ function App() {
         );
       }
 
-      // Sync with server after API call settles
       await loadData(selectedStatus, search, page);
     } catch (err) {
       console.error("Pin/Unpin failed:", err);
@@ -418,6 +401,12 @@ function App() {
         : ""
     );
     setEditRegions(Array.isArray(item.regions) ? item.regions : []);
+    // ─── Load saved checkFrequency, fallback to default ───────────────────
+    setEditCheckFrequency(
+      item.checkFrequency !== undefined && item.checkFrequency !== null
+        ? Number(item.checkFrequency)
+        : DEFAULT_FREQUENCY_MS
+    );
   };
 
   // EDIT SITE — save
@@ -452,6 +441,11 @@ function App() {
               ? Number(editResponseThresholdMs)
               : null,
           regions: Array.isArray(editRegions) ? editRegions : [],
+          // ─── NEW: send checkFrequency to backend ──────────────────────
+          checkFrequency:
+            editCheckFrequency !== null && editCheckFrequency !== undefined
+              ? Number(editCheckFrequency)
+              : DEFAULT_FREQUENCY_MS,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -463,6 +457,7 @@ function App() {
       setEditPriority(0);
       setEditResponseThresholdMs("");
       setEditRegions([]);
+      setEditCheckFrequency(DEFAULT_FREQUENCY_MS); // reset to default
       await loadData(selectedStatus, search, page);
     } catch (err) {
       console.error(err);
@@ -498,12 +493,9 @@ function App() {
 
   /* ================= DERIVED ================= */
 
-  // safeUrls  → current page slice (dashboard table)
-  // safeAllUrls → full list (popups & reports) — untouched by pagination
   const safeUrls = Array.isArray(urls) ? urls : [];
   const safeAllUrls = Array.isArray(allUrls) ? allUrls : [];
 
-  // Up/Down counts derived from the full list (accurate totals for popups)
   const allStatusMap = safeAllUrls.reduce((acc, u) => {
     const s = u.status || "UNKNOWN";
     if (!acc[s]) acc[s] = [];
@@ -517,7 +509,6 @@ function App() {
   ];
   const downSites = [...(allStatusMap["DOWN"] || [])];
 
-  // Report data derived from the full list — unaffected by page/filter
   const reportData = safeAllUrls
     .filter(
       (u) =>
@@ -571,10 +562,10 @@ function App() {
             path="/dashboard"
             element={
               <Dashboard
-                urls={safeAllUrls}        // full list → popups see everything
+                urls={safeAllUrls}
                 search={search}
                 setSearch={setSearch}
-                filteredUrls={safeUrls}   // current page slice → table rows
+                filteredUrls={safeUrls}
                 upSites={upSites}
                 downSites={downSites}
                 onPin={handlePin}
@@ -630,7 +621,7 @@ function App() {
             path="/reports"
             element={
               <Report
-                urls={safeAllUrls}        // full list for report page
+                urls={safeAllUrls}
                 reportData={reportData}
                 reportSearch={reportSearch}
                 setReportSearch={setReportSearch}
@@ -664,11 +655,13 @@ function App() {
           editPriority={editPriority}
           editResponseThresholdMs={editResponseThresholdMs}
           editRegions={editRegions}
+          editCheckFrequency={editCheckFrequency}
           setEditEmail={setEditEmail}
           setEditPhone={setEditPhone}
           setEditPriority={setEditPriority}
           setEditResponseThresholdMs={setEditResponseThresholdMs}
           setEditRegions={setEditRegions}
+          setEditCheckFrequency={setEditCheckFrequency}
           urlError={urlError}
           onClose={() => setEditItem(null)}
           onSave={handleSaveEdit}

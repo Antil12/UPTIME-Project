@@ -13,8 +13,8 @@ import {
   X,
   CheckCircle2,
   ChevronDown,
+  Timer,
 } from "lucide-react";
-
 
 // ─── Font Loader ──────────────────────────────────────────────────────────────
 const FontLoader = () => {
@@ -216,29 +216,38 @@ const HudInput = ({ type = "text", placeholder, value, onChange, required, ...re
   </div>
 );
 
-// ─── HUD Select Dropdown ──────────────────────────────────────────────────────
-const CATEGORY_OPTIONS = [
-  "JOURNALS",
-  "E-JAYPEE",
-  "JPMEDPUB",
-  "JP-DIGITAL",
-  "DIGINERVE",
-  "Others",
+// ─── Check Frequency Options ──────────────────────────────────────────────────
+export const CHECK_FREQUENCY_OPTIONS = [
+  { label: "10 sec",  value: 10_000 },
+  { label: "1 min",   value: 60_000 },
+  { label: "5 min",   value: 300_000 },
+  { label: "10 min",  value: 600_000 },
+  { label: "15 min",  value: 900_000 },
+  { label: "30 min",  value: 1_800_000 },
+  { label: "1 hour",  value: 3_600_000 },
+  { label: "2 hour",  value: 7_200_000 },
+  { label: "3 hour",  value: 10_800_000 },
+  { label: "4 hour",  value: 14_400_000 },
+  { label: "5 hour",  value: 18_000_000 },
+  { label: "6 hour",  value: 21_600_000 },
+  { label: "1 day",   value: 86_400_000 },
 ];
 
-const HudSelect = ({ value, onChange, placeholder = "Select category" }) => {
+// ─── Generic Portal Dropdown ──────────────────────────────────────────────────
+const PortalDropdown = ({ value, onChange, options, placeholder }) => {
   const [open, setOpen] = useState(false);
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
   const triggerRef = useRef(null);
 
+  const selectedOption = options.find((o) => o.value === value || o === value);
+  const displayLabel = selectedOption
+    ? (typeof selectedOption === "object" ? selectedOption.label : selectedOption)
+    : null;
+
   const calcPos = () => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    setDropPos({
-      top:   rect.bottom + window.scrollY + 6,
-      left:  rect.left   + window.scrollX,
-      width: rect.width,
-    });
+    setDropPos({ top: rect.bottom + window.scrollY + 6, left: rect.left + window.scrollX, width: rect.width });
   };
 
   const handleOpen = () => {
@@ -246,12 +255,6 @@ const HudSelect = ({ value, onChange, placeholder = "Select category" }) => {
     setOpen((v) => !v);
   };
 
-  const handleSelect = (opt) => {
-    onChange(opt);
-    setOpen(false);
-  };
-
-  // Keep position in sync while dropdown is open
   useEffect(() => {
     if (!open) return;
     window.addEventListener("scroll", calcPos, true);
@@ -272,7 +275,7 @@ const HudSelect = ({ value, onChange, placeholder = "Select category" }) => {
         style={{
           background: "rgba(255,255,255,0.022)",
           border: open ? "1px solid rgba(56,189,248,0.35)" : "1px solid rgba(56,189,248,0.09)",
-          color: value ? "white" : "rgba(148,163,184,0.45)",
+          color: displayLabel ? "white" : "rgba(148,163,184,0.45)",
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: "12px",
           letterSpacing: "0.02em",
@@ -281,7 +284,7 @@ const HudSelect = ({ value, onChange, placeholder = "Select category" }) => {
           textAlign: "left",
         }}
       >
-        <span>{value || placeholder}</span>
+        <span>{displayLabel || placeholder}</span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -293,52 +296,52 @@ const HudSelect = ({ value, onChange, placeholder = "Select category" }) => {
 
       {open && createPortal(
         <>
-          {/* Backdrop */}
-          <div
-            style={{ position: "fixed", inset: 0, zIndex: 9998 }}
-            onClick={() => setOpen(false)}
-          />
-          {/* Dropdown panel — rendered in <body>, escapes all overflow:hidden parents */}
+          <div style={{ position: "fixed", inset: 0, zIndex: 9998 }} onClick={() => setOpen(false)} />
           <motion.div
             initial={{ opacity: 0, y: 6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.15 }}
             style={{
               position: "absolute",
-              top:      dropPos.top,
-              left:     dropPos.left,
-              width:    dropPos.width,
-              zIndex:   9999,
+              top: dropPos.top, left: dropPos.left, width: dropPos.width,
+              zIndex: 9999,
               background: "rgba(3,7,18,0.97)",
               border: "1px solid rgba(56,189,248,0.14)",
               backdropFilter: "blur(28px)",
               boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 24px rgba(56,189,248,0.05)",
               borderRadius: "16px",
               overflow: "hidden",
+              maxHeight: "260px",
+              overflowY: "auto",
             }}
           >
-            {CATEGORY_OPTIONS.map((opt, idx) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => handleSelect(opt)}
-                className="w-full px-5 py-3 text-left transition-all duration-150 flex items-center justify-between"
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: "11px",
-                  letterSpacing: "0.06em",
-                  color: value === opt ? "#38bdf8" : "rgba(148,163,184,0.75)",
-                  background: value === opt ? "rgba(56,189,248,0.07)" : "transparent",
-                  borderTop: idx === 0 ? "none" : "1px solid rgba(56,189,248,0.045)",
-                  borderLeft: value === opt ? "2px solid rgba(56,189,248,0.45)" : "2px solid transparent",
-                }}
-                onMouseEnter={(e) => { if (value !== opt) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
-                onMouseLeave={(e) => { if (value !== opt) e.currentTarget.style.background = "transparent"; }}
-              >
-                <span>{opt}</span>
-                {value === opt && <span style={{ color: "#38bdf8", fontSize: "9px" }}>✓</span>}
-              </button>
-            ))}
+            {options.map((opt, idx) => {
+              const optValue = typeof opt === "object" ? opt.value : opt;
+              const optLabel = typeof opt === "object" ? opt.label : opt;
+              const isSelected = value === optValue || value === opt;
+              return (
+                <button
+                  key={optValue ?? idx}
+                  type="button"
+                  onClick={() => { onChange(optValue); setOpen(false); }}
+                  className="w-full px-5 py-3 text-left transition-all duration-150 flex items-center justify-between"
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "11px",
+                    letterSpacing: "0.06em",
+                    color: isSelected ? "#38bdf8" : "rgba(148,163,184,0.75)",
+                    background: isSelected ? "rgba(56,189,248,0.07)" : "transparent",
+                    borderTop: idx === 0 ? "none" : "1px solid rgba(56,189,248,0.045)",
+                    borderLeft: isSelected ? "2px solid rgba(56,189,248,0.45)" : "2px solid transparent",
+                  }}
+                  onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
+                  onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                >
+                  <span>{optLabel}</span>
+                  {isSelected && <span style={{ color: "#38bdf8", fontSize: "9px" }}>✓</span>}
+                </button>
+              );
+            })}
           </motion.div>
         </>,
         document.body
@@ -347,7 +350,12 @@ const HudSelect = ({ value, onChange, placeholder = "Select category" }) => {
   );
 };
 
-// ─── Toggle Chip ─────────────────────────────────────────────────────────────
+// ─── Category Options ─────────────────────────────────────────────────────────
+const CATEGORY_OPTIONS = [
+  "JOURNALS", "E-JAYPEE", "JPMEDPUB", "JP-DIGITAL", "DIGINERVE", "Others",
+];
+
+// ─── Toggle Chip ──────────────────────────────────────────────────────────────
 const ToggleChip = ({ label, active, onClick, activeColor = "#38bdf8" }) => (
   <motion.button
     type="button"
@@ -382,18 +390,20 @@ const AddUrl = ({
   onSave,
   urls = [],
 }) => {
-  // Default responseThresholdMs to 15000
   const [responseThresholdMs, setResponseThresholdMs] = useState("15000");
-  const [alertChannels, setAlertChannels] = useState([]);
-  const [regions, setRegions] = useState([]);
+  const [alertChannels, setAlertChannels]             = useState([]);
+  const [regions, setRegions]                         = useState([]);
   const [alertIfAllRegionsDown, setAlertIfAllRegionsDown] = useState(false);
-  const [category, setCategory] = useState("");
-  const [localError, setLocalError] = useState("");
-  const [emailContacts, setEmailContacts] = useState([]);
-  const [emailInput, setEmailInput] = useState("");
-  const [phoneContact, setPhoneContact] = useState("");
-  const [priority, setPriority] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
+  const [category, setCategory]                       = useState("");
+  const [localError, setLocalError]                   = useState("");
+  const [emailContacts, setEmailContacts]             = useState([]);
+  const [emailInput, setEmailInput]                   = useState("");
+  const [phoneContact, setPhoneContact]               = useState("");
+  const [priority, setPriority]                       = useState(0);
+  const [submitted, setSubmitted]                     = useState(false);
+
+  // ── NEW: Check Frequency — default 60 000 ms (1 min) ─────────────────────
+  const [checkFrequency, setCheckFrequency] = useState(60_000);
 
   const normalize = (v = "") => v.trim().toLowerCase().replace(/\/$/, "");
 
@@ -409,21 +419,31 @@ const AddUrl = ({
       return;
     }
     if (urls.some((u) => normalize(u.domain) === nd)) { setLocalError("Domain name already exists."); return; }
-    if (urls.some((u) => normalize(u.url) === nu)) { setLocalError("URL already exists."); return; }
+    if (urls.some((u) => normalize(u.url) === nu))    { setLocalError("URL already exists."); return; }
 
     onSave({
-      domain: domain.trim(), url: url.trim(),
+      domain: domain.trim(),
+      url: url.trim(),
       category: category.trim() || null,
-      responseThresholdMs, alertChannels, regions,
+      responseThresholdMs,
+      alertChannels,
+      regions,
       alertIfAllRegionsDown,
-      emailContact: emailContacts, phoneContact, priority,
+      emailContact: emailContacts,
+      phoneContact,
+      priority,
+      checkFrequency,   // ← NEW field sent to backend
     });
 
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 2000);
-    setCategory(""); setEmailContacts([]); setEmailInput("");
-    setPhoneContact(""); setAlertChannels([]);
+    setCategory("");
+    setEmailContacts([]);
+    setEmailInput("");
+    setPhoneContact("");
+    setAlertChannels([]);
     setResponseThresholdMs("15000");
+    setCheckFrequency(60_000);
   };
 
   const toggleChannel = (ch) =>
@@ -431,6 +451,9 @@ const AddUrl = ({
 
   const toggleRegion = (r) =>
     setRegions((p) => p.includes(r) ? p.filter((x) => x !== r) : [...p, r]);
+
+  // Display label for selected frequency
+  const freqLabel = CHECK_FREQUENCY_OPTIONS.find((o) => o.value === checkFrequency)?.label || "1 min";
 
   return (
     <>
@@ -443,7 +466,7 @@ const AddUrl = ({
         <Background />
         <CursorGlow />
 
-        <OrbitRing radius={220} duration={20} dotCount={8} color="#38bdf8" tilt={72} />
+        <OrbitRing radius={220} duration={20} dotCount={8}  color="#38bdf8" tilt={72} />
         <OrbitRing radius={290} duration={30} dotCount={10} color="#818cf8" tilt={68} delay={1} />
 
         {["tl", "tr", "bl", "br"].map((p, i) => (
@@ -541,17 +564,16 @@ const AddUrl = ({
                 <div className="space-y-3">
                   <HudInput placeholder="Domain Name (e.g. myapp.com)" value={domain} onChange={(e) => setDomain(e.target.value)} />
                   <HudInput type="url" placeholder="https://example.com" value={url} onChange={(e) => setUrl(e.target.value)} />
-
-                  {/* ── Category Dropdown ── */}
-                  <HudSelect
+                  <PortalDropdown
                     value={category}
                     onChange={setCategory}
+                    options={CATEGORY_OPTIONS}
                     placeholder="Select Category (optional)"
                   />
                 </div>
               </motion.div>
 
-              {/* ── Performance ── */}
+              {/* ── Performance + Check Frequency ── */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -569,10 +591,14 @@ const AddUrl = ({
 
                 <div className="flex items-center justify-between mb-4">
                   <SectionLabel icon={Zap} label="Performance Threshold" />
-                  <label className="flex items-center gap-2 cursor-pointer -mt-4" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: priority === 1 ? "#f87171" : "rgba(148,163,184,0.5)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                  <label className="flex items-center gap-2 cursor-pointer -mt-4"
+                    style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: priority === 1 ? "#f87171" : "rgba(148,163,184,0.5)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
                     <div
                       className="relative w-8 h-4 rounded-full cursor-pointer transition-all duration-300"
-                      style={{ background: priority === 1 ? "rgba(248,113,113,0.3)" : "rgba(255,255,255,0.06)", border: priority === 1 ? "1px solid rgba(248,113,113,0.4)" : "1px solid rgba(255,255,255,0.08)" }}
+                      style={{
+                        background: priority === 1 ? "rgba(248,113,113,0.3)" : "rgba(255,255,255,0.06)",
+                        border: priority === 1 ? "1px solid rgba(248,113,113,0.4)" : "1px solid rgba(255,255,255,0.08)",
+                      }}
                       onClick={() => setPriority(priority === 1 ? 0 : 1)}
                     >
                       <motion.div
@@ -586,35 +612,49 @@ const AddUrl = ({
                   </label>
                 </div>
 
-                {/* Response threshold — required, default 15000 */}
-                <div className="relative">
-                  <HudInput
-                    type="number"
-                    placeholder="Max Response Time (ms) *"
-                    value={responseThresholdMs}
-                    onChange={(e) => setResponseThresholdMs(e.target.value)}
-                    required
-                    min="1"
-                  />
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <span style={{
-                      fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
-                      color: "rgba(56,189,248,0.35)", letterSpacing: "0.08em",
-                    }}>
-                      Default: 15000 ms · Required field
-                    </span>
-                    {responseThresholdMs && (
-                      <motion.span
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
-                          color: "rgba(52,211,153,0.6)",
-                        }}
-                      >
-                        ✓ {Number(responseThresholdMs).toLocaleString()} ms
-                      </motion.span>
-                    )}
+                <div className="space-y-3">
+                  {/* Response threshold */}
+                  <div className="relative">
+                    <HudInput
+                      type="number"
+                      placeholder="Max Response Time (ms) *"
+                      value={responseThresholdMs}
+                      onChange={(e) => setResponseThresholdMs(e.target.value)}
+                      required
+                      min="1"
+                    />
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(56,189,248,0.35)", letterSpacing: "0.08em" }}>
+                        Default: 15000 ms · Required field
+                      </span>
+                      {responseThresholdMs && (
+                        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                          style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(52,211,153,0.6)" }}>
+                          ✓ {Number(responseThresholdMs).toLocaleString()} ms
+                        </motion.span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── Check Frequency dropdown (NEW) ── */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Timer size={11} className="text-sky-400" />
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.45)", textTransform: "uppercase" }}>
+                        Check Frequency *
+                      </span>
+                    </div>
+                    <PortalDropdown
+                      value={checkFrequency}
+                      onChange={(val) => setCheckFrequency(Number(val))}
+                      options={CHECK_FREQUENCY_OPTIONS}
+                      placeholder="Select check interval"
+                    />
+                    <div className="mt-1.5">
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(56,189,248,0.35)", letterSpacing: "0.08em" }}>
+                        How often to ping this site · Default: 1 min
+                      </span>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -643,7 +683,6 @@ const AddUrl = ({
                   ))}
                 </div>
 
-                {/* Email inputs */}
                 {alertChannels.includes("email") && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mb-4">
                     <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.4)", textTransform: "uppercase", marginBottom: "10px" }}>
@@ -677,8 +716,7 @@ const AddUrl = ({
                           className="flex items-center gap-2 px-3 py-1 rounded-full"
                           style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)", fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(148,163,184,0.8)" }}>
                           {em}
-                          <button type="button" onClick={() => setEmailContacts((p) => p.filter((x) => x !== em))}
-                            className="text-red-400/60 hover:text-red-400 transition-colors">
+                          <button type="button" onClick={() => setEmailContacts((p) => p.filter((x) => x !== em))} className="text-red-400/60 hover:text-red-400 transition-colors">
                             <X size={10} />
                           </button>
                         </motion.span>
@@ -687,7 +725,6 @@ const AddUrl = ({
                   </motion.div>
                 )}
 
-                {/* Phone input */}
                 {(alertChannels.includes("sms") || alertChannels.includes("whatsapp") || alertChannels.includes("voice")) && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
                     <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.4)", textTransform: "uppercase", marginBottom: "10px" }}>
@@ -758,11 +795,7 @@ const AddUrl = ({
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="rounded-2xl px-5 py-4 flex items-center gap-3"
-                  style={{
-                    background: "rgba(239,68,68,0.06)",
-                    border: "1px solid rgba(239,68,68,0.18)",
-                    backdropFilter: "blur(12px)",
-                  }}
+                  style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.18)", backdropFilter: "blur(12px)" }}
                 >
                   <X size={14} className="text-red-400 shrink-0" />
                   <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(248,113,113,0.85)", letterSpacing: "0.02em" }}>
@@ -786,43 +819,29 @@ const AddUrl = ({
                     background: submitted
                       ? "linear-gradient(135deg, rgba(52,211,153,0.2), rgba(16,185,129,0.1))"
                       : "linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(129,140,248,0.1) 100%)",
-                    border: submitted
-                      ? "1px solid rgba(52,211,153,0.35)"
-                      : "1px solid rgba(56,189,248,0.2)",
-                    boxShadow: submitted
-                      ? "0 0 28px rgba(52,211,153,0.1)"
-                      : "0 0 28px rgba(56,189,248,0.06)",
+                    border: submitted ? "1px solid rgba(52,211,153,0.35)" : "1px solid rgba(56,189,248,0.2)",
+                    boxShadow: submitted ? "0 0 28px rgba(52,211,153,0.1)" : "0 0 28px rgba(56,189,248,0.06)",
                     transition: "all 0.4s ease",
                   }}
                 >
-                  {/* Shimmer */}
                   <motion.div
                     className="absolute inset-0 pointer-events-none"
-                    style={{
-                      background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%)",
-                    }}
+                    style={{ background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%)" }}
                     animate={{ x: ["-100%", "100%"] }}
                     transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
                   />
-
                   <div className="relative flex items-center justify-center gap-3">
                     {submitted ? (
                       <>
                         <CheckCircle2 size={17} className="text-emerald-400" />
-                        <span style={{
-                          fontFamily: "'Orbitron', sans-serif", fontWeight: 700,
-                          fontSize: "13px", letterSpacing: "0.12em", color: "#34d399",
-                        }}>
+                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "13px", letterSpacing: "0.12em", color: "#34d399" }}>
                           SITE ADDED
                         </span>
                       </>
                     ) : (
                       <>
                         <Link2 size={16} className="text-sky-400" />
-                        <span style={{
-                          fontFamily: "'Orbitron', sans-serif", fontWeight: 700,
-                          fontSize: "13px", letterSpacing: "0.12em", color: "white",
-                        }}>
+                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "13px", letterSpacing: "0.12em", color: "white" }}>
                           ACTIVATE MONITORING
                         </span>
                       </>

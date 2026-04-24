@@ -12,6 +12,7 @@ import {
   MapPin,
   Check,
   ChevronDown,
+  Clock,
 } from "lucide-react";
 
 const REGIONS = [
@@ -32,12 +33,31 @@ const CATEGORY_OPTIONS = [
   "Others",
 ];
 
-// ─── Category Select Dropdown ─────────────────────────────────────────────────
-const CategorySelect = ({ value, onChange }) => {
+const FREQUENCY_OPTIONS = [
+  { label: "10 seconds",  value: 10_000 },
+  { label: "30 seconds",  value: 30_000 },
+  { label: "1 minute",    value: 60_000 },
+  { label: "2 minutes",   value: 120_000 },
+  { label: "5 minutes",   value: 300_000 },
+  { label: "10 minutes",  value: 600_000 },
+  { label: "15 minutes",  value: 900_000 },
+  { label: "30 minutes",  value: 1_800_000 },
+  { label: "1 hour",      value: 3_600_000 },
+  { label: "6 hours",     value: 21_600_000 },
+  { label: "12 hours",    value: 43_200_000 },
+  { label: "1 day",       value: 86_400_000 },
+];
+
+// ─── Generic Dropdown ─────────────────────────────────────────────────────────
+const CustomSelect = ({ value, onChange, options, placeholder, icon: Icon }) => {
   const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.value === value || o === value);
+  const displayLabel = selected
+    ? typeof selected === "string" ? selected : selected.label
+    : null;
 
   const handleSelect = (opt) => {
-    onChange(opt);
+    onChange(typeof opt === "string" ? opt : opt.value);
     setOpen(false);
   };
 
@@ -52,14 +72,14 @@ const CategorySelect = ({ value, onChange }) => {
           border: open
             ? "1px solid rgba(56,189,248,0.30)"
             : "1px solid rgba(56,189,248,0.10)",
-          color: value ? "white" : "rgba(100,116,139,1)",
+          color: displayLabel ? "white" : "rgba(100,116,139,1)",
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: "14px",
           boxShadow: open ? "0 0 0 2px rgba(56,189,248,0.15)" : "none",
           textAlign: "left",
         }}
       >
-        <span style={{ fontSize: "14px" }}>{value || "Select Category (optional)"}</span>
+        <span style={{ fontSize: "14px" }}>{displayLabel || placeholder}</span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -81,45 +101,90 @@ const CategorySelect = ({ value, onChange }) => {
               background: "rgba(3,7,18,0.97)",
               border: "1px solid rgba(56,189,248,0.14)",
               backdropFilter: "blur(28px)",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 0 24px rgba(56,189,248,0.05)",
+              boxShadow:
+                "0 8px 40px rgba(0,0,0,0.7), 0 0 24px rgba(56,189,248,0.05)",
+              maxHeight: "220px",
+              overflowY: "auto",
             }}
           >
-            {CATEGORY_OPTIONS.map((opt, idx) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => handleSelect(opt)}
-                className="w-full px-4 py-3 text-left transition-all duration-150 flex items-center justify-between"
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: "12px",
-                  letterSpacing: "0.04em",
-                  color: value === opt ? "#38bdf8" : "rgba(148,163,184,0.75)",
-                  background: value === opt ? "rgba(56,189,248,0.07)" : "transparent",
-                  borderTop: idx === 0 ? "none" : "1px solid rgba(56,189,248,0.045)",
-                  borderLeft: value === opt ? "2px solid rgba(56,189,248,0.45)" : "2px solid transparent",
-                }}
-                onMouseEnter={(e) => { if (value !== opt) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
-                onMouseLeave={(e) => { if (value !== opt) e.currentTarget.style.background = "transparent"; }}
-              >
-                <span>{opt}</span>
-                {value === opt && <span style={{ color: "#38bdf8", fontSize: "10px" }}>✓</span>}
-              </button>
-            ))}
+            {options.map((opt, idx) => {
+              const optValue = typeof opt === "string" ? opt : opt.value;
+              const optLabel = typeof opt === "string" ? opt : opt.label;
+              const isSelected =
+                typeof opt === "string" ? opt === value : opt.value === value;
+
+              return (
+                <button
+                  key={optValue ?? idx}
+                  type="button"
+                  onClick={() => handleSelect(opt)}
+                  className="w-full px-4 py-3 text-left transition-all duration-150 flex items-center justify-between"
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "12px",
+                    letterSpacing: "0.04em",
+                    color: isSelected
+                      ? "#38bdf8"
+                      : "rgba(148,163,184,0.75)",
+                    background: isSelected
+                      ? "rgba(56,189,248,0.07)"
+                      : "transparent",
+                    borderTop:
+                      idx === 0
+                        ? "none"
+                        : "1px solid rgba(56,189,248,0.045)",
+                    borderLeft: isSelected
+                      ? "2px solid rgba(56,189,248,0.45)"
+                      : "2px solid transparent",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected)
+                      e.currentTarget.style.background =
+                        "rgba(255,255,255,0.03)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected)
+                      e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  <span>{optLabel}</span>
+                  {isSelected && (
+                    <span style={{ color: "#38bdf8", fontSize: "10px" }}>✓</span>
+                  )}
+                </button>
+              );
+            })}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Backdrop to close dropdown */}
       {open && (
-        <div
-          className="fixed inset-0 z-50"
-          onClick={() => setOpen(false)}
-        />
+        <div className="fixed inset-0 z-50" onClick={() => setOpen(false)} />
       )}
     </div>
   );
 };
+
+// ─── Category Select (string values) ─────────────────────────────────────────
+const CategorySelect = ({ value, onChange }) => (
+  <CustomSelect
+    value={value}
+    onChange={onChange}
+    options={CATEGORY_OPTIONS}
+    placeholder="Select Category (optional)"
+  />
+);
+
+// ─── Frequency Select (numeric values) ───────────────────────────────────────
+const FrequencySelect = ({ value, onChange }) => (
+  <CustomSelect
+    value={value}
+    onChange={(v) => onChange(Number(v))}
+    options={FREQUENCY_OPTIONS}
+    placeholder="Select Check Frequency"
+    icon={Clock}
+  />
+);
 
 export default function EditModal({
   item,
@@ -132,11 +197,13 @@ export default function EditModal({
   editPriority,
   editResponseThresholdMs,
   editRegions,
+  editCheckFrequency,
   setEditEmail,
   setEditPhone,
   setEditPriority,
   setEditResponseThresholdMs,
   setEditRegions,
+  setEditCheckFrequency,
   urlError,
   onClose,
   onSave,
@@ -180,7 +247,6 @@ export default function EditModal({
   const handleAddEmail = () => {
     const value = (emailInput || "").trim();
     if (!value) return;
-
     if (!normalizedEmails.includes(value)) {
       setEditEmail([...normalizedEmails, value]);
     }
@@ -307,7 +373,7 @@ export default function EditModal({
                   />
                 </FieldWrapper>
 
-                {/* ── Category Dropdown ── */}
+                {/* Category Dropdown */}
                 <FieldWrapper label="Category" icon={Tag}>
                   <CategorySelect value={category} onChange={setCategory} />
                 </FieldWrapper>
@@ -371,15 +437,33 @@ export default function EditModal({
                     className={inputClass}
                   />
                 </div>
+
+                {/* Check Frequency Dropdown — full width */}
+                <div className="md:col-span-2">
+                  <FieldLabel icon={Clock} text="Check Frequency" />
+                  <FrequencySelect
+                    value={editCheckFrequency}
+                    onChange={setEditCheckFrequency}
+                  />
+                  <p
+                    className="mt-1.5"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "10px",
+                      color: "rgba(100,116,139,0.6)",
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    How often this site is pinged. Min: 10 sec · Max: 1 day ·
+                    Default: 1 min
+                  </p>
+                </div>
               </div>
 
               {/* Regions */}
               <div>
                 <FieldLabel icon={MapPin} text="Regions" />
-                <div
-                  className="rounded-2xl p-4"
-                  style={cardFieldStyle}
-                >
+                <div className="rounded-2xl p-4" style={cardFieldStyle}>
                   <div className="flex flex-wrap gap-3">
                     {REGIONS.map((region) => {
                       const selected = editRegions.includes(region);
@@ -413,7 +497,9 @@ export default function EditModal({
                                 : "1px solid rgba(56,189,248,0.10)",
                             }}
                           >
-                            {selected && <Check size={10} className="text-emerald-400" />}
+                            {selected && (
+                              <Check size={10} className="text-emerald-400" />
+                            )}
                           </div>
 
                           <span
