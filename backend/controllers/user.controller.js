@@ -23,6 +23,8 @@ export const createUser = async (req, res) => {
       assignedSites: role !== "SUPERADMIN" ? assignedSites || [] : [],
       // Save assigned categories for USER/VIEWER roles
       assignedCategories: role !== "SUPERADMIN" ? assignedCategories || [] : [],
+      alertRole:          req.body.alertRole      || null,
+      alertCategories:    req.body.alertCategories || [],
     });
 
     res.status(201).json({
@@ -153,6 +155,8 @@ export const updateUser = async (req, res) => {
         role,
         assignedSites: role !== "SUPERADMIN" ? assignedSites || [] : [],
         assignedCategories: role !== "SUPERADMIN" ? assignedCategories || [] : [],
+        alertRole:          req.body.alertRole      || null,
+        alertCategories:    req.body.alertCategories || [],
       },
       { new: true }
     );

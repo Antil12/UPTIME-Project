@@ -10,6 +10,8 @@ const SuperAdmin = () => {
     password: "",
     email: "",
     role: "USER",
+    alertRole: null,
+    alertCategories: [],
   });
 
   const [users, setUsers] = useState([]);
@@ -24,6 +26,8 @@ const SuperAdmin = () => {
     name: "",
     email: "",
     role: "",
+    alertRole: null,
+    alertCategories: [],
   });
   const [editAssignedSites, setEditAssignedSites] = useState([]);
   const [editAssignedCategories, setEditAssignedCategories] = useState([]);
@@ -140,6 +144,8 @@ const SuperAdmin = () => {
       name:  user.name  || "",
       email: user.email || "",
       role:  user.role  || "USER",
+      alertRole:        user.alertRole || null,
+      alertCategories:  user.alertCategories || [],
     });
     setEditAssignedSites(siteIds);
     setEditAssignedCategories(cats);
@@ -169,6 +175,8 @@ const SuperAdmin = () => {
           role:               form.role,
           assignedSites:      form.role !== "SUPERADMIN" ? assignedSites      : [],
           assignedCategories: form.role !== "SUPERADMIN" ? assignedCategories : [],
+          alertRole:          form.alertRole || null,
+          alertCategories:    form.alertCategories || [],
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -196,7 +204,7 @@ const SuperAdmin = () => {
 
       alert("User created successfully");
 
-      setForm({ username: "", password: "", email: "", role: "USER" });
+      setForm({ username: "", password: "", email: "", role: "USER", alertRole: null, alertCategories: [] });
       setAssignedSites([]);
       setAssignedCategories([]);
     } catch (err) {
@@ -241,6 +249,8 @@ const SuperAdmin = () => {
           role:               editForm.role,
           assignedSites:      editForm.role !== "SUPERADMIN" ? newSites               : [],
           assignedCategories: editForm.role !== "SUPERADMIN" ? editAssignedCategories : [],
+          alertRole:          editForm.alertRole || null,
+          alertCategories:    editForm.alertCategories || [],
         },
         {
           headers: { Authorization: `Bearer ${token}` },

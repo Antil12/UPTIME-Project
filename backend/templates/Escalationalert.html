@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>{{title}}</title>
+  <!--[if mso]>
+  <noscript>
+    <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+  </noscript>
+  <![endif]-->
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    body { margin: 0 !important; padding: 0 !important; background-color: #f0f2f5; }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f0f2f5;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+
+<!-- OUTER WRAPPER -->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+       style="background-color:#f0f2f5;padding:32px 16px;">
+  <tr>
+    <td align="center">
+
+      <!-- CONTAINER -->
+      <table role="presentation" width="680" cellspacing="0" cellpadding="0" border="0"
+             style="max-width:680px;width:100%;border-radius:12px;
+                    box-shadow:0 4px 24px rgba(0,0,0,0.11);overflow:hidden;">
+
+        <!-- ══ HEADER ══ -->
+        <tr>
+          <td style="background-color:{{headerBg}};padding:0;">
+            <!-- Top accent stripe -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td height="6" style="background-color:{{accentColor}};font-size:0;line-height:0;">&nbsp;</td>
+              </tr>
+            </table>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td style="padding:26px 32px 22px 32px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                         style="margin-bottom:14px;">
+                    <tr>
+                      <td style="font-size:42px;line-height:1;padding-right:16px;vertical-align:middle;">
+                        {{headerIcon}}
+                      </td>
+                      <td style="vertical-align:middle;">
+                        <p style="margin:0 0 6px;font-size:25px;font-weight:800;
+                                  color:#ffffff;line-height:1.1;letter-spacing:-0.3px;">
+                          {{title}}
+                        </p>
+                        <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.78);line-height:1.5;">
+                          {{#multiSite}}{{siteCount}} sites DOWN{{/multiSite}}
+                          {{^multiSite}}Site Down{{/multiSite}}
+                          &nbsp;·&nbsp; Escalation Level {{escalationLevel}}
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                  <!-- Timestamp pill -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td style="background-color:rgba(0,0,0,0.22);border-radius:20px;padding:6px 14px;">
+                        <p style="margin:0;font-size:12px;font-weight:600;
+                                  color:rgba(255,255,255,0.92);letter-spacing:0.02em;">
+                          🕐 &nbsp;Checked at {{checkedAt}} (IST)
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ══ ESCALATION PROGRESS STRIP ══ -->
+        <tr>
+          <td style="background-color:#12121f;padding:0;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <!-- Step 1 -->
+                <td align="center" width="33%"
+                    style="padding:14px 4px 12px;border-bottom:3px solid {{step1Color}};
+                           border-right:1px solid #1e1e30;">
+                  <p style="margin:0 0 3px;font-size:18px;line-height:1;">🔴</p>
+                  <p style="margin:0;font-size:11px;font-weight:700;color:{{step1TextColor}};
+                             text-transform:uppercase;letter-spacing:0.07em;">Group 1</p>
+                  <p style="margin:2px 0 0;font-size:10px;color:rgba(255,255,255,0.38);">Down Alert</p>
+                </td>
+                <!-- Step 2 -->
+                <td align="center" width="33%"
+                    style="padding:14px 4px 12px;border-bottom:3px solid {{step2Color}};
+                           border-right:1px solid #1e1e30;">
+                  <p style="margin:0 0 3px;font-size:18px;line-height:1;">🔺</p>
+                  <p style="margin:0;font-size:11px;font-weight:700;color:{{step2TextColor}};
+                             text-transform:uppercase;letter-spacing:0.07em;">Group 2</p>
+                  <p style="margin:2px 0 0;font-size:10px;color:rgba(255,255,255,0.38);">Trouble Alert</p>
+                </td>
+                <!-- Step 3 -->
+                <td align="center" width="33%"
+                    style="padding:14px 4px 12px;border-bottom:3px solid {{step3Color}};">
+                  <p style="margin:0 0 3px;font-size:18px;line-height:1;">🚨</p>
+                  <p style="margin:0;font-size:11px;font-weight:700;color:{{step3TextColor}};
+                             text-transform:uppercase;letter-spacing:0.07em;">Group 3</p>
+                  <p style="margin:2px 0 0;font-size:10px;color:rgba(255,255,255,0.38);">Critical Alert</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ══ BODY CARD ══ -->
+        <tr>
+          <td style="background-color:#ffffff;padding:28px 30px 26px 30px;">
+
+            <!-- DOWN SINCE BANNER (longest outage, shown only if downSince exists) -->
+            {{#downSinceBanner}}
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                   style="margin-bottom:22px;">
+              <tr>
+                <td style="background-color:#fff5f5;border:1px solid #f0c0c0;
+                           border-left:4px solid {{accentColor}};border-radius:6px;
+                           padding:14px 16px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td style="font-size:20px;padding-right:12px;vertical-align:top;line-height:1.5;">⏱</td>
+                      <td>
+                        <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#8b0000;">
+                          Longest outage: <strong>{{outageDuration}}</strong>
+                        </p>
+                        <p style="margin:0;font-size:12px;color:#b94040;line-height:1.5;">
+                          Down since: <strong>{{downSinceLabel}}</strong>
+                          &nbsp;·&nbsp; Escalation Level: <strong>{{escalationLevel}}</strong>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            {{/downSinceBanner}}
+
+            <!-- STAT CARDS ROW (single-site only — hidden for multi-site batches) -->
+            {{^multiSite}}
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                   style="margin-bottom:26px;">
+              <tr>
+                <!-- Status card -->
+                <td width="33%" style="padding-right:8px;vertical-align:top;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td style="background-color:#fff0f0;border:1px solid #f5c6c6;
+                                 border-top:3px solid #c0392b;border-radius:8px;
+                                 padding:16px 12px;text-align:center;">
+                        <p style="margin:0 0 5px;font-size:22px;line-height:1;">🔴</p>
+                        <p style="margin:0 0 3px;font-size:18px;font-weight:800;color:#c0392b;">DOWN</p>
+                        <p style="margin:0;font-size:10px;color:#a94442;text-transform:uppercase;
+                                  letter-spacing:0.06em;">Current Status</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <!-- Priority card -->
+                <td width="33%" style="padding-right:8px;vertical-align:top;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td style="background-color:#f8f9fa;border:1px solid #dee2e6;
+                                 border-top:3px solid #6c757d;border-radius:8px;
+                                 padding:16px 12px;text-align:center;">
+                        <p style="margin:0 0 5px;font-size:22px;line-height:1;">⚡</p>
+                        <p style="margin:0 0 3px;font-size:17px;font-weight:800;color:#343a40;">{{priorityLabel}}</p>
+                        <p style="margin:0;font-size:10px;color:#6c757d;text-transform:uppercase;
+                                  letter-spacing:0.06em;">Priority</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <!-- Category card -->
+                <td width="33%" style="vertical-align:top;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td style="background-color:#f0f4ff;border:1px solid #c5d0f0;
+                                 border-top:3px solid #3d5a99;border-radius:8px;
+                                 padding:16px 12px;text-align:center;">
+                        <p style="margin:0 0 5px;font-size:22px;line-height:1;">🏷</p>
+                        <p style="margin:0 0 3px;font-size:14px;font-weight:800;color:#1a2a6c;
+                                  word-break:break-word;line-height:1.3;">{{categoryLabel}}</p>
+                        <p style="margin:0;font-size:10px;color:#3d5a99;text-transform:uppercase;
+                                  letter-spacing:0.06em;">Category</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            {{/multiSite}}
+
+            <!-- MULTI-SITE COUNT BANNER -->
+            {{#multiSite}}
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                   style="margin-bottom:22px;">
+              <tr>
+                <td style="background-color:#fff0f0;border:1px solid #f5c6c6;
+                           border-left:4px solid {{accentColor}};border-radius:6px;
+                           padding:14px 18px;">
+                  <p style="margin:0;font-size:14px;font-weight:700;color:#8b0000;">
+                    🔴 &nbsp;{{siteCount}} sites are currently DOWN
+                  </p>
+                </td>
+              </tr>
+            </table>
+            {{/multiSite}}
+
+            <!-- SECTION LABEL -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                   style="margin-bottom:12px;">
+              <tr>
+                <td style="border-left:4px solid {{accentColor}};padding:2px 0 2px 12px;">
+                  <p style="margin:0;font-size:12px;font-weight:700;text-transform:uppercase;
+                             letter-spacing:0.09em;color:#444;">
+                    {{#multiSite}}Affected Sites ({{siteCount}}){{/multiSite}}
+                    {{^multiSite}}Affected Site{{/multiSite}}
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- SITES TABLE -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                   style="border:1px solid #e0e0e0;border-radius:10px;border-collapse:separate;
+                          border-spacing:0;overflow:hidden;margin-bottom:26px;">
+              <!-- Header row -->
+              <tr style="background-color:#f5f7fa;">
+                <td style="padding:11px 14px;font-size:10px;font-weight:700;text-transform:uppercase;
+                           letter-spacing:0.07em;color:#666;border-bottom:2px solid #e0e0e0;">
+                  Domain
+                </td>
+                <td style="padding:11px 14px;font-size:10px;font-weight:700;text-transform:uppercase;
+                           letter-spacing:0.07em;color:#666;border-bottom:2px solid #e0e0e0;">
+                  URL
+                </td>
+                <td style="padding:11px 14px;font-size:10px;font-weight:700;text-transform:uppercase;
+                           letter-spacing:0.07em;color:#666;border-bottom:2px solid #e0e0e0;">
+                  Category
+                </td>
+                <td style="padding:11px 14px;font-size:10px;font-weight:700;text-transform:uppercase;
+                           letter-spacing:0.07em;color:#666;border-bottom:2px solid #e0e0e0;
+                           white-space:nowrap;">
+                  Threshold&nbsp;(ms)
+                </td>
+                <td style="padding:11px 14px;font-size:10px;font-weight:700;text-transform:uppercase;
+                           letter-spacing:0.07em;color:#666;border-bottom:2px solid #e0e0e0;
+                           white-space:nowrap;">
+                  Down For
+                </td>
+                <td style="padding:11px 14px;font-size:10px;font-weight:700;text-transform:uppercase;
+                           letter-spacing:0.07em;color:#666;border-bottom:2px solid #e0e0e0;">
+                  Status
+                </td>
+              </tr>
+
+              <!-- Data rows — always DOWN, one row per site in the batch -->
+              {{#sites}}
+              <tr>
+                <td style="padding:13px 14px;font-size:14px;font-weight:700;
+                           color:#1a1a2e;border-bottom:1px solid #f4f4f4;vertical-align:middle;">
+                  {{domain}}
+                </td>
+                <td style="padding:13px 14px;font-size:12px;border-bottom:1px solid #f4f4f4;
+                           word-break:break-all;vertical-align:middle;">
+                  <a href="{{url}}" target="_blank"
+                     style="color:#1a73e8;text-decoration:none;font-weight:500;">{{url}}</a>
+                </td>
+                <td style="padding:13px 14px;font-size:12px;border-bottom:1px solid #f4f4f4;
+                           vertical-align:middle;">
+                  <span style="display:inline-block;background:#eef2ff;color:#3d5a99;border-radius:4px;
+                               padding:3px 10px;font-size:11px;font-weight:600;white-space:nowrap;">
+                    {{category}}
+                  </span>
+                </td>
+                <td style="padding:13px 14px;font-size:13px;font-weight:600;color:#555;
+                           border-bottom:1px solid #f4f4f4;vertical-align:middle;white-space:nowrap;">
+                  {{threshold}}
+                </td>
+                <td style="padding:13px 14px;font-size:13px;font-weight:700;
+                           border-bottom:1px solid #f4f4f4;vertical-align:middle;white-space:nowrap;">
+                  {{#downSinceBanner}}
+                    <span style="color:#c0392b;">{{outageDuration}}</span>
+                  {{/downSinceBanner}}
+                  {{^downSinceBanner}}
+                    <span style="color:#bbb;font-style:italic;">—</span>
+                  {{/downSinceBanner}}
+                </td>
+                <td style="padding:13px 14px;border-bottom:1px solid #f4f4f4;vertical-align:middle;">
+                  <span style="display:inline-block;background:#fde8e8;color:#c0392b;border-radius:6px;
+                               padding:5px 13px;font-size:12px;font-weight:800;white-space:nowrap;">
+                    ● DOWN
+                  </span>
+                </td>
+              </tr>
+              {{/sites}}
+            </table>
+
+            <!-- CTA BUTTON -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                   style="margin-bottom:22px;">
+              <tr>
+                <td style="border-radius:8px;background-color:{{accentColor}};">
+                  <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml"
+                    href="{{siteUrl}}" style="height:44px;v-text-anchor:middle;width:180px;"
+                    arcsize="10%" stroke="f" fillcolor="{{accentColor}}">
+                    <w:anchorlock/>
+                    <center style="color:#fff;font-family:Arial,sans-serif;font-size:14px;font-weight:700;">
+                      {{#multiSite}}View Dashboard{{/multiSite}}{{^multiSite}}View Site{{/multiSite}}
+                    </center></v:roundrect><![endif]-->
+                  <a href="{{siteUrl}}" target="_blank"
+                     style="background-color:{{accentColor}};border-radius:8px;color:#ffffff;
+                            display:inline-block;font-family:'Segoe UI',Arial,Helvetica,sans-serif;
+                            font-size:14px;font-weight:700;line-height:1;padding:14px 28px;
+                            text-decoration:none;-webkit-text-size-adjust:none;">
+                    {{#multiSite}}🖥 &nbsp;View Dashboard{{/multiSite}}
+                    {{^multiSite}}🔍 &nbsp;View Site{{/multiSite}}
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Divider -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                   style="margin-bottom:16px;">
+              <tr>
+                <td style="border-top:1px solid #f0f0f0;font-size:0;line-height:0;">&nbsp;</td>
+              </tr>
+            </table>
+
+            <!-- Footer note inside card -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td style="background-color:#fafbfc;border:1px solid #e8eaed;
+                           border-radius:8px;padding:12px 16px;">
+                  <p style="margin:0;font-size:12px;color:#888;line-height:1.7;">
+                    ⚠️ &nbsp;This alert was generated automatically by
+                    <strong style="color:#555;letter-spacing:0.03em;">UPTIME MONITOR</strong>.
+                    Immediate action may be required. Please do not reply to this email.
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- ══ FOOTER ══ -->
+        <tr>
+          <td style="background-color:#f5f6f8;border-top:1px solid #e2e6ea;
+                     padding:14px 30px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td style="font-size:12px;color:#999;line-height:1.5;">
+                  Checked at <strong style="color:#666;">{{checkedAt}}</strong> (IST)
+                </td>
+                <td align="right"
+                    style="font-size:10px;font-weight:800;color:#ccc;text-transform:uppercase;
+                           letter-spacing:0.09em;white-space:nowrap;padding-left:16px;">
+                  UPTIME MONITOR
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+      </table><!-- /container -->
+    </td>
+  </tr>
+</table><!-- /outer wrapper -->
+
+</body>
+</html>

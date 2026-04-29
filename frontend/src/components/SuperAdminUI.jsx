@@ -900,6 +900,79 @@ const SuperAdminUI = ({
               </select>
             </div>
 
+            {/* Alert Role (separate from auth role) */}
+            <div className="mb-4">
+              <label
+                className="block mb-3"
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "10px",
+                  letterSpacing: "0.12em",
+                  color: "rgba(56,189,248,0.48)",
+                  textTransform: "uppercase",
+                }}
+              >
+                Alert Role
+              </label>
+
+              <select
+                value={form.alertRole || ""}
+                onChange={(e) => setForm({ ...form, alertRole: e.target.value || null })}
+                className="w-full px-4 py-3.5 rounded-2xl outline-none"
+                style={{
+                  background: "rgba(255,255,255,0.022)",
+                  border: "1px solid rgba(56,189,248,0.09)",
+                  color: "white",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "12px",
+                  backdropFilter: "blur(12px)",
+                }}
+              >
+                <option value="">None</option>
+                <option value="developer" className="bg-slate-900">Developer</option>
+                <option value="pm" className="bg-slate-900">Product Manager</option>
+                <option value="avp" className="bg-slate-900">AVP</option>
+              </select>
+            </div>
+
+            {/* Alert Categories */}
+            <div className="mb-5">
+              <label
+                className="block mb-3"
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "10px",
+                  letterSpacing: "0.12em",
+                  color: "rgba(129,140,248,0.6)",
+                  textTransform: "uppercase",
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  <Tag size={11} />
+                  Alert Categories
+                </span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {["JOURNALS", "E-JAYPEE", "JPMEDPUB", "JP-DIGITAL", "DIGINERVE", "Others"].map((cat) => (
+                  <label key={cat} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.alertCategories?.includes(cat) || false}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setForm({ ...form, alertCategories: [...(form.alertCategories || []), cat] });
+                        } else {
+                          setForm({ ...form, alertCategories: (form.alertCategories || []).filter(c => c !== cat) });
+                        }
+                      }}
+                      style={{ accentColor: "#38bdf8" }}
+                    />
+                    <span style={{ fontSize: "11px", color: "rgba(148,163,184,0.7)" }}>{cat}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {form.role !== "SUPERADMIN" && (
               <>
                 {/* Assign Categories */}
@@ -1145,7 +1218,7 @@ const SuperAdminUI = ({
                   <table className="w-full text-sm">
                     <thead style={{ background: "rgba(255,255,255,0.02)" }}>
                       <tr>
-                        {["Name", "Email", "Role",, "Actions"].map((head, idx) => (
+                        {["Name", "Email", "Role", "Alert Role", "Alert Categories", "Actions"].map((head, idx) => (
                           <th
                             key={head}
                             className={`p-4 ${idx === 4 ? "text-right" : "text-left"}`}
@@ -1194,6 +1267,70 @@ const SuperAdminUI = ({
 
                           <td className="p-4">
                             <ToggleChip label={user.role} active activeColor="#818cf8" />
+                          </td>
+
+                          <td className="p-4">
+                            {user.alertRole ? (
+                              <ToggleChip label={user.alertRole} active activeColor="#f59e0b" />
+                            ) : (
+                              <span
+                                style={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: "10px",
+                                  color: "rgba(148,163,184,0.3)",
+                                }}
+                              >
+                                None
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="p-4">
+                            {user.alertCategories && user.alertCategories.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {user.alertCategories.slice(0, 2).map((cat) => (
+                                  <span
+                                    key={cat}
+                                    className="px-2 py-1 rounded-lg"
+                                    style={{
+                                      fontFamily: "'JetBrains Mono', monospace",
+                                      fontSize: "9px",
+                                      letterSpacing: "0.06em",
+                                      textTransform: "uppercase",
+                                      background: "rgba(16,185,129,0.1)",
+                                      border: "1px solid rgba(16,185,129,0.18)",
+                                      color: "rgba(16,185,129,0.8)",
+                                    }}
+                                  >
+                                    {cat}
+                                  </span>
+                                ))}
+                                {user.alertCategories.length > 2 && (
+                                  <span
+                                    className="px-2 py-1 rounded-lg"
+                                    style={{
+                                      fontFamily: "'JetBrains Mono', monospace",
+                                      fontSize: "9px",
+                                      background: "rgba(255,255,255,0.04)",
+                                      border: "1px solid rgba(255,255,255,0.08)",
+                                      color: "rgba(148,163,184,0.5)",
+                                    }}
+                                  >
+                                    +{user.alertCategories.length - 2}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span
+                                style={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: "10px",
+                                  color: "rgba(148,163,184,0.3)",
+                                }}
+                              >
+                                —
+                              </span>
+                            )}
                           </td>
 
                           {/* <td className="p-4">
@@ -1376,6 +1513,68 @@ const SuperAdminUI = ({
                     <option value="SUPERADMIN" className="bg-slate-900">Super Admin</option>
                     <option value="VIEWER" className="bg-slate-900">Viewer</option>
                   </select>
+                </div>
+
+                {/* Edit — Alert Role */}
+                <div className="md:col-span-1">
+                  <select
+                    value={editForm.alertRole || ""}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, alertRole: e.target.value || null })
+                    }
+                    className="w-full px-4 py-3.5 rounded-2xl outline-none"
+                    style={{
+                      background: "rgba(255,255,255,0.022)",
+                      border: "1px solid rgba(56,189,248,0.09)",
+                      color: "white",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "12px",
+                      backdropFilter: "blur(12px)",
+                    }}
+                  >
+                    <option value="">Alert Role: None</option>
+                    <option value="developer" className="bg-slate-900">Developer</option>
+                    <option value="pm" className="bg-slate-900">Product Manager</option>
+                    <option value="avp" className="bg-slate-900">AVP</option>
+                  </select>
+                </div>
+
+                {/* Edit — Alert Categories */}
+                <div className="md:col-span-2">
+                  <label
+                    className="block mb-3"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "10px",
+                      letterSpacing: "0.12em",
+                      color: "rgba(129,140,248,0.6)",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Tag size={11} />
+                      Alert Categories
+                    </span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {["JOURNALS", "E-JAYPEE", "JPMEDPUB", "JP-DIGITAL", "DIGINERVE", "Others"].map((cat) => (
+                      <label key={cat} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editForm.alertCategories?.includes(cat) || false}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEditForm({ ...editForm, alertCategories: [...(editForm.alertCategories || []), cat] });
+                            } else {
+                              setEditForm({ ...editForm, alertCategories: (editForm.alertCategories || []).filter(c => c !== cat) });
+                            }
+                          }}
+                          style={{ accentColor: "#38bdf8" }}
+                        />
+                        <span style={{ fontSize: "11px", color: "rgba(148,163,184,0.7)" }}>{cat}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
                 {editForm.role !== "SUPERADMIN" && (

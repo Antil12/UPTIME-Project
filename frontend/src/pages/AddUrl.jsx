@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Timer,
 } from "lucide-react";
+import AlertRoutingForm from "../components/AlertRoutingForm";
 
 // ─── Font Loader ──────────────────────────────────────────────────────────────
 const FontLoader = () => {
@@ -405,6 +406,21 @@ const AddUrl = ({
   // ── NEW: Check Frequency — default 60 000 ms (1 min) ─────────────────────
   const [checkFrequency, setCheckFrequency] = useState(60_000);
 
+  // ── NEW: Alert Groups ─────────────────────────────────────────────────────
+  const [alertGroups, setAlertGroups] = useState({
+    developer: "",
+    pm: "",
+    avp: "",
+  });
+
+  // ── NEW: Alert Routing ────────────────────────────────────────────────────
+  const [alertRouting, setAlertRouting] = useState({
+    down: [], trouble: [], critical: []
+  });
+
+  // ── NEW: Show Group Form ──────────────────────────────────────────────────
+  const [showGroupForm, setShowGroupForm] = useState(false);
+
   const normalize = (v = "") => v.trim().toLowerCase().replace(/\/$/, "");
 
   const handleSubmit = (e) => {
@@ -433,7 +449,11 @@ const AddUrl = ({
       phoneContact,
       priority,
       checkFrequency,   // ← NEW field sent to backend
+      alertRouting,     // ← NEW: alert routing configuration
+      alertGroups,      // ← NEW: alert groups with emails
     });
+
+    console.log("DEBUG: Sending alertGroups:", alertGroups);
 
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 2000);
@@ -444,6 +464,8 @@ const AddUrl = ({
     setAlertChannels([]);
     setResponseThresholdMs("15000");
     setCheckFrequency(60_000);
+    setAlertRouting({ down: [], trouble: [], critical: [] }); // Reset alertRouting
+    setAlertGroups({ developer: "", pm: "", avp: "" }); // Reset alertGroups
   };
 
   const toggleChannel = (ch) =>
@@ -787,6 +809,116 @@ const AddUrl = ({
                     Alert only if ALL regions are down
                   </span>
                 </label>
+              </motion.div>
+
+              {/* ── Alert Group Configuration ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.33, duration: 0.45 }}
+              >
+                <div className="space-y-4">
+                  {/* Create Group Button */}
+                  <motion.button
+                    type="button"
+                    onClick={() => setShowGroupForm(!showGroupForm)}
+                    className="w-full px-4 py-3 rounded-2xl flex items-center justify-between"
+                    style={{
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid rgba(56,189,248,0.10)",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "11px",
+                      letterSpacing: "0.10em",
+                      textTransform: "uppercase",
+                      color: "rgba(56,189,248,0.8)",
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Bell size={14} />
+                      Create Alert Group
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      style={{
+                        transform: showGroupForm ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s",
+                      }}
+                    />
+                  </motion.button>
+
+                  {/* Collapsible Group Form */}
+                  {showGroupForm && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-4 overflow-hidden"
+                    >
+                      {/* Email Fields */}
+                      <div className="grid grid-cols-1 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
+                            Developer Email
+                          </label>
+                          <input
+                            type="email"
+                            value={alertGroups.developer}
+                            onChange={(e) => setAlertGroups(prev => ({ ...prev, developer: e.target.value }))}
+                            placeholder="developer@company.com"
+                            className="w-full px-3 py-2 rounded-lg text-sm"
+                            style={{
+                              background: "rgba(255,255,255,0.02)",
+                              border: "1px solid rgba(56,189,248,0.10)",
+                              color: "white",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
+                            Product Manager Email
+                          </label>
+                          <input
+                            type="email"
+                            value={alertGroups.pm}
+                            onChange={(e) => setAlertGroups(prev => ({ ...prev, pm: e.target.value }))}
+                            placeholder="pm@company.com"
+                            className="w-full px-3 py-2 rounded-lg text-sm"
+                            style={{
+                              background: "rgba(255,255,255,0.02)",
+                              border: "1px solid rgba(56,189,248,0.10)",
+                              color: "white",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
+                            AVP Email
+                          </label>
+                          <input
+                            type="email"
+                            value={alertGroups.avp}
+                            onChange={(e) => setAlertGroups(prev => ({ ...prev, avp: e.target.value }))}
+                            placeholder="avp@company.com"
+                            className="w-full px-3 py-2 rounded-lg text-sm"
+                            style={{
+                              background: "rgba(255,255,255,0.02)",
+                              border: "1px solid rgba(56,189,248,0.10)",
+                              color: "white",
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Alert Routing */}
+                      <AlertRoutingForm
+                        value={alertRouting}
+                        onChange={setAlertRouting}
+                      />
+                    </motion.div>
+                  )}
+                </div>
               </motion.div>
 
               {/* ─── Error ─── */}

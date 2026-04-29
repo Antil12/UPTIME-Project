@@ -6,7 +6,7 @@ import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import UptimeLog from "../models/UptimeLog.js";
 import { checkSsl } from "../services/sslChecker.js";
 import { checkRegions } from "../services/regionChecker.js";
-import { handleStatusAlert } from "../services/alertService.js";
+import { handleStatusAlert, handleRoutedAlert } from "../services/alertService.js";
 import sendSlowBatchEmail from "../services/sendSlowBatchEmail.js";
 import { setSlowBatch } from "../services/slowBatchStore.js";
 import { emailQueue } from "../queue/emailQueue.js";
@@ -32,7 +32,7 @@ const RETRYABLE_AXIOS_ERRORS = [
 const DEFAULT_FREQUENCY_MS = 60_000;
 let sslRunCounter = 0;
 
-/* ✅ execution lock */
+/* execution lock — prevents overlapping runs */
 let isRunning = false;
 
 const isRetryableError = (err) => {
@@ -73,7 +73,6 @@ const axiosRequestWithRetry = async (axiosConfig, retries = 2) => {
 export const startMonitoringCron = () => {
   setInterval(async () => {
 
-    /* ✅ prevent overlap */
     if (isRunning) {
       console.log("⏭️ Skipping tick — previous run still in progress");
       return;
@@ -211,17 +210,52 @@ export const startMonitoringCron = () => {
             checkedAt,
           });
 
+          // ──── SLOW: immediate "trouble" routed alert ──────────────────────────────
+          // SLOW alerts fire immediately — they are not escalated.
+          if (status === "SLOW") {
+            await handleRoutedAlert(site, "trouble");
+          }
+
+          // ──── DOWN: only record downSince — NO alert sent here ───────────────────
+          // The escalation worker owns all routed alerts for DOWN sites:
+          //   Level 1 (30 min)  → Group 1 "down"
+          //   Level 2 (1 hr)    → Group 2 "trouble"
+          //   Level 3 (3 hrs)   → Group 3 "critical"
           if (status === "DOWN") {
+            if (!site.downSince) {
+              // First detection — stamp downSince so the escalation worker can time it
+              site.downSince        = checkedAt; // update in-memory so block won't re-run
+              site.escalationLevel  = 0;
+              site.lastEscalationAt = null;
+
+              await MonitoredSite.updateOne(
+                { _id: site._id },
+                {
+                  $set: {
+                    downSince:        checkedAt,
+                    escalationLevel:  0,
+                    lastEscalationAt: null,
+                  },
+                }
+              );
+
+              console.log(
+                `[CRON] ${site.domain} is DOWN — downSince stamped. ` +
+                `Group 1 alert fires in 30 min via escalation worker.`
+              );
+            }
+
+            // failureCount batching still runs (for emailQueue down/high-priority batches)
             const alertResult = await handleStatusAlert(site, "DOWN", checkedAt, responseTimeMs);
             if (alertResult && alertResult.alert) {
               const entry = {
-                domain: alertResult.site.domain,
-                url: alertResult.site.url,
+                domain:         alertResult.site.domain,
+                url:            alertResult.site.url,
                 responseTimeMs: alertResult.responseTimeMs ?? responseTimeMs ?? "—",
-                status: "DOWN",
-                threshold: alertResult.site.responseThresholdMs ?? "—",
+                status:         "DOWN",
+                threshold:      alertResult.site.responseThresholdMs ?? "—",
                 checkedAt,
-                emailContact: alertResult.site.emailContact || null,
+                emailContact:   alertResult.site.emailContact || null,
               };
 
               if (alertResult.type === "HIGH_PRIORITY") highPriorityTemp.push(entry);
@@ -229,10 +263,26 @@ export const startMonitoringCron = () => {
             }
           }
 
+          // ──── UP: recovery + reset outage tracking ────────────────────────────────
           if (status === "UP") {
             await handleStatusAlert(site, "UP", checkedAt, responseTimeMs);
+
+            // Only write to DB if the site was previously recorded as down
+            if (site.downSince) {
+              await MonitoredSite.updateOne(
+                { _id: site._id },
+                {
+                  $set: {
+                    downSince:        null,
+                    escalationLevel:  0,
+                    lastEscalationAt: null,
+                  },
+                }
+              );
+            }
           }
 
+          // ──── Region checks ───────────────────────────────────────────────────────
           if (site.regions && site.regions.length > 0) {
             const regionResults = await checkRegions(site);
 
@@ -246,13 +296,13 @@ export const startMonitoringCron = () => {
               const regionResult = await handleStatusAlert(site, "DOWN", checkedAt, responseTimeMs);
               if (regionResult && regionResult.alert) {
                 downSitesTemp.push({
-                  domain: regionResult.site.domain,
-                  url: regionResult.site.url,
+                  domain:         regionResult.site.domain,
+                  url:            regionResult.site.url,
                   responseTimeMs: responseTimeMs ?? "—",
-                  status: "DOWN",
-                  threshold: regionResult.site.responseThresholdMs ?? "—",
+                  status:         "DOWN",
+                  threshold:      regionResult.site.responseThresholdMs ?? "—",
                   checkedAt,
-                  emailContact: regionResult.site.emailContact || null,
+                  emailContact:   regionResult.site.emailContact || null,
                 });
               }
             }
@@ -262,7 +312,7 @@ export const startMonitoringCron = () => {
             await checkSsl(site);
           }
 
-          /* 🔥 ONLY FIX APPLIED HERE */
+          /* advance nextCheckAt */
           let nextTime = site.nextCheckAt || checkedAt;
 
           if (nextTime <= checkedAt) {
@@ -271,9 +321,7 @@ export const startMonitoringCron = () => {
 
           await MonitoredSite.updateOne(
             { _id: site._id },
-            {
-              $set: { nextCheckAt: nextTime },
-            }
+            { $set: { nextCheckAt: nextTime } }
           );
         })
       );
@@ -284,9 +332,8 @@ export const startMonitoringCron = () => {
         const uniqueSlow = Array.from(
           new Map(slowSitesTemp.map((s) => [s.domain, s])).values()
         );
-
         await emailQueue.add("slow-site-alert", {
-          batchId: Date.now(),
+          batchId:   Date.now(),
           slowCount: uniqueSlow.length,
           slowSites: uniqueSlow,
           checkedAt,
@@ -300,9 +347,8 @@ export const startMonitoringCron = () => {
         const uniqueDown = Array.from(
           new Map(downSitesTemp.map((s) => [s.domain, s])).values()
         );
-
         await emailQueue.add("down-site-alert", {
-          batchId: Date.now(),
+          batchId:   Date.now(),
           downCount: uniqueDown.length,
           slowSites: uniqueDown,
           checkedAt,
@@ -314,9 +360,8 @@ export const startMonitoringCron = () => {
         const uniqueHigh = Array.from(
           new Map(highPriorityTemp.map((s) => [s.domain, s])).values()
         );
-
         await emailQueue.add("high-priority-alert", {
-          batchId: Date.now(),
+          batchId:   Date.now(),
           downCount: uniqueHigh.length,
           slowSites: uniqueHigh,
           checkedAt,

@@ -117,6 +117,9 @@ export const getMonitoredSites = async (req, res) => {
           checkFrequency: 1,
           nextCheckAt: 1,
 
+          alertRouting: 1,
+          alertGroups: 1,
+
           ownerEmail: "$ownerData.email",
           ownerRole:  "$ownerData.role",
 
@@ -278,7 +281,10 @@ export const addSite = async (req, res) => {
       alertChannels, regions, alertIfAllRegionsDown,
       emailContact, phoneContact, priority,
       checkFrequency,   // ← NEW
+      alertGroups,      // ← NEW
     } = req.body;
+
+    console.log("DEBUG: Received alertGroups:", alertGroups);
 
     if (!url) {
       return res.status(400).json({ success: false, message: "URL is required" });
@@ -315,7 +321,19 @@ export const addSite = async (req, res) => {
       owner:        req.user?._id,
       checkFrequency: resolvedFrequency,
       nextCheckAt:    new Date(now + resolvedFrequency),  // ← first check after one interval
+      alertRouting: req.body.alertRouting || {
+        down: [], trouble: [], critical: []
+      },
+      alertGroups: alertGroups ? {
+        developer: alertGroups.developer || null,
+        pm: alertGroups.pm || null,
+        avp: alertGroups.avp || null,
+      } : {
+        developer: null, pm: null, avp: null
+      },
     });
+
+    console.log("DEBUG: Site created with alertGroups:", site.alertGroups);
 
     if (Array.isArray(site.regions) && site.regions.length > 0) {
       const assignments = site.regions.map((r) => ({ siteId: site._id, region: r }));
@@ -344,7 +362,10 @@ export const updateSite = async (req, res) => {
       domain, url, category, regions,
       emailContact, phoneContact, priority, responseThresholdMs,
       checkFrequency,   // ← NEW
+      alertGroups,      // ← NEW
     } = req.body;
+
+    console.log("DEBUG: Update received alertGroups:", alertGroups);
 
     const site = await MonitoredSite.findById(req.params.id);
     if (!site) {
@@ -387,6 +408,14 @@ export const updateSite = async (req, res) => {
         responseThresholdMs !== undefined && responseThresholdMs !== null
           ? Number(responseThresholdMs)
           : null,
+      alertRouting: req.body.alertRouting
+        ? req.body.alertRouting
+        : undefined,
+      alertGroups: alertGroups ? {
+        developer: alertGroups.developer || null,
+        pm: alertGroups.pm || null,
+        avp: alertGroups.avp || null,
+      } : undefined,
     };
 
     // ── Handle checkFrequency update ─────────────────────────────────────────
@@ -415,6 +444,8 @@ export const updateSite = async (req, res) => {
     site.updatedBy          = req.user._id;
     site.lastManualUpdateAt = new Date();
     await site.save();
+
+    console.log("DEBUG: Site updated with alertGroups:", site.alertGroups);
 
     if (Array.isArray(regions)) {
       try {

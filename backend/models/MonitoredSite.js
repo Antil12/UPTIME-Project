@@ -8,9 +8,9 @@ const monitoredSiteSchema = new mongoose.Schema({
     default: null,
     trim: true,
   },
-  timeoutMs: { type: Number, default: 5000 },
-  slowThresholdMs: { type: Number, default: 3000 },
-  sslMonitoringEnabled: { type: Boolean, default: false },
+  // timeoutMs: { type: Number, default: 5000 },
+  // slowThresholdMs: { type: Number, default: 3000 },
+  // sslMonitoringEnabled: { type: Boolean, default: false },
   sslAlertBeforeDays: { type: Number, default: 7 },
   responseThresholdMs: {
     type: Number,
@@ -91,9 +91,40 @@ const monitoredSiteSchema = new mongoose.Schema({
     default: Date.now,
   },
   isChecking: {
-  type: Boolean,
-  default: false,
-},
+    type: Boolean,
+    default: false,
+  },
+
+  // ── Alert Routing (role-based, separate from auth roles) ──────────────────────
+  alertRouting: {
+    down:     { type: [String], default: [] },
+    trouble:  { type: [String], default: [] },
+    critical: { type: [String], default: [] },
+  },
+
+  // ── Alert Groups (specific emails for each role) ─────────────────────────────
+  alertGroups: {
+    developer: { type: String, default: null },
+    pm:        { type: String, default: null },
+    avp:       { type: String, default: null },
+  },
+
+  // ── Outage Tracking ──────────────────────────────────────────────────────────
+  downSince: {
+    type: Date,
+    default: null,
+  },
+
+  // ── Escalation Tracking ──────────────────────────────────────────────────────
+  escalationLevel: {
+    type: Number,
+    default: 0,
+  },
+
+  lastEscalationAt: {
+    type: Date,
+    default: null,
+  },
 }, { timestamps: true });
 
 // ✅ Check if model already exists, otherwise create it

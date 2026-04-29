@@ -13,7 +13,9 @@ import {
   Check,
   ChevronDown,
   Clock,
+  Bell,
 } from "lucide-react";
+import AlertRoutingForm from "./AlertRoutingForm";
 
 const REGIONS = [
   "South America",
@@ -198,12 +200,16 @@ export default function EditModal({
   editResponseThresholdMs,
   editRegions,
   editCheckFrequency,
+  editAlertRouting,
+  editAlertGroups,
   setEditEmail,
   setEditPhone,
   setEditPriority,
   setEditResponseThresholdMs,
   setEditRegions,
   setEditCheckFrequency,
+  setEditAlertRouting,
+  setEditAlertGroups,
   urlError,
   onClose,
   onSave,
@@ -211,6 +217,7 @@ export default function EditModal({
 }) {
   const [category, setCategory] = useState(item?.category || "");
   const [emailInput, setEmailInput] = useState("");
+  const [showGroupForm, setShowGroupForm] = useState(false);
 
   useEffect(() => {
     if (item?.category !== undefined) {
@@ -644,6 +651,111 @@ export default function EditModal({
                     className={inputClass}
                   />
                 </FieldWrapper>
+              </div>
+
+              {/* Section: Alert Group Configuration */}
+              <SectionTitle title="Alert Group Configuration" />
+              <div className="space-y-4">
+                {/* Create Group Button */}
+                <motion.button
+                  type="button"
+                  onClick={() => setShowGroupForm(!showGroupForm)}
+                  className="w-full px-4 py-3 rounded-2xl flex items-center justify-between"
+                  style={{
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(56,189,248,0.10)",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "11px",
+                    letterSpacing: "0.10em",
+                    textTransform: "uppercase",
+                    color: "rgba(56,189,248,0.8)",
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Bell size={14} />
+                    Configure Alert Group
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    style={{
+                      transform: showGroupForm ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s",
+                    }}
+                  />
+                </motion.button>
+
+                {/* Collapsible Group Form */}
+                {showGroupForm && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 overflow-hidden"
+                  >
+                    {/* Email Fields */}
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
+                          Developer Email
+                        </label>
+                        <input
+                          type="email"
+                          value={editAlertGroups?.developer || ""}
+                          onChange={(e) => setEditAlertGroups(prev => ({ ...prev, developer: e.target.value }))}
+                          placeholder="developer@company.com"
+                          className="w-full px-3 py-2 rounded-lg text-sm"
+                          style={{
+                            background: "rgba(255,255,255,0.02)",
+                            border: "1px solid rgba(56,189,248,0.10)",
+                            color: "white",
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
+                          Product Manager Email
+                        </label>
+                        <input
+                          type="email"
+                          value={editAlertGroups?.pm || ""}
+                          onChange={(e) => setEditAlertGroups(prev => ({ ...prev, pm: e.target.value }))}
+                          placeholder="pm@company.com"
+                          className="w-full px-3 py-2 rounded-lg text-sm"
+                          style={{
+                            background: "rgba(255,255,255,0.02)",
+                            border: "1px solid rgba(56,189,248,0.10)",
+                            color: "white",
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
+                          AVP Email
+                        </label>
+                        <input
+                          type="email"
+                          value={editAlertGroups?.avp || ""}
+                          onChange={(e) => setEditAlertGroups(prev => ({ ...prev, avp: e.target.value }))}
+                          placeholder="avp@company.com"
+                          className="w-full px-3 py-2 rounded-lg text-sm"
+                          style={{
+                            background: "rgba(255,255,255,0.02)",
+                            border: "1px solid rgba(56,189,248,0.10)",
+                            color: "white",
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Alert Routing */}
+                    <AlertRoutingForm
+                      value={editAlertRouting || { down: [], trouble: [], critical: [] }}
+                      onChange={setEditAlertRouting}
+                    />
+                  </motion.div>
+                )}
               </div>
 
               {/* Error */}

@@ -156,6 +156,18 @@ function App() {
   // ─── NEW: check frequency edit state ─────────────────────────────────────
   const [editCheckFrequency, setEditCheckFrequency] = useState(DEFAULT_FREQUENCY_MS);
 
+  // ─── NEW: alert routing edit state ───────────────────────────────────────
+  const [editAlertRouting, setEditAlertRouting] = useState({
+    down: [], trouble: [], critical: []
+  });
+
+  // ─── NEW: alert groups edit state ─────────────────────────────────────────
+  const [editAlertGroups, setEditAlertGroups] = useState({
+    developer: "",
+    pm: "",
+    avp: "",
+  });
+
   const [popupData, setPopupData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -295,6 +307,8 @@ function App() {
         phoneContact,
         priority,
         checkFrequency,
+        alertRouting: data.alertRouting || { down: [], trouble: [], critical: [] },
+        alertGroups: data.alertGroups || { developer: "", pm: "", avp: "" },
       });
       setDomain("");
       setUrl("");
@@ -407,6 +421,14 @@ function App() {
         ? Number(item.checkFrequency)
         : DEFAULT_FREQUENCY_MS
     );
+    // ─── Load saved alertRouting, fallback to empty ──────────────────────
+    setEditAlertRouting(
+      item.alertRouting || { down: [], trouble: [], critical: [] }
+    );
+    // ─── Load saved alertGroups, fallback to empty ───────────────────────
+    setEditAlertGroups(
+      item.alertGroups || { developer: "", pm: "", avp: "" }
+    );
   };
 
   // EDIT SITE — save
@@ -446,9 +468,15 @@ function App() {
             editCheckFrequency !== null && editCheckFrequency !== undefined
               ? Number(editCheckFrequency)
               : DEFAULT_FREQUENCY_MS,
+          // ─── NEW: send alertRouting to backend ───────────────────────
+          alertRouting: editAlertRouting,
+          // ─── NEW: send alertGroups to backend ─────────────────────────
+          alertGroups: editAlertGroups,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      console.log("DEBUG: Sending update alertGroups:", editAlertGroups);
 
       setEditItem(null);
       setUrlError("");
@@ -458,6 +486,8 @@ function App() {
       setEditResponseThresholdMs("");
       setEditRegions([]);
       setEditCheckFrequency(DEFAULT_FREQUENCY_MS); // reset to default
+      setEditAlertRouting({ down: [], trouble: [], critical: [] }); // reset alertRouting
+      setEditAlertGroups({ developer: "", pm: "", avp: "" }); // reset alertGroups
       await loadData(selectedStatus, search, page);
     } catch (err) {
       console.error(err);
@@ -656,12 +686,16 @@ function App() {
           editResponseThresholdMs={editResponseThresholdMs}
           editRegions={editRegions}
           editCheckFrequency={editCheckFrequency}
+          editAlertRouting={editAlertRouting}
+          editAlertGroups={editAlertGroups}
           setEditEmail={setEditEmail}
           setEditPhone={setEditPhone}
           setEditPriority={setEditPriority}
           setEditResponseThresholdMs={setEditResponseThresholdMs}
           setEditRegions={setEditRegions}
           setEditCheckFrequency={setEditCheckFrequency}
+          setEditAlertRouting={setEditAlertRouting}
+          setEditAlertGroups={setEditAlertGroups}
           urlError={urlError}
           onClose={() => setEditItem(null)}
           onSave={handleSaveEdit}

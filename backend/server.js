@@ -10,6 +10,7 @@ import connectDB from "./config/db.js";
 import monitoredSiteRoutes from "./routes/monitoredSite.Routes.js";
 import { startMonitoringCron } from "./cron/monitorCron.js";
 import { startGlobalMonitoringCron } from "./cron/globalMonitorCron.js";
+import { startEscalationWorker } from "./workers/escalationWorker.js";
 import checkUrlRoutes from "./routes/checkUrl.Routes.js";
 import siteCurrentStatusRoutes from "./routes/siteCurrentStatus.routes.js";
 import uptimeLogRoutes from "./routes/uptimeLog.routes.js";
@@ -141,6 +142,9 @@ const startServer = async () => {
 
     startGlobalMonitoringCron();
     logger.info("🌍 Global monitoring cron started");
+
+    startEscalationWorker();
+    logger.info("⚡ Escalation worker started");
 
     app.listen(PORT, () => {
       logger.info({ port: PORT }, "🚀 Server running");
