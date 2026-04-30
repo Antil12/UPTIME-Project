@@ -265,7 +265,12 @@ const resolveEmailsForLevel = async (site, alertLevel) => {
   if (roles.length === 0) return [];
 
   const rawEmails = roles
-    .map((role) => site.alertGroups?.[role])
+    .flatMap((role) => {
+      const group = site.alertGroups?.[role];
+      if (!group) return [];
+      return Array.isArray(group) ? group : [group];
+    })
+    .map((email) => (typeof email === "string" ? email.trim() : ""))
     .filter(Boolean);
 
   if (rawEmails.length === 0) return [];

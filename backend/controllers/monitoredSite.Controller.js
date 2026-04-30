@@ -16,6 +16,20 @@ const MIN_FREQUENCY_MS = 10_000;       // 10 seconds
 const MAX_FREQUENCY_MS = 86_400_000;   // 1 day
 const DEFAULT_FREQUENCY_MS = 60_000;   // 1 minute
 
+const normalizeAlertGroupValue = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .flat()
+      .map((email) => (typeof email === "string" ? email.trim() : ""))
+      .filter(Boolean);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  return [];
+};
+
 /* =====================================================================
    GET ALL MONITORED SITES — with server-side pagination
 ===================================================================== */
@@ -316,7 +330,14 @@ export const addSite = async (req, res) => {
       emailContact: alertChannels?.includes("email")
         ? (Array.isArray(emailContact) ? emailContact : emailContact ? [emailContact] : [])
         : [],
-      phoneContact: phoneContact || null,
+      phoneContact:
+        alertChannels?.some((ch) => ["sms", "whatsapp", "voice"].includes(ch))
+          ? Array.isArray(phoneContact)
+            ? phoneContact
+            : phoneContact
+            ? [phoneContact]
+            : []
+          : [],
       priority:     Number(priority ?? 0),
       owner:        req.user?._id,
       checkFrequency: resolvedFrequency,
@@ -324,12 +345,10 @@ export const addSite = async (req, res) => {
       alertRouting: req.body.alertRouting || {
         down: [], trouble: [], critical: []
       },
-      alertGroups: alertGroups ? {
-        developer: alertGroups.developer || null,
-        pm: alertGroups.pm || null,
-        avp: alertGroups.avp || null,
-      } : {
-        developer: null, pm: null, avp: null
+      alertGroups: {
+        developer: normalizeAlertGroupValue(alertGroups?.developer),
+        pm:        normalizeAlertGroupValue(alertGroups?.pm),
+        avp:       normalizeAlertGroupValue(alertGroups?.avp),
       },
     });
 
@@ -402,7 +421,12 @@ export const updateSite = async (req, res) => {
       emailContact: emailContact
         ? Array.isArray(emailContact) ? emailContact : [emailContact]
         : [],
-      phoneContact:        phoneContact || null,
+      phoneContact:
+        Array.isArray(phoneContact)
+          ? phoneContact
+          : phoneContact
+          ? [phoneContact]
+          : [],
       priority:            priority !== undefined ? Number(priority) : 0,
       responseThresholdMs:
         responseThresholdMs !== undefined && responseThresholdMs !== null
@@ -412,9 +436,9 @@ export const updateSite = async (req, res) => {
         ? req.body.alertRouting
         : undefined,
       alertGroups: alertGroups ? {
-        developer: alertGroups.developer || null,
-        pm: alertGroups.pm || null,
-        avp: alertGroups.avp || null,
+        developer: normalizeAlertGroupValue(alertGroups.developer),
+        pm:        normalizeAlertGroupValue(alertGroups.pm),
+        avp:       normalizeAlertGroupValue(alertGroups.avp),
       } : undefined,
     };
 

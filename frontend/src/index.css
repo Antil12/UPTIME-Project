@@ -42,6 +42,11 @@
 
   body {
     @apply bg-background text-white;
+    color: #f8fafc;
+  }
+
+  input, textarea, select, button {
+    color: #f8fafc;
   }
 }
 

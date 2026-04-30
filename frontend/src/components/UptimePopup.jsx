@@ -59,7 +59,7 @@ const StatCard = ({ icon: Icon, label, value, color, delay = 0 }) => {
         </div>
       </div>
 
-      <div style={{ ...monoLabel, fontSize: "8px", color: "rgba(148,163,184,0.5)" }}>
+      <div style={{ ...monoLabel, fontSize: "8px", color: "rgba(248,250,252,0.78)" }}>
         {label}
       </div>
 
@@ -266,7 +266,7 @@ const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
           <div className="h-[1px]" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.4) 30%, rgba(129,140,248,0.32) 70%, transparent 100%)" }} />
           <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
             <div>
-              <div style={{ ...monoLabel, fontSize: "8px", color: "rgba(56,189,248,0.5)" }}>
+              <div style={{ ...monoLabel, fontSize: "8px", color: "rgba(56,189,248,0.78)" }}>
                 ANALYTICS
               </div>
               <div

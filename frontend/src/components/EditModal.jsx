@@ -74,7 +74,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, icon: Icon }) => 
           border: open
             ? "1px solid rgba(56,189,248,0.30)"
             : "1px solid rgba(56,189,248,0.10)",
-          color: displayLabel ? "white" : "rgba(100,116,139,1)",
+          color: displayLabel ? "white" : "rgba(248,250,252,0.72)",
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: "14px",
           boxShadow: open ? "0 0 0 2px rgba(56,189,248,0.15)" : "none",
@@ -85,7 +85,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, icon: Icon }) => 
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          style={{ color: "rgba(56,189,248,0.5)", flexShrink: 0 }}
+          style={{ color: "rgba(56,189,248,0.78)", flexShrink: 0 }}
         >
           <ChevronDown size={14} />
         </motion.span>
@@ -217,6 +217,7 @@ export default function EditModal({
 }) {
   const [category, setCategory] = useState(item?.category || "");
   const [emailInput, setEmailInput] = useState("");
+  const [phoneInput, setPhoneInput] = useState("");
   const [showGroupForm, setShowGroupForm] = useState(false);
 
   useEffect(() => {
@@ -237,6 +238,11 @@ export default function EditModal({
     ? editEmail
     : editEmail
     ? [editEmail]
+    : [];
+  const normalizedPhones = Array.isArray(editPhone)
+    ? editPhone
+    : editPhone
+    ? [editPhone]
     : [];
 
   const toggleRegion = (region) => {
@@ -263,6 +269,21 @@ export default function EditModal({
   const handleRemoveEmail = (email) => {
     setEditEmail((prev) =>
       Array.isArray(prev) ? prev.filter((e) => e !== email) : []
+    );
+  };
+
+  const handleAddPhone = () => {
+    const value = (phoneInput || "").trim();
+    if (!value) return;
+    if (!normalizedPhones.includes(value)) {
+      setEditPhone([...normalizedPhones, value]);
+    }
+    setPhoneInput("");
+  };
+
+  const handleRemovePhone = (phone) => {
+    setEditPhone((prev) =>
+      Array.isArray(prev) ? prev.filter((p) => p !== phone) : []
     );
   };
 
@@ -340,7 +361,7 @@ export default function EditModal({
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: "11px",
-                    color: "rgba(148,163,184,0.52)",
+                    color: "rgba(248,250,252,0.88)",
                     letterSpacing: "0.03em",
                   }}
                 >
@@ -644,12 +665,65 @@ export default function EditModal({
                 </FieldWrapper>
 
                 <FieldWrapper label="Contact Phone" icon={Phone}>
-                  <input
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    placeholder="+91 9876543210"
-                    className={inputClass}
-                  />
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      value={phoneInput}
+                      onChange={(e) => setPhoneInput(e.target.value)}
+                      placeholder="+91 9876543210"
+                      className={inputClass}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddPhone();
+                        }
+                      }}
+                    />
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={handleAddPhone}
+                      className="px-5 py-3 rounded-2xl text-white shrink-0"
+                      style={primaryButtonStyle}
+                    >
+                      Add
+                    </motion.button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {normalizedPhones.length > 0 ? (
+                      normalizedPhones.map((phone, idx) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-2 rounded-full flex items-center gap-2"
+                          style={{
+                            background: "rgba(56,189,248,0.08)",
+                            border: "1px solid rgba(56,189,248,0.18)",
+                            color: "#7dd3fc",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: "11px",
+                            }}
+                          >
+                            {phone}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePhone(phone)}
+                            className="text-red-400 text-xs hover:text-red-300 transition"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-slate-500 text-sm font-mono">
+                        No phone numbers added yet
+                      </span>
+                    )}
+                  </div>
                 </FieldWrapper>
               </div>
 

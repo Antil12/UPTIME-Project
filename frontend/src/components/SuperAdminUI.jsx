@@ -901,7 +901,7 @@ const SuperAdminUI = ({
             </div>
 
             {/* Alert Role (separate from auth role) */}
-            <div className="mb-4">
+            {/* <div className="mb-4">
               <label
                 className="block mb-3"
                 style={{
@@ -933,10 +933,10 @@ const SuperAdminUI = ({
                 <option value="pm" className="bg-slate-900">Product Manager</option>
                 <option value="avp" className="bg-slate-900">AVP</option>
               </select>
-            </div>
+            </div> */}
 
             {/* Alert Categories */}
-            <div className="mb-5">
+            {/* <div className="mb-5">
               <label
                 className="block mb-3"
                 style={{
@@ -971,7 +971,7 @@ const SuperAdminUI = ({
                   </label>
                 ))}
               </div>
-            </div>
+            </div> */}
 
             {form.role !== "SUPERADMIN" && (
               <>
@@ -1218,10 +1218,10 @@ const SuperAdminUI = ({
                   <table className="w-full text-sm">
                     <thead style={{ background: "rgba(255,255,255,0.02)" }}>
                       <tr>
-                        {["Name", "Email", "Role", "Alert Role", "Alert Categories", "Actions"].map((head, idx) => (
+                        {["Name", "Email", "Role",  "Actions"].map((head, idx) => (
                           <th
                             key={head}
-                            className={`p-4 ${idx === 4 ? "text-right" : "text-left"}`}
+                            className={`p-4 ${idx === 4 ? "text-center" : "text-center"}`}
                             style={{
                               fontFamily: "'JetBrains Mono', monospace",
                               fontSize: "10px",
@@ -1244,7 +1244,7 @@ const SuperAdminUI = ({
                           style={{ background: "rgba(255,255,255,0.008)" }}
                         >
                           <td
-                            className="p-4 text-white"
+                            className="p-4 text-white text-center"
                             style={{
                               fontFamily: "'Orbitron', sans-serif",
                               fontWeight: 700,
@@ -1255,7 +1255,7 @@ const SuperAdminUI = ({
                           </td>
 
                           <td
-                            className="p-4"
+                            className="p-4 text-center"
                             style={{
                               fontFamily: "'JetBrains Mono', monospace",
                               fontSize: "11px",
@@ -1265,11 +1265,11 @@ const SuperAdminUI = ({
                             {user.email}
                           </td>
 
-                          <td className="p-4">
+                          <td className="p-4 text-center">
                             <ToggleChip label={user.role} active activeColor="#818cf8" />
                           </td>
 
-                          <td className="p-4">
+                          {/* <td className="p-4">
                             {user.alertRole ? (
                               <ToggleChip label={user.alertRole} active activeColor="#f59e0b" />
                             ) : (
@@ -1283,9 +1283,9 @@ const SuperAdminUI = ({
                                 None
                               </span>
                             )}
-                          </td>
+                          </td> */}
 
-                          <td className="p-4">
+                          {/* <td className="p-4">
                             {user.alertCategories && user.alertCategories.length > 0 ? (
                               <div className="flex flex-wrap gap-1.5">
                                 {user.alertCategories.slice(0, 2).map((cat) => (
@@ -1331,7 +1331,7 @@ const SuperAdminUI = ({
                                 —
                               </span>
                             )}
-                          </td>
+                          </td> */}
 
                           {/* <td className="p-4">
                             {user.assignedCategories && user.assignedCategories.length > 0 ? (
@@ -1381,7 +1381,7 @@ const SuperAdminUI = ({
                             )}
                           </td> */}
 
-                          <td className="p-4 text-right space-x-2">
+                          <td className="p-4 text-center space-x-2">
                             {/* ✅ Use centralised openEditModal */}
                             <button
                               onClick={() => openEditModal(user)}
@@ -1516,7 +1516,7 @@ const SuperAdminUI = ({
                 </div>
 
                 {/* Edit — Alert Role */}
-                <div className="md:col-span-1">
+                {/* <div className="md:col-span-1">
                   <select
                     value={editForm.alertRole || ""}
                     onChange={(e) =>
@@ -1537,10 +1537,10 @@ const SuperAdminUI = ({
                     <option value="pm" className="bg-slate-900">Product Manager</option>
                     <option value="avp" className="bg-slate-900">AVP</option>
                   </select>
-                </div>
+                </div> */}
 
                 {/* Edit — Alert Categories */}
-                <div className="md:col-span-2">
+                {/* <div className="md:col-span-2">
                   <label
                     className="block mb-3"
                     style={{
@@ -1575,7 +1575,7 @@ const SuperAdminUI = ({
                       </label>
                     ))}
                   </div>
-                </div>
+                </div> */}
 
                 {editForm.role !== "SUPERADMIN" && (
                   <>

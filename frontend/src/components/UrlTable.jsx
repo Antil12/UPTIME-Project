@@ -247,7 +247,7 @@ const DomainFilterDropdown = ({
           <button
             onClick={handleReset}
             className="flex-1 py-2 rounded-xl transition-all duration-200"
-            style={{ ...monoLabel, fontSize: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(148,163,184,0.6)" }}
+            style={{ ...monoLabel, fontSize: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(248,250,252,0.88)" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(148,163,184,0.9)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.color = "rgba(148,163,184,0.6)"; }}
           >
@@ -285,14 +285,14 @@ const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleCol
       </div>
       <div className="p-3" style={{ borderBottom: "1px solid rgba(56,189,248,0.07)" }}>
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(56,189,248,0.09)" }}>
-          <Search size={12} style={{ color: "rgba(56,189,248,0.4)" }} />
+          <Search size={12} style={{ color: "rgba(56,189,248,0.75)" }} />
           <input
             type="text"
             placeholder="Search column..."
             value={searchColumn}
             onChange={(e) => setSearchColumn(e.target.value)}
             className="bg-transparent outline-none w-full"
-            style={{ ...monoLabel, fontSize: "10px", color: "rgba(148,163,184,0.8)" }}
+            style={{ ...monoLabel, fontSize: "10px", color: "rgba(248,250,252,0.9)" }}
           />
         </div>
       </div>
@@ -322,7 +322,7 @@ const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleCol
         ))}
       </div>
       <div className="px-4 py-2.5" style={{ borderTop: "1px solid rgba(56,189,248,0.07)" }}>
-        <span style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.35)" }}>
+        <span style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.75)" }}>
           {DEFAULT_COLUMNS.length - hiddenColumns.length} columns visible
         </span>
       </div>
@@ -332,7 +332,7 @@ const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleCol
 
 const Th = ({ children, className = "", style = {}, ...rest }) => (
   <th className={`px-4 py-3 text-left whitespace-nowrap ${className}`}
-    style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.5)", position: "sticky", top: 0, zIndex: 40, background: "rgba(3,7,18,0.97)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(56,189,248,0.13)", fontWeight: 400, ...style }}
+    style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.85)", position: "sticky", top: 0, zIndex: 40, background: "rgba(3,7,18,0.97)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(56,189,248,0.13)", fontWeight: 400, ...style }}
     {...rest}
   >
     {children}
@@ -344,7 +344,7 @@ const FilterBtn = ({ active, onClick, btnRef }) => (
     ref={btnRef}
     onClick={onClick}
     className="inline-flex items-center justify-center w-5 h-5 rounded-md transition-all duration-200"
-    style={{ background: active ? "rgba(56,189,248,0.15)" : "transparent", color: active ? "#38bdf8" : "rgba(148,163,184,0.3)", border: active ? "1px solid rgba(56,189,248,0.28)" : "1px solid transparent" }}
+    style={{ background: active ? "rgba(56,189,248,0.15)" : "transparent", color: active ? "#38bdf8" : "rgba(148,163,184,0.65)", border: active ? "1px solid rgba(56,189,248,0.28)" : "1px solid transparent" }}
   >
     <Filter size={10} />
   </button>
@@ -967,7 +967,7 @@ const FragmentRow = ({
         )}
 
         {!hiddenColumns.includes("sno") && (
-          <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(148,163,184,0.3)" }}>{i + 1}</td>
+          <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(248,250,252,0.78)" }}>{i + 1}</td>
         )}
 
         {!hiddenColumns.includes("domain") && (
@@ -985,7 +985,7 @@ const FragmentRow = ({
 
         {!hiddenColumns.includes("url") && (
           <td className="px-4 py-3 max-w-xs">
-            <a href={item.url} target="_blank" rel="noreferrer" className="hover:underline truncate block" style={{ ...monoLabel, fontSize: "10px", color: "rgba(56,189,248,0.5)" }}>{item.url}</a>
+            <a href={item.url} target="_blank" rel="noreferrer" className="hover:underline truncate block" style={{ ...monoLabel, fontSize: "10px", color: "rgba(56,189,248,0.78)" }}>{item.url}</a>
           </td>
         )}
 
@@ -1026,8 +1026,8 @@ const FragmentRow = ({
 
         {isSuperAdmin && (
           <>
-            {!hiddenColumns.includes("userEmail") && <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(148,163,184,0.5)" }}>{item.ownerEmail || "--"}</td>}
-            {!hiddenColumns.includes("userRole")  && <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(148,163,184,0.6)" }}>{item.ownerRole  || "--"}</td>}
+            {!hiddenColumns.includes("userEmail") && <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(248,250,252,0.78)" }}>{item.ownerEmail || "--"}</td>}
+            {!hiddenColumns.includes("userRole")  && <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(248,250,252,0.82)" }}>{item.ownerRole  || "--"}</td>}
           </>
         )}
 
@@ -1040,7 +1040,7 @@ const FragmentRow = ({
         )}
 
         {!hiddenColumns.includes("lastCheckedAt") && (
-          <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "9px", color: "rgba(148,163,184,0.38)" }}>
+          <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "9px", color: "rgba(248,250,252,0.72)" }}>
             {item.lastCheckedAt ? new Date(item.lastCheckedAt).toLocaleString() : "-"}
           </td>
         )}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, useMotionValue, useSpring } from "framer-motion";
@@ -177,7 +178,7 @@ const SectionLabel = ({ icon: Icon, label }) => (
     </div>
     <span style={{
       fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
-      letterSpacing: "0.22em", color: "rgba(56,189,248,0.5)", textTransform: "uppercase",
+      letterSpacing: "0.22em", color: "rgba(56,189,248,0.78)", textTransform: "uppercase",
     }}>
       {label}
     </span>
@@ -186,8 +187,18 @@ const SectionLabel = ({ icon: Icon, label }) => (
 );
 
 // ─── HUD Input ────────────────────────────────────────────────────────────────
-const HudInput = ({ type = "text", placeholder, value, onChange, required, ...rest }) => (
-  <div className="relative group">
+const HudInput = ({ type = "text", placeholder, value, onChange, required, label, ...rest }) => (
+  <div className="relative group w-full">
+    {label && (
+      <label className="block text-xs font-medium mb-2" style={{ 
+        fontFamily: "'JetBrains Mono', monospace",
+        letterSpacing: "0.1em",
+        color: "rgba(56,189,248,0.88)", 
+        textTransform: "uppercase"
+      }}>
+        {label}
+      </label>
+    )}
     <input
       type={type}
       placeholder={placeholder}
@@ -195,7 +206,7 @@ const HudInput = ({ type = "text", placeholder, value, onChange, required, ...re
       onChange={onChange}
       required={required}
       {...rest}
-      className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-300"
+      className="w-full px-4 py-3 rounded-xl outline-none transition-all duration-300"
       style={{
         background: "rgba(255,255,255,0.022)",
         border: "1px solid rgba(56,189,248,0.09)",
@@ -235,7 +246,7 @@ export const CHECK_FREQUENCY_OPTIONS = [
 ];
 
 // ─── Generic Portal Dropdown ──────────────────────────────────────────────────
-const PortalDropdown = ({ value, onChange, options, placeholder }) => {
+const PortalDropdown = ({ value, onChange, options, placeholder, label }) => {
   const [open, setOpen] = useState(false);
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
   const triggerRef = useRef(null);
@@ -267,16 +278,26 @@ const PortalDropdown = ({ value, onChange, options, placeholder }) => {
   }, [open]);
 
   return (
-    <div className="relative">
+    <div className="w-full">
+      {label && (
+        <label className="block text-xs font-medium mb-2" style={{ 
+          fontFamily: "'JetBrains Mono', monospace",
+          letterSpacing: "0.1em",
+          color: "rgba(56,189,248,0.88)", 
+          textTransform: "uppercase"
+        }}>
+          {label}
+        </label>
+      )}
       <button
         ref={triggerRef}
         type="button"
         onClick={handleOpen}
-        className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-300 flex items-center justify-between"
+        className="w-full px-4 py-3 rounded-xl outline-none transition-all duration-300 flex items-center justify-between"
         style={{
           background: "rgba(255,255,255,0.022)",
           border: open ? "1px solid rgba(56,189,248,0.35)" : "1px solid rgba(56,189,248,0.09)",
-          color: displayLabel ? "white" : "rgba(148,163,184,0.45)",
+          color: displayLabel ? "white" : "rgba(248,250,252,0.82)",
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: "12px",
           letterSpacing: "0.02em",
@@ -289,7 +310,7 @@ const PortalDropdown = ({ value, onChange, options, placeholder }) => {
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          style={{ color: "rgba(56,189,248,0.5)", flexShrink: 0 }}
+          style={{ color: "rgba(56,189,248,0.78)", flexShrink: 0 }}
         >
           <ChevronDown size={14} />
         </motion.span>
@@ -310,7 +331,7 @@ const PortalDropdown = ({ value, onChange, options, placeholder }) => {
               border: "1px solid rgba(56,189,248,0.14)",
               backdropFilter: "blur(28px)",
               boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 24px rgba(56,189,248,0.05)",
-              borderRadius: "16px",
+              borderRadius: "12px",
               overflow: "hidden",
               maxHeight: "260px",
               overflowY: "auto",
@@ -325,12 +346,12 @@ const PortalDropdown = ({ value, onChange, options, placeholder }) => {
                   key={optValue ?? idx}
                   type="button"
                   onClick={() => { onChange(optValue); setOpen(false); }}
-                  className="w-full px-5 py-3 text-left transition-all duration-150 flex items-center justify-between"
+                  className="w-full px-4 py-2.5 text-left transition-all duration-150 flex items-center justify-between"
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: "11px",
                     letterSpacing: "0.06em",
-                    color: isSelected ? "#38bdf8" : "rgba(148,163,184,0.75)",
+                    color: isSelected ? "#38bdf8" : "rgba(248,250,252,0.83)",
                     background: isSelected ? "rgba(56,189,248,0.07)" : "transparent",
                     borderTop: idx === 0 ? "none" : "1px solid rgba(56,189,248,0.045)",
                     borderLeft: isSelected ? "2px solid rgba(56,189,248,0.45)" : "2px solid transparent",
@@ -363,17 +384,17 @@ const ToggleChip = ({ label, active, onClick, activeColor = "#38bdf8" }) => (
     onClick={onClick}
     whileHover={{ scale: 1.04 }}
     whileTap={{ scale: 0.96 }}
-    className="px-5 py-3 rounded-2xl font-medium tracking-wide transition-all duration-300"
+    className="px-4 py-2 rounded-lg font-medium tracking-wide transition-all duration-300"
     style={{
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: "11px",
+      fontSize: "10px",
       letterSpacing: "0.1em",
       textTransform: "uppercase",
       border: active ? `1px solid ${activeColor}55` : "1px solid rgba(56,189,248,0.08)",
       background: active
         ? `linear-gradient(135deg, ${activeColor}18, ${activeColor}08)`
         : "rgba(255,255,255,0.018)",
-      color: active ? activeColor : "rgba(148,163,184,0.6)",
+      color: active ? activeColor : "rgba(248,250,252,0.82)",
       boxShadow: active ? `0 0 18px ${activeColor}18` : "none",
     }}
   >
@@ -399,27 +420,20 @@ const AddUrl = ({
   const [localError, setLocalError]                   = useState("");
   const [emailContacts, setEmailContacts]             = useState([]);
   const [emailInput, setEmailInput]                   = useState("");
-  const [phoneContact, setPhoneContact]               = useState("");
+  const [phoneContacts, setPhoneContacts]             = useState([]);
+  const [phoneInput, setPhoneInput]                   = useState("");
   const [priority, setPriority]                       = useState(0);
   const [submitted, setSubmitted]                     = useState(false);
-
-  // ── NEW: Check Frequency — default 60 000 ms (1 min) ─────────────────────
-  const [checkFrequency, setCheckFrequency] = useState(60_000);
-
-  // ── NEW: Alert Groups ─────────────────────────────────────────────────────
-  const [alertGroups, setAlertGroups] = useState({
+  const [checkFrequency, setCheckFrequency]           = useState(60_000);
+  const [alertGroups, setAlertGroups]                 = useState({
     developer: "",
     pm: "",
     avp: "",
   });
-
-  // ── NEW: Alert Routing ────────────────────────────────────────────────────
-  const [alertRouting, setAlertRouting] = useState({
+  const [alertRouting, setAlertRouting]               = useState({
     down: [], trouble: [], critical: []
   });
-
-  // ── NEW: Show Group Form ──────────────────────────────────────────────────
-  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [showGroupForm, setShowGroupForm]             = useState(false);
 
   const normalize = (v = "") => v.trim().toLowerCase().replace(/\/$/, "");
 
@@ -446,11 +460,11 @@ const AddUrl = ({
       regions,
       alertIfAllRegionsDown,
       emailContact: emailContacts,
-      phoneContact,
+      phoneContact: phoneContacts,
       priority,
-      checkFrequency,   // ← NEW field sent to backend
-      alertRouting,     // ← NEW: alert routing configuration
-      alertGroups,      // ← NEW: alert groups with emails
+      checkFrequency,
+      alertRouting,
+      alertGroups,
     });
 
     console.log("DEBUG: Sending alertGroups:", alertGroups);
@@ -460,12 +474,13 @@ const AddUrl = ({
     setCategory("");
     setEmailContacts([]);
     setEmailInput("");
-    setPhoneContact("");
+    setPhoneContacts([]);
+    setPhoneInput("");
     setAlertChannels([]);
     setResponseThresholdMs("15000");
     setCheckFrequency(60_000);
-    setAlertRouting({ down: [], trouble: [], critical: [] }); // Reset alertRouting
-    setAlertGroups({ developer: "", pm: "", avp: "" }); // Reset alertGroups
+    setAlertRouting({ down: [], trouble: [], critical: [] });
+    setAlertGroups({ developer: "", pm: "", avp: "" });
   };
 
   const toggleChannel = (ch) =>
@@ -474,7 +489,6 @@ const AddUrl = ({
   const toggleRegion = (r) =>
     setRegions((p) => p.includes(r) ? p.filter((x) => x !== r) : [...p, r]);
 
-  // Display label for selected frequency
   const freqLabel = CHECK_FREQUENCY_OPTIONS.find((o) => o.value === checkFrequency)?.label || "1 min";
 
   return (
@@ -482,7 +496,7 @@ const AddUrl = ({
       <FontLoader />
 
       <div
-        className="relative min-h-screen w-full overflow-hidden px-4 sm:px-6 lg:px-8 py-6 text-white"
+        className="relative min-h-screen w-full overflow-hidden px-4 sm:px-6 lg:px-8 py-5 text-white"
         style={{ background: "transparent" }}
       >
         <Background />
@@ -496,22 +510,22 @@ const AddUrl = ({
         ))}
 
         {/* ─── Page Content ─── */}
-        <div className="relative z-10 w-full max-w-2xl mx-auto">
+        <div className="relative z-10 w-full max-w-4xl mx-auto">
 
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mb-8"
+            className="mb-6"
           >
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-3">
               <div className="h-[1px] w-8 bg-sky-400/20" />
               <span style={{
-                fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+                fontFamily: "'JetBrains Mono', monospace", fontSize: "8px",
                 letterSpacing: "0.28em", color: "rgba(56,189,248,0.42)", textTransform: "uppercase",
               }}>
-                Monitor Configuration
+                Configuration
               </span>
               <div className="h-[1px] w-24 bg-sky-400/10" />
             </div>
@@ -526,9 +540,9 @@ const AddUrl = ({
               <StatusDot color="#34d399" label="Ready" />
             </div>
 
-            <p className="mt-3" style={{
-              fontFamily: "'JetBrains Mono', monospace", fontSize: "11px",
-              color: "rgba(148,163,184,0.52)", letterSpacing: "0.03em",
+            <p className="mt-2" style={{
+              fontFamily: "'JetBrains Mono', monospace", fontSize: "10px",
+              color: "rgba(248,250,252,0.88)", letterSpacing: "0.03em",
             }}>
               Configure uptime monitoring, alert channels, and regional tracking.
             </p>
@@ -539,7 +553,7 @@ const AddUrl = ({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08, duration: 0.45 }}
-            className="mb-6 rounded-2xl px-4 py-3 flex items-center justify-between"
+            className="mb-5 rounded-xl px-4 py-3 flex items-center justify-between"
             style={{
               background: "rgba(3,7,18,0.64)", border: "1px solid rgba(56,189,248,0.08)",
               backdropFilter: "blur(14px)", boxShadow: "0 0 18px rgba(56,189,248,0.02)",
@@ -548,13 +562,13 @@ const AddUrl = ({
             <div>
               <div style={{
                 fontFamily: "'Orbitron', sans-serif", fontWeight: 700,
-                fontSize: "12px", letterSpacing: "0.06em", color: "white",
+                fontSize: "11px", letterSpacing: "0.06em", color: "white",
               }}>
                 SITE CONFIGURATION PANEL
               </div>
               <div style={{
-                fontFamily: "'JetBrains Mono', monospace", fontSize: "10px",
-                color: "rgba(148,163,184,0.48)", marginTop: "3px",
+                fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+                color: "rgba(248,250,252,0.82)", marginTop: "3px",
               }}>
                 Fill all required fields to activate monitoring.
               </div>
@@ -564,14 +578,14 @@ const AddUrl = ({
 
           {/* ─── Form ─── */}
           <form onSubmit={handleSubmit}>
-            <div className="space-y-6">
+            <div className="space-y-4">
 
-              {/* ── Identity ── */}
+              {/* ── Identity Section - Two Column Layout ── */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.12, duration: 0.45 }}
-                className="rounded-2xl p-6 relative overflow-visible"
+                className="rounded-xl p-5 relative overflow-visible"
                 style={{
                   background: "rgba(3,7,18,0.72)",
                   border: "1px solid rgba(56,189,248,0.09)",
@@ -583,14 +597,30 @@ const AddUrl = ({
                   style={{ background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.32) 30%, rgba(129,140,248,0.28) 70%, transparent 100%)" }} />
 
                 <SectionLabel icon={Globe2} label="Site Identity" />
-                <div className="space-y-3">
-                  <HudInput placeholder="Domain Name (e.g. myapp.com)" value={domain} onChange={(e) => setDomain(e.target.value)} />
-                  <HudInput type="url" placeholder="https://example.com" value={url} onChange={(e) => setUrl(e.target.value)} />
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <HudInput 
+                    placeholder="Domain Name (e.g myapp.com)" 
+                    value={domain} 
+                    onChange={(e) => setDomain(e.target.value)}
+                    label="Domain"
+                  />
+                  <HudInput 
+                    type="url" 
+                    placeholder="https://example.com" 
+                    value={url} 
+                    onChange={(e) => setUrl(e.target.value)}
+                    label="URL"
+                  />
+                </div>
+
+                <div className="mt-4">
                   <PortalDropdown
                     value={category}
                     onChange={setCategory}
                     options={CATEGORY_OPTIONS}
                     placeholder="Select Category (optional)"
+                    label="Category"
                   />
                 </div>
               </motion.div>
@@ -600,7 +630,7 @@ const AddUrl = ({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.18, duration: 0.45 }}
-                className="rounded-2xl p-6 relative overflow-hidden"
+                className="rounded-xl p-5 relative overflow-hidden"
                 style={{
                   background: "rgba(3,7,18,0.72)",
                   border: "1px solid rgba(56,189,248,0.09)",
@@ -613,8 +643,8 @@ const AddUrl = ({
 
                 <div className="flex items-center justify-between mb-4">
                   <SectionLabel icon={Zap} label="Performance Threshold" />
-                  <label className="flex items-center gap-2 cursor-pointer -mt-4"
-                    style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: priority === 1 ? "#f87171" : "rgba(148,163,184,0.5)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                  <label className="flex items-center gap-2 cursor-pointer"
+                    style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: priority === 1 ? "#f87171" : "rgba(248,250,252,0.86)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
                     <div
                       className="relative w-8 h-4 rounded-full cursor-pointer transition-all duration-300"
                       style={{
@@ -634,47 +664,43 @@ const AddUrl = ({
                   </label>
                 </div>
 
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Response threshold */}
-                  <div className="relative">
+                  <div className="relative lg:col-span-1">
                     <HudInput
                       type="number"
-                      placeholder="Max Response Time (ms) *"
+                      placeholder="Max Response Time (ms)"
                       value={responseThresholdMs}
                       onChange={(e) => setResponseThresholdMs(e.target.value)}
                       required
                       min="1"
+                      label="Response Threshold"
                     />
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(56,189,248,0.35)", letterSpacing: "0.08em" }}>
-                        Default: 15000 ms · Required field
+                    <div className="mt-2 flex items-center gap-2">
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(56,189,248,0.35)", letterSpacing: "0.08em" }}>
+                        Default: 15s
                       </span>
                       {responseThresholdMs && (
                         <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                          style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(52,211,153,0.6)" }}>
-                          ✓ {Number(responseThresholdMs).toLocaleString()} ms
+                          style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(52,211,153,0.6)" }}>
+                          ✓
                         </motion.span>
                       )}
                     </div>
                   </div>
 
-                  {/* ── Check Frequency dropdown (NEW) ── */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Timer size={11} className="text-sky-400" />
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.45)", textTransform: "uppercase" }}>
-                        Check Frequency *
-                      </span>
-                    </div>
+                  {/* Check Frequency dropdown */}
+                  <div className="lg:col-span-1">
                     <PortalDropdown
                       value={checkFrequency}
                       onChange={(val) => setCheckFrequency(Number(val))}
                       options={CHECK_FREQUENCY_OPTIONS}
                       placeholder="Select check interval"
+                      label="Check Frequency"
                     />
-                    <div className="mt-1.5">
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(56,189,248,0.35)", letterSpacing: "0.08em" }}>
-                        How often to ping this site · Default: 1 min
+                    <div className="mt-2">
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(56,189,248,0.35)", letterSpacing: "0.08em" }}>
+                        Default: 1 min
                       </span>
                     </div>
                   </div>
@@ -686,7 +712,7 @@ const AddUrl = ({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.24, duration: 0.45 }}
-                className="rounded-2xl p-6 relative overflow-hidden"
+                className="rounded-xl p-5 relative overflow-hidden"
                 style={{
                   background: "rgba(3,7,18,0.72)",
                   border: "1px solid rgba(56,189,248,0.09)",
@@ -699,7 +725,7 @@ const AddUrl = ({
 
                 <SectionLabel icon={Bell} label="Notification Channels" />
 
-                <div className="flex flex-wrap gap-3 mb-5">
+                <div className="flex flex-wrap gap-2 mb-4">
                   {["email", "sms", "whatsapp", "voice"].map((ch) => (
                     <ToggleChip key={ch} label={ch} active={alertChannels.includes(ch)} onClick={() => toggleChannel(ch)} />
                   ))}
@@ -707,7 +733,7 @@ const AddUrl = ({
 
                 {alertChannels.includes("email") && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mb-4">
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.4)", textTransform: "uppercase", marginBottom: "10px" }}>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.72)", textTransform: "uppercase", marginBottom: "10px" }}>
                       <Mail size={10} style={{ display: "inline", marginRight: "6px" }} />
                       Alert Emails
                     </div>
@@ -727,19 +753,19 @@ const AddUrl = ({
                       />
                       <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                         onClick={() => { const v = emailInput.trim(); if (v && !emailContacts.includes(v)) { setEmailContacts((p) => [...p, v]); setEmailInput(""); } }}
-                        className="px-4 rounded-2xl flex items-center justify-center"
-                        style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "48px" }}>
-                        <Plus size={16} />
+                        className="px-3 rounded-xl flex items-center justify-center"
+                        style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "44px", height: "44px" }}>
+                        <Plus size={14} />
                       </motion.button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {emailContacts.map((em, idx) => (
                         <motion.span key={idx} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                          className="flex items-center gap-2 px-3 py-1 rounded-full"
-                          style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)", fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(148,163,184,0.8)" }}>
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                          style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.8)" }}>
                           {em}
                           <button type="button" onClick={() => setEmailContacts((p) => p.filter((x) => x !== em))} className="text-red-400/60 hover:text-red-400 transition-colors">
-                            <X size={10} />
+                            <X size={9} />
                           </button>
                         </motion.span>
                       ))}
@@ -749,11 +775,57 @@ const AddUrl = ({
 
                 {(alertChannels.includes("sms") || alertChannels.includes("whatsapp") || alertChannels.includes("voice")) && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.4)", textTransform: "uppercase", marginBottom: "10px" }}>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.72)", textTransform: "uppercase", marginBottom: "10px" }}>
                       <Phone size={10} style={{ display: "inline", marginRight: "6px" }} />
-                      Mobile Contact
+                      Mobile Contacts
                     </div>
-                    <HudInput type="tel" placeholder="+91 9876543210" value={phoneContact} onChange={(e) => setPhoneContact(e.target.value)} />
+                    <div className="flex gap-2 mb-3">
+                      <HudInput
+                        type="tel"
+                        placeholder="+91 9876543210"
+                        value={phoneInput}
+                        onChange={(e) => setPhoneInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const v = phoneInput.trim();
+                            if (v && !phoneContacts.includes(v)) {
+                              setPhoneContacts((p) => [...p, v]);
+                              setPhoneInput("");
+                            }
+                          }
+                        }}
+                        label="Phone Number"
+                      />
+                      <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                          const v = phoneInput.trim();
+                          if (v && !phoneContacts.includes(v)) {
+                            setPhoneContacts((p) => [...p, v]);
+                            setPhoneInput("");
+                          }
+                        }}
+                        className="px-3 rounded-xl flex items-center justify-center"
+                        style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "44px", height: "44px" }}>
+                        <Plus size={14} />
+                      </motion.button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {phoneContacts.length > 0 ? (
+                        phoneContacts.map((phone, idx) => (
+                          <motion.span key={idx} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                            style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.8)" }}>
+                            {phone}
+                            <button type="button" onClick={() => setPhoneContacts((p) => p.filter((x) => x !== phone))} className="text-red-400/60 hover:text-red-400 transition-colors">
+                              <X size={9} />
+                            </button>
+                          </motion.span>
+                        ))
+                      ) : (
+                        <span className="text-slate-500 text-sm font-mono">No phone numbers added yet</span>
+                      )}
+                    </div>
                   </motion.div>
                 )}
               </motion.div>
@@ -763,7 +835,7 @@ const AddUrl = ({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.45 }}
-                className="rounded-2xl p-6 relative overflow-hidden"
+                className="rounded-xl p-5 relative overflow-hidden"
                 style={{
                   background: "rgba(3,7,18,0.72)",
                   border: "1px solid rgba(56,189,248,0.09)",
@@ -776,7 +848,7 @@ const AddUrl = ({
 
                 <SectionLabel icon={MapPin} label="Monitoring Regions" />
 
-                <div className="flex flex-wrap gap-3 mb-5">
+                <div className="flex flex-wrap gap-2 mb-4">
                   {["South America", "Australia", "North America", "Europe", "Asia", "Africa"].map((r) => (
                     <ToggleChip key={r} label={r} active={regions.includes(r)} onClick={() => toggleRegion(r)} activeColor="#34d399" />
                   ))}
@@ -802,8 +874,8 @@ const AddUrl = ({
                     />
                   </div>
                   <span style={{
-                    fontFamily: "'JetBrains Mono', monospace", fontSize: "10px",
-                    letterSpacing: "0.1em", color: alertIfAllRegionsDown ? "rgba(56,189,248,0.7)" : "rgba(148,163,184,0.45)",
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+                    letterSpacing: "0.1em", color: alertIfAllRegionsDown ? "rgba(56,189,248,0.85)" : "rgba(248,250,252,0.8)",
                     textTransform: "uppercase",
                   }}>
                     Alert only if ALL regions are down
@@ -817,17 +889,17 @@ const AddUrl = ({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.33, duration: 0.45 }}
               >
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Create Group Button */}
                   <motion.button
                     type="button"
                     onClick={() => setShowGroupForm(!showGroupForm)}
-                    className="w-full px-4 py-3 rounded-2xl flex items-center justify-between"
+                    className="w-full px-4 py-3 rounded-xl flex items-center justify-between"
                     style={{
                       background: "rgba(255,255,255,0.02)",
                       border: "1px solid rgba(56,189,248,0.10)",
                       fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: "11px",
+                      fontSize: "10px",
                       letterSpacing: "0.10em",
                       textTransform: "uppercase",
                       color: "rgba(56,189,248,0.8)",
@@ -836,11 +908,11 @@ const AddUrl = ({
                     whileTap={{ scale: 0.98 }}
                   >
                     <span className="flex items-center gap-2">
-                      <Bell size={14} />
+                      <Bell size={13} />
                       Create Alert Group
                     </span>
                     <ChevronDown
-                      size={14}
+                      size={13}
                       style={{
                         transform: showGroupForm ? "rotate(180deg)" : "rotate(0deg)",
                         transition: "transform 0.2s",
@@ -854,68 +926,95 @@ const AddUrl = ({
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="space-y-4 overflow-hidden"
+                      className="space-y-3 overflow-hidden rounded-xl p-5"
+                      style={{
+                        background: "rgba(56,189,248,0.03)",
+                        border: "1px solid rgba(56,189,248,0.08)",
+                      }}
                     >
-                      {/* Email Fields */}
-                      <div className="grid grid-cols-1 gap-3">
+                      {/* Email Fields Grid */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
-                            Developer Email
+                          <label className="block text-xs font-medium mb-2" style={{ 
+                            fontFamily: "'JetBrains Mono', monospace",
+                            letterSpacing: "0.1em",
+                            color: "rgba(56,189,248,0.88)", 
+                            textTransform: "uppercase"
+                          }}>
+                            Developer
                           </label>
                           <input
                             type="email"
                             value={alertGroups.developer}
                             onChange={(e) => setAlertGroups(prev => ({ ...prev, developer: e.target.value }))}
-                            placeholder="developer@company.com"
-                            className="w-full px-3 py-2 rounded-lg text-sm"
+                            placeholder="dev@company.com"
+                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                             style={{
                               background: "rgba(255,255,255,0.02)",
                               border: "1px solid rgba(56,189,248,0.10)",
                               color: "white",
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: "11px",
                             }}
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
-                            Product Manager Email
+                          <label className="block text-xs font-medium mb-2" style={{ 
+                            fontFamily: "'JetBrains Mono', monospace",
+                            letterSpacing: "0.1em",
+                            color: "rgba(56,189,248,0.88)", 
+                            textTransform: "uppercase"
+                          }}>
+                            Product Manager
                           </label>
                           <input
                             type="email"
                             value={alertGroups.pm}
                             onChange={(e) => setAlertGroups(prev => ({ ...prev, pm: e.target.value }))}
                             placeholder="pm@company.com"
-                            className="w-full px-3 py-2 rounded-lg text-sm"
+                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                             style={{
                               background: "rgba(255,255,255,0.02)",
                               border: "1px solid rgba(56,189,248,0.10)",
                               color: "white",
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: "11px",
                             }}
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
-                            AVP Email
+                          <label className="block text-xs font-medium mb-2" style={{ 
+                            fontFamily: "'JetBrains Mono', monospace",
+                            letterSpacing: "0.1em",
+                            color: "rgba(56,189,248,0.88)", 
+                            textTransform: "uppercase"
+                          }}>
+                            AVP
                           </label>
                           <input
                             type="email"
                             value={alertGroups.avp}
                             onChange={(e) => setAlertGroups(prev => ({ ...prev, avp: e.target.value }))}
                             placeholder="avp@company.com"
-                            className="w-full px-3 py-2 rounded-lg text-sm"
+                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                             style={{
                               background: "rgba(255,255,255,0.02)",
                               border: "1px solid rgba(56,189,248,0.10)",
                               color: "white",
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: "11px",
                             }}
                           />
                         </div>
                       </div>
 
                       {/* Alert Routing */}
-                      <AlertRoutingForm
-                        value={alertRouting}
-                        onChange={setAlertRouting}
-                      />
+                      <div className="mt-3 pt-3 border-t border-rgba(56,189,248,0.08)">
+                        <AlertRoutingForm
+                          value={alertRouting}
+                          onChange={setAlertRouting}
+                        />
+                      </div>
                     </motion.div>
                   )}
                 </div>
@@ -926,11 +1025,11 @@ const AddUrl = ({
                 <motion.div
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl px-5 py-4 flex items-center gap-3"
+                  className="rounded-xl px-4 py-3 flex items-center gap-3"
                   style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.18)", backdropFilter: "blur(12px)" }}
                 >
-                  <X size={14} className="text-red-400 shrink-0" />
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(248,113,113,0.85)", letterSpacing: "0.02em" }}>
+                  <X size={13} className="text-red-400 shrink-0" />
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(248,113,113,0.85)", letterSpacing: "0.02em" }}>
                     {localError || urlError}
                   </span>
                 </motion.div>
@@ -944,9 +1043,9 @@ const AddUrl = ({
               >
                 <motion.button
                   type="submit"
-                  whileHover={{ scale: 1.015 }}
-                  whileTap={{ scale: 0.985 }}
-                  className="w-full py-5 rounded-2xl relative overflow-hidden"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  className="w-full py-4 rounded-xl relative overflow-hidden"
                   style={{
                     background: submitted
                       ? "linear-gradient(135deg, rgba(52,211,153,0.2), rgba(16,185,129,0.1))"
@@ -965,15 +1064,15 @@ const AddUrl = ({
                   <div className="relative flex items-center justify-center gap-3">
                     {submitted ? (
                       <>
-                        <CheckCircle2 size={17} className="text-emerald-400" />
-                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "13px", letterSpacing: "0.12em", color: "#34d399" }}>
+                        <CheckCircle2 size={15} className="text-emerald-400" />
+                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.12em", color: "#34d399" }}>
                           SITE ADDED
                         </span>
                       </>
                     ) : (
                       <>
-                        <Link2 size={16} className="text-sky-400" />
-                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "13px", letterSpacing: "0.12em", color: "white" }}>
+                        <Link2 size={15} className="text-sky-400" />
+                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.12em", color: "white" }}>
                           ACTIVATE MONITORING
                         </span>
                       </>

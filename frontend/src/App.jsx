@@ -149,7 +149,7 @@ function App() {
   const [editDomain, setEditDomain] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [editEmail, setEditEmail] = useState([]);
-  const [editPhone, setEditPhone] = useState("");
+  const [editPhone, setEditPhone] = useState([]);
   const [editPriority, setEditPriority] = useState(0);
   const [editResponseThresholdMs, setEditResponseThresholdMs] = useState("");
   const [editRegions, setEditRegions] = useState([]);
@@ -402,7 +402,13 @@ function App() {
         ? [item.emailContact]
         : []
     );
-    setEditPhone(item.phoneContact || "");
+    setEditPhone(
+      Array.isArray(item.phoneContact)
+        ? item.phoneContact
+        : item.phoneContact
+        ? [item.phoneContact]
+        : []
+    );
     setEditPriority(
       item.priority !== undefined && item.priority !== null
         ? Number(item.priority)
@@ -455,7 +461,11 @@ function App() {
             : editEmail
             ? [editEmail]
             : [],
-          phoneContact: editPhone?.trim() || null,
+          phoneContact: Array.isArray(editPhone)
+            ? editPhone
+            : editPhone
+            ? [editPhone]
+            : [],
           priority: Number(editPriority || 0),
           responseThresholdMs:
             editResponseThresholdMs !== "" &&

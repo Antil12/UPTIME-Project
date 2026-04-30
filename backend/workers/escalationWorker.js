@@ -12,8 +12,8 @@ import { handleRoutedAlertBatch } from "../services/alertService.js";
    Level 3 → 3 hrs   → Group 3 "critical" (still down after 3 hrs)
 ───────────────────────────────────────────────────────────────────────────── */
 const ESCALATION_RULES = [
-  { level: 1, delay:  30 * 60 * 1000,      alertLevel: "down"     }, // 30 min → Group 1
-  { level: 2, delay: 60 * 60 * 1000,      alertLevel: "trouble"  }, // 1 hr   → Group 2
+  { level: 1, delay:  2 * 60 * 1000,      alertLevel: "down"     }, // 30 min → Group 1
+  { level: 2, delay: 4 * 60 * 1000,      alertLevel: "trouble"  }, // 1 hr   → Group 2
   { level: 3, delay:   3 * 60 * 60 * 1000, alertLevel: "critical" }, // 3 hrs  → Group 3
 ];
 
@@ -31,7 +31,12 @@ const resolveRecipientsForLevel = async (site, alertLevel) => {
   if (roles.length === 0) return [];
 
   const rawEmails = roles
-    .map((role) => site.alertGroups?.[role])
+    .flatMap((role) => {
+      const group = site.alertGroups?.[role];
+      if (!group) return [];
+      return Array.isArray(group) ? group : [group];
+    })
+    .map((email) => (typeof email === "string" ? email.trim() : ""))
     .filter(Boolean);
 
   if (rawEmails.length === 0) return [];

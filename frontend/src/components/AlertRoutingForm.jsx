@@ -66,7 +66,7 @@ const AlertRoutingForm = ({ value, onChange }) => {
           style={{
             fontSize:      "9px",
             letterSpacing: "0.22em",
-            color:         "rgba(56,189,248,0.5)",
+            color: "rgba(56,189,248,0.78)",
             textTransform: "uppercase",
           }}
         >
@@ -87,14 +87,14 @@ const AlertRoutingForm = ({ value, onChange }) => {
         }}
       >
         {/* Header row */}
-        <div style={{ color: "rgba(148,163,184,0.45)", fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+        <div style={{ color: "rgba(248,250,252,0.8)", fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase" }}>
           Level
         </div>
         {ALERT_ROLES.map((role) => (
           <div
             key={role.key}
             style={{
-              color:         "rgba(148,163,184,0.6)",
+              color: "rgba(248,250,252,0.82)",
               textAlign:     "center",
               fontSize:      "10px",
               letterSpacing: "0.08em",
@@ -188,7 +188,7 @@ const AlertRoutingForm = ({ value, onChange }) => {
           marginTop:     "16px",
           marginBottom:  0,
           fontSize:      "10px",
-          color:         "rgba(148,163,184,0.45)",
+          color: "rgba(248,250,252,0.8)",
           letterSpacing: "0.03em",
         }}
       >

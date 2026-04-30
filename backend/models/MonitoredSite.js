@@ -31,12 +31,10 @@ const monitoredSiteSchema = new mongoose.Schema({
   emailContact: {
     type: [String],
     default: [],
-    trim: true,
   },
   phoneContact: {
-    type: String,
-    default: null,
-    trim: true,
+    type: [String],
+    default: [],
   },
   priority: {
     type: Number,
@@ -104,9 +102,9 @@ const monitoredSiteSchema = new mongoose.Schema({
 
   // ── Alert Groups (specific emails for each role) ─────────────────────────────
   alertGroups: {
-    developer: { type: String, default: null },
-    pm:        { type: String, default: null },
-    avp:       { type: String, default: null },
+    developer: { type: [String], default: [] },
+    pm:        { type: [String], default: [] },
+    avp:       { type: [String], default: [] },
   },
 
   // ── Outage Tracking ──────────────────────────────────────────────────────────
