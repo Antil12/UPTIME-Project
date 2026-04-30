@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useEffect, useState, useRef, useCallback } from "react";
-import EditModal from "./components/EditModal";
+import EditPage from "./pages/EditPage"; 
+// import EditModal from "./components/EditModal";
 import { isValidUrl } from "./utils/validators";
 import PreLoginSplash from "./components/PreLoginSplash";
 import Dashboard from "./pages/Dashboard";
@@ -434,7 +435,9 @@ function App() {
     // ─── Load saved alertGroups, fallback to empty ───────────────────────
     setEditAlertGroups(
       item.alertGroups || { developer: [], pm: [], avp: [] }
+      
     );
+    navigate("/edit");
   };
 
   // EDIT SITE — save
@@ -499,6 +502,7 @@ function App() {
       setEditAlertRouting({ down: [], trouble: [], critical: [] }); // reset alertRouting
       setEditAlertGroups({ developer: [], pm: [], avp: [] }); // reset alertGroups
       await loadData(selectedStatus, search, page);
+      navigate("/dashboard");
     } catch (err) {
       console.error(err);
       alert("Failed to update site");
@@ -623,6 +627,41 @@ function App() {
               />
             }
           />
+
+          <Route
+  path="/edit"
+  element={
+    <EditPage
+      item={editItem}
+      editDomain={editDomain}
+      editUrl={editUrl}
+      setEditDomain={setEditDomain}
+      setEditUrl={setEditUrl}
+      editEmail={editEmail}
+      editPhone={editPhone}
+      editPriority={editPriority}
+      editResponseThresholdMs={editResponseThresholdMs}
+      editRegions={editRegions}
+      editCheckFrequency={editCheckFrequency}
+      editAlertRouting={editAlertRouting}
+      editAlertGroups={editAlertGroups}
+      setEditEmail={setEditEmail}
+      setEditPhone={setEditPhone}
+      setEditPriority={setEditPriority}
+      setEditResponseThresholdMs={setEditResponseThresholdMs}
+      setEditRegions={setEditRegions}
+      setEditCheckFrequency={setEditCheckFrequency}
+      setEditAlertRouting={setEditAlertRouting}
+      setEditAlertGroups={setEditAlertGroups}
+      urlError={urlError}
+      onSave={handleSaveEdit}
+      onClose={() => {
+        setEditItem(null);
+        setUrlError("");
+      }}
+    />
+  }
+/>
           <Route
             path="/add"
             element={
@@ -683,8 +722,9 @@ function App() {
       </main>
 
       {/* EDIT MODAL */}
-      {editItem && (
-        <EditModal
+      {/* EDIT MODAL — only on non-edit pages */}
+{/* {editItem && window.location.pathname !== "/edit" && (
+  <EditModal
           item={editItem}
           editDomain={editDomain}
           editUrl={editUrl}
@@ -709,8 +749,9 @@ function App() {
           urlError={urlError}
           onClose={() => setEditItem(null)}
           onSave={handleSaveEdit}
+          
         />
-      )}
+      )} */}
     </div>
   );
 }
