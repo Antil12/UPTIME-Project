@@ -426,6 +426,11 @@ const AddUrl = ({
   const [submitted, setSubmitted]                     = useState(false);
   const [checkFrequency, setCheckFrequency]           = useState(60_000);
   const [alertGroups, setAlertGroups]                 = useState({
+    developer: [],
+    pm: [],
+    avp: [],
+  });
+  const [alertGroupInputs, setAlertGroupInputs]       = useState({
     developer: "",
     pm: "",
     avp: "",
@@ -436,6 +441,29 @@ const AddUrl = ({
   const [showGroupForm, setShowGroupForm]             = useState(false);
 
   const normalize = (v = "") => v.trim().toLowerCase().replace(/\/$/, "");
+
+  const isValidEmail = (value = "") => /\S+@\S+\.\S+/.test(value.trim());
+
+  const addAlertGroupEmail = (role) => {
+    const value = alertGroupInputs[role]?.trim();
+    if (!value || !isValidEmail(value)) return;
+    if (alertGroups[role].includes(value)) {
+      setAlertGroupInputs((prev) => ({ ...prev, [role]: "" }));
+      return;
+    }
+    setAlertGroups((prev) => ({
+      ...prev,
+      [role]: [...(prev[role] || []), value],
+    }));
+    setAlertGroupInputs((prev) => ({ ...prev, [role]: "" }));
+  };
+
+  const removeAlertGroupEmail = (role, email) => {
+    setAlertGroups((prev) => ({
+      ...prev,
+      [role]: (prev[role] || []).filter((item) => item !== email),
+    }));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -480,7 +508,8 @@ const AddUrl = ({
     setResponseThresholdMs("15000");
     setCheckFrequency(60_000);
     setAlertRouting({ down: [], trouble: [], critical: [] });
-    setAlertGroups({ developer: "", pm: "", avp: "" });
+    setAlertGroupInputs({ developer: "", pm: "", avp: "" });
+    setAlertGroups({ developer: [], pm: [], avp: [] });
   };
 
   const toggleChannel = (ch) =>
@@ -934,78 +963,76 @@ const AddUrl = ({
                     >
                       {/* Email Fields Grid */}
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium mb-2" style={{ 
-                            fontFamily: "'JetBrains Mono', monospace",
-                            letterSpacing: "0.1em",
-                            color: "rgba(56,189,248,0.88)", 
-                            textTransform: "uppercase"
-                          }}>
-                            Developer
-                          </label>
-                          <input
-                            type="email"
-                            value={alertGroups.developer}
-                            onChange={(e) => setAlertGroups(prev => ({ ...prev, developer: e.target.value }))}
-                            placeholder="dev@company.com"
-                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                            style={{
-                              background: "rgba(255,255,255,0.02)",
-                              border: "1px solid rgba(56,189,248,0.10)",
-                              color: "white",
+                        {[
+                          { key: "developer", label: "Developer" },
+                          { key: "pm", label: "Product Manager" },
+                          { key: "avp", label: "AVP" },
+                        ].map(({ key, label }) => (
+                          <div key={key}>
+                            <label className="block text-xs font-medium mb-2" style={{ 
                               fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: "11px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium mb-2" style={{ 
-                            fontFamily: "'JetBrains Mono', monospace",
-                            letterSpacing: "0.1em",
-                            color: "rgba(56,189,248,0.88)", 
-                            textTransform: "uppercase"
-                          }}>
-                            Product Manager
-                          </label>
-                          <input
-                            type="email"
-                            value={alertGroups.pm}
-                            onChange={(e) => setAlertGroups(prev => ({ ...prev, pm: e.target.value }))}
-                            placeholder="pm@company.com"
-                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                            style={{
-                              background: "rgba(255,255,255,0.02)",
-                              border: "1px solid rgba(56,189,248,0.10)",
-                              color: "white",
-                              fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: "11px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium mb-2" style={{ 
-                            fontFamily: "'JetBrains Mono', monospace",
-                            letterSpacing: "0.1em",
-                            color: "rgba(56,189,248,0.88)", 
-                            textTransform: "uppercase"
-                          }}>
-                            AVP
-                          </label>
-                          <input
-                            type="email"
-                            value={alertGroups.avp}
-                            onChange={(e) => setAlertGroups(prev => ({ ...prev, avp: e.target.value }))}
-                            placeholder="avp@company.com"
-                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                            style={{
-                              background: "rgba(255,255,255,0.02)",
-                              border: "1px solid rgba(56,189,248,0.10)",
-                              color: "white",
-                              fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: "11px",
-                            }}
-                          />
-                        </div>
+                              letterSpacing: "0.1em",
+                              color: "rgba(56,189,248,0.88)", 
+                              textTransform: "uppercase"
+                            }}>
+                              {label}
+                            </label>
+                            <div className="flex gap-2 mb-3">
+                              <input
+                                type="email"
+                                value={alertGroupInputs[key]}
+                                onChange={(e) => setAlertGroupInputs((prev) => ({ ...prev, [key]: e.target.value }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    addAlertGroupEmail(key);
+                                  }
+                                }}
+                                placeholder="dev@company.com"
+                                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                                style={{
+                                  background: "rgba(255,255,255,0.02)",
+                                  border: "1px solid rgba(56,189,248,0.10)",
+                                  color: "white",
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: "11px",
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => addAlertGroupEmail(key)}
+                                className="px-3 rounded-xl flex items-center justify-center"
+                                style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.20)", color: "#38bdf8", minWidth: "44px", height: "44px" }}
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(alertGroups[key] || []).map((email, idx) => (
+                                <span
+                                  key={`${key}-${email}-${idx}`}
+                                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                                  style={{
+                                    background: "rgba(56,189,248,0.06)",
+                                    border: "1px solid rgba(56,189,248,0.14)",
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                    fontSize: "9px",
+                                    color: "rgba(148,163,184,0.8)",
+                                  }}
+                                >
+                                  {email}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeAlertGroupEmail(key, email)}
+                                    className="text-red-400/60 hover:text-red-400 transition-colors"
+                                  >
+                                    <X size={9} />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
 
                       {/* Alert Routing */}

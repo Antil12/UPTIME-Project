@@ -16,18 +16,38 @@ const MIN_FREQUENCY_MS = 10_000;       // 10 seconds
 const MAX_FREQUENCY_MS = 86_400_000;   // 1 day
 const DEFAULT_FREQUENCY_MS = 60_000;   // 1 minute
 
-const normalizeAlertGroupValue = (value) => {
-  if (Array.isArray(value)) {
-    return value
-      .flat()
-      .map((email) => (typeof email === "string" ? email.trim() : ""))
-      .filter(Boolean);
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? [trimmed] : [];
-  }
+const extractAlertEmails = (value) => {
+  if (Array.isArray(value)) return value.flat();
+  if (typeof value === "string") return value.split(/[;,]+/);
   return [];
+};
+
+const normalizeAlertGroupValue = (value) => {
+  return extractAlertEmails(value)
+    .map((email) => (typeof email === "string" ? email.trim() : ""))
+    .filter(Boolean);
+};
+
+const validateAlertGroupEmails = async (alertGroups) => {
+  const allEmails = Object.values(alertGroups)
+    .flat()
+    .map((email) => (typeof email === "string" ? email.trim() : ""))
+    .filter(Boolean);
+
+  if (allEmails.length === 0) return;
+
+  // Simple email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const invalid = allEmails.filter((email) => !emailRegex.test(email));
+
+  if (invalid.length > 0) {
+    const uniqueInvalid = [...new Set(invalid)];
+    const err = new Error(
+      `Invalid email format(s): ${uniqueInvalid.join(", ")}`
+    );
+    err.status = 400;
+    throw err;
+  }
 };
 
 /* =====================================================================
@@ -319,6 +339,14 @@ export const addSite = async (req, res) => {
 
     const now = Date.now();
 
+    const normalizedAlertGroups = {
+      developer: normalizeAlertGroupValue(alertGroups?.developer),
+      pm:        normalizeAlertGroupValue(alertGroups?.pm),
+      avp:       normalizeAlertGroupValue(alertGroups?.avp),
+    };
+
+    await validateAlertGroupEmails(normalizedAlertGroups);
+
     const site = await MonitoredSite.create({
       domain,
       url,
@@ -345,11 +373,7 @@ export const addSite = async (req, res) => {
       alertRouting: req.body.alertRouting || {
         down: [], trouble: [], critical: []
       },
-      alertGroups: {
-        developer: normalizeAlertGroupValue(alertGroups?.developer),
-        pm:        normalizeAlertGroupValue(alertGroups?.pm),
-        avp:       normalizeAlertGroupValue(alertGroups?.avp),
-      },
+      alertGroups: normalizedAlertGroups,
     });
 
     console.log("DEBUG: Site created with alertGroups:", site.alertGroups);
@@ -364,6 +388,9 @@ export const addSite = async (req, res) => {
     return res.status(201).json({ success: true, data: site });
   } catch (error) {
     console.error("❌ addSite error:", error);
+    if (error?.status === 400) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     return res.status(500).json({ success: false, message: "Failed to add site" });
   }
 };
@@ -435,12 +462,18 @@ export const updateSite = async (req, res) => {
       alertRouting: req.body.alertRouting
         ? req.body.alertRouting
         : undefined,
-      alertGroups: alertGroups ? {
+    };
+
+    if (alertGroups) {
+      const normalizedAlertGroups = {
         developer: normalizeAlertGroupValue(alertGroups.developer),
         pm:        normalizeAlertGroupValue(alertGroups.pm),
         avp:       normalizeAlertGroupValue(alertGroups.avp),
-      } : undefined,
-    };
+      };
+      await validateAlertGroupEmails(normalizedAlertGroups);
+      updatedData.alertGroups = normalizedAlertGroups;
+    }
+
 
     // ── Handle checkFrequency update ─────────────────────────────────────────
     if (checkFrequency !== undefined && checkFrequency !== null && checkFrequency !== "") {
@@ -496,6 +529,9 @@ export const updateSite = async (req, res) => {
     return res.json({ success: true, data: site });
   } catch (error) {
     console.error("❌ updateSite error:", error);
+    if (error?.status === 400) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     return res.status(500).json({ success: false, message: "Failed to update site" });
   }
 };

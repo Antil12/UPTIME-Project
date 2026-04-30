@@ -264,14 +264,16 @@ const resolveEmailsForLevel = async (site, alertLevel) => {
   const roles = site.alertRouting?.[alertLevel] || [];
   if (roles.length === 0) return [];
 
-  const rawEmails = roles
-    .flatMap((role) => {
-      const group = site.alertGroups?.[role];
-      if (!group) return [];
-      return Array.isArray(group) ? group : [group];
-    })
-    .map((email) => (typeof email === "string" ? email.trim() : ""))
-    .filter(Boolean);
+  const rawEmails = [...new Set(
+    roles
+      .flatMap((role) => {
+        const group = site.alertGroups?.[role];
+        if (!group) return [];
+        return Array.isArray(group) ? group : [group];
+      })
+      .map((email) => (typeof email === "string" ? email.trim() : ""))
+      .filter(Boolean)
+  )];
 
   if (rawEmails.length === 0) return [];
 

@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Clock,
   Bell,
+  Plus,
 } from "lucide-react";
 import AlertRoutingForm from "./AlertRoutingForm";
 
@@ -218,6 +219,7 @@ export default function EditModal({
   const [category, setCategory] = useState(item?.category || "");
   const [emailInput, setEmailInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
+  const [groupInput, setGroupInput] = useState({ developer: "", pm: "", avp: "" });
   const [showGroupForm, setShowGroupForm] = useState(false);
 
   useEffect(() => {
@@ -225,6 +227,31 @@ export default function EditModal({
       setCategory(item.category || "");
     }
   }, [item]);
+
+  const isValidEmail = (value = "") => /\S+@\S+\.\S+/.test(value.trim());
+
+  const addEditAlertGroupEmail = (role) => {
+    const value = groupInput[role]?.trim();
+    if (!value || !isValidEmail(value)) return;
+    const current = Array.isArray(editAlertGroups?.[role]) ? editAlertGroups[role] : [];
+    if (current.includes(value)) {
+      setGroupInput((prev) => ({ ...prev, [role]: "" }));
+      return;
+    }
+    setEditAlertGroups((prev) => ({
+      ...prev,
+      [role]: [...current, value],
+    }));
+    setGroupInput((prev) => ({ ...prev, [role]: "" }));
+  };
+
+  const removeEditAlertGroupEmail = (role, email) => {
+    const current = Array.isArray(editAlertGroups?.[role]) ? editAlertGroups[role] : [];
+    setEditAlertGroups((prev) => ({
+      ...prev,
+      [role]: current.filter((item) => item !== email),
+    }));
+  };
 
   useEffect(() => {
     if (initialCategory !== undefined) {
@@ -770,57 +797,69 @@ export default function EditModal({
                   >
                     {/* Email Fields */}
                     <div className="grid grid-cols-1 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
-                          Developer Email
-                        </label>
-                        <input
-                          type="email"
-                          value={editAlertGroups?.developer || ""}
-                          onChange={(e) => setEditAlertGroups(prev => ({ ...prev, developer: e.target.value }))}
-                          placeholder="developer@company.com"
-                          className="w-full px-3 py-2 rounded-lg text-sm"
-                          style={{
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(56,189,248,0.10)",
-                            color: "white",
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
-                          Product Manager Email
-                        </label>
-                        <input
-                          type="email"
-                          value={editAlertGroups?.pm || ""}
-                          onChange={(e) => setEditAlertGroups(prev => ({ ...prev, pm: e.target.value }))}
-                          placeholder="pm@company.com"
-                          className="w-full px-3 py-2 rounded-lg text-sm"
-                          style={{
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(56,189,248,0.10)",
-                            color: "white",
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
-                          AVP Email
-                        </label>
-                        <input
-                          type="email"
-                          value={editAlertGroups?.avp || ""}
-                          onChange={(e) => setEditAlertGroups(prev => ({ ...prev, avp: e.target.value }))}
-                          placeholder="avp@company.com"
-                          className="w-full px-3 py-2 rounded-lg text-sm"
-                          style={{
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(56,189,248,0.10)",
-                            color: "white",
-                          }}
-                        />
-                      </div>
+                      {[
+                        { key: "developer", label: "Developer" },
+                        { key: "pm", label: "Product Manager" },
+                        { key: "avp", label: "AVP" },
+                      ].map(({ key, label }) => (
+                        <div key={key}>
+                          <label className="block text-xs font-medium mb-1" style={{ color: "rgba(56,189,248,0.7)" }}>
+                            {label} Email
+                          </label>
+                          <div className="flex gap-2 mb-3">
+                            <input
+                              type="email"
+                              value={groupInput[key] || ""}
+                              onChange={(e) => setGroupInput((prev) => ({ ...prev, [key]: e.target.value }))}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addEditAlertGroupEmail(key);
+                                }
+                              }}
+                              placeholder="user@company.com"
+                              className="w-full px-3 py-2 rounded-lg text-sm"
+                              style={{
+                                background: "rgba(255,255,255,0.02)",
+                                border: "1px solid rgba(56,189,248,0.10)",
+                                color: "white",
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => addEditAlertGroupEmail(key)}
+                              className="px-3 rounded-xl flex items-center justify-center"
+                              style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.20)", color: "#38bdf8", minWidth: "44px", height: "44px" }}
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {(Array.isArray(editAlertGroups?.[key]) ? editAlertGroups[key] : []).map((email, idx) => (
+                              <span
+                                key={`${key}-${email}-${idx}`}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                                style={{
+                                  background: "rgba(56,189,248,0.06)",
+                                  border: "1px solid rgba(56,189,248,0.14)",
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: "9px",
+                                  color: "rgba(148,163,184,0.8)",
+                                }}
+                              >
+                                {email}
+                                <button
+                                  type="button"
+                                  onClick={() => removeEditAlertGroupEmail(key, email)}
+                                  className="text-red-400/60 hover:text-red-400 transition-colors"
+                                >
+                                  <X size={9} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
 
                     {/* Alert Routing */}
