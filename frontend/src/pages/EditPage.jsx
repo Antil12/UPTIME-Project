@@ -14,16 +14,20 @@ const REGIONS = ["South America", "Australia", "North America", "Europe", "Asia"
 const CATEGORY_OPTIONS = ["JOURNALS", "E-JAYPEE", "JPMEDPUB", "JP-DIGITAL", "DIGINERVE", "Others"];
 const FREQUENCY_OPTIONS = [
   { label: "10 seconds", value: 10_000 },
-  { label: "30 seconds", value: 30_000 },
+  
   { label: "1 minute",   value: 60_000 },
-  { label: "2 minutes",  value: 120_000 },
+  
   { label: "5 minutes",  value: 300_000 },
   { label: "10 minutes", value: 600_000 },
   { label: "15 minutes", value: 900_000 },
   { label: "30 minutes", value: 1_800_000 },
-  { label: "1 hour",     value: 3_600_000 },
+  { label: "1 hour",  value: 3_600_000 },
+  { label: "2 hours",  value: 7_200_000 },
+  { label: "3 hours",  value: 10_800_000 },
+  { label: "4 hours",  value: 14_400_000 },
+  { label: "5 hours",  value: 18_000_000 },
   { label: "6 hours",    value: 21_600_000 },
-  { label: "12 hours",   value: 43_200_000 },
+ 
   { label: "1 day",      value: 86_400_000 },
 ];
 

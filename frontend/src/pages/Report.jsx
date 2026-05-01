@@ -373,7 +373,7 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                 </span>
                 <div className="h-[1px] w-14 bg-sky-400/10" />
               </div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl mb-1" style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 800, letterSpacing: "0.04em", textShadow: "0 0 18px rgba(56,189,248,0.05)" }}>
+              <h1 className="text-xl sm:text-2xl lg:text-2xl mb-1" style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 800, letterSpacing: "0.04em", textShadow: "0 0 18px rgba(56,189,248,0.05)" }}>
                 REPORT ANALYTICS
               </h1>
               <p className="max-w-2xl" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(148,163,184,0.5)", letterSpacing: "0.02em" }}>

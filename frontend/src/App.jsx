@@ -721,37 +721,7 @@ function App() {
         </Routes>
       </main>
 
-      {/* EDIT MODAL */}
-      {/* EDIT MODAL — only on non-edit pages */}
-{/* {editItem && window.location.pathname !== "/edit" && (
-  <EditModal
-          item={editItem}
-          editDomain={editDomain}
-          editUrl={editUrl}
-          setEditDomain={setEditDomain}
-          setEditUrl={setEditUrl}
-          editEmail={editEmail}
-          editPhone={editPhone}
-          editPriority={editPriority}
-          editResponseThresholdMs={editResponseThresholdMs}
-          editRegions={editRegions}
-          editCheckFrequency={editCheckFrequency}
-          editAlertRouting={editAlertRouting}
-          editAlertGroups={editAlertGroups}
-          setEditEmail={setEditEmail}
-          setEditPhone={setEditPhone}
-          setEditPriority={setEditPriority}
-          setEditResponseThresholdMs={setEditResponseThresholdMs}
-          setEditRegions={setEditRegions}
-          setEditCheckFrequency={setEditCheckFrequency}
-          setEditAlertRouting={setEditAlertRouting}
-          setEditAlertGroups={setEditAlertGroups}
-          urlError={urlError}
-          onClose={() => setEditItem(null)}
-          onSave={handleSaveEdit}
-          
-        />
-      )} */}
+      
     </div>
   );
 }

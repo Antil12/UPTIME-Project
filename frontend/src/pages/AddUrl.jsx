@@ -560,7 +560,7 @@ const AddUrl = ({
             </div>
 
             <div className="flex items-center justify-between">
-              <h1 className="text-3xl sm:text-4xl" style={{
+              <h1 className="text-xl sm:text-2xl" style={{
                 fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
                 letterSpacing: "0.05em", textShadow: "0 0 24px rgba(56,189,248,0.08)",
               }}>

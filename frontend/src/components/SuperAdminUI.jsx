@@ -729,7 +729,7 @@ const SuperAdminUI = ({
               </div>
 
               <h1
-                className="text-2xl sm:text-3xl lg:text-4xl mb-2"
+                className="text-2xl sm:text-3xl lg:text-3xl mb-2"
                 style={{
                   fontFamily: "'Orbitron', sans-serif",
                   fontWeight: 800,
