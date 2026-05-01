@@ -297,7 +297,7 @@ export default function EditPage({
   const [category,      setCategory]      = useState(item?.category || "");
   const [emailInput,    setEmailInput]    = useState("");
   const [phoneInput,    setPhoneInput]    = useState("");
-  const [groupInput,    setGroupInput]    = useState({ developer: "", pm: "", avp: "" });
+  const [groupInput,    setGroupInput]    = useState({ group1: "", group2: "", group3: "" });
   const [showGroupForm, setShowGroupForm] = useState(false);
 
   useEffect(() => { if (item?.category !== undefined) setCategory(item.category || ""); }, [item]);
@@ -504,7 +504,7 @@ export default function EditPage({
                     >
                       <div className="p-4 space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {[{ key: "developer", label: "Developer" }, { key: "pm", label: "Product Manager" }, { key: "avp", label: "AVP" }].map(({ key, label }) => (
+                          {[{ key: "group1", label: "group 1" }, { key: "group2", label: "group 2" }, { key: "group3", label: "Group 3" }].map(({ key, label }) => (
                             <div key={key}>
                               <FieldLabel text={`${label} Email`} />
                               <AddRow

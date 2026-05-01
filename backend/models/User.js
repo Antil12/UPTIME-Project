@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema(
   // ── Alert Role (separate from auth role: SUPERADMIN/USER/VIEWER) ─────────────
   alertRole: {
     type: String,
-    enum: ["developer", "pm", "avp", null],
+    enum: ["group1", "group2", "group3", null],
     default: null,
   },
 

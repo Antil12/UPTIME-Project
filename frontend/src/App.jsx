@@ -164,9 +164,9 @@ function App() {
 
   // ─── NEW: alert groups edit state ─────────────────────────────────────────
   const [editAlertGroups, setEditAlertGroups] = useState({
-    developer: [],
-    pm: [],
-    avp: [],
+    group1: [],
+    group2: [],
+    group3: [],
   });
 
   const [popupData, setPopupData] = useState(null);
@@ -309,7 +309,7 @@ function App() {
         priority,
         checkFrequency,
         alertRouting: data.alertRouting || { down: [], trouble: [], critical: [] },
-        alertGroups: data.alertGroups || { developer: [], pm: [], avp: [] },
+        alertGroups: data.alertGroups || { group1: [], group2: [], group3: [] },
       });
       setDomain("");
       setUrl("");
@@ -434,7 +434,7 @@ function App() {
     );
     // ─── Load saved alertGroups, fallback to empty ───────────────────────
     setEditAlertGroups(
-      item.alertGroups || { developer: [], pm: [], avp: [] }
+      item.alertGroups || { group1: [], group2: [], group3: [] }
       
     );
     navigate("/edit");
@@ -500,7 +500,7 @@ function App() {
       setEditRegions([]);
       setEditCheckFrequency(DEFAULT_FREQUENCY_MS); // reset to default
       setEditAlertRouting({ down: [], trouble: [], critical: [] }); // reset alertRouting
-      setEditAlertGroups({ developer: [], pm: [], avp: [] }); // reset alertGroups
+      setEditAlertGroups({ group1: [], group2: [], group3: [] }); // reset alertGroups
       await loadData(selectedStatus, search, page);
       navigate("/dashboard");
     } catch (err) {

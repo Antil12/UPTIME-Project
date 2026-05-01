@@ -426,14 +426,14 @@ const AddUrl = ({
   const [submitted, setSubmitted]                     = useState(false);
   const [checkFrequency, setCheckFrequency]           = useState(60_000);
   const [alertGroups, setAlertGroups]                 = useState({
-    developer: [],
-    pm: [],
-    avp: [],
+    group1: [],
+    group2: [],
+    group3: [],
   });
   const [alertGroupInputs, setAlertGroupInputs]       = useState({
-    developer: "",
-    pm: "",
-    avp: "",
+   group1: "",
+    group2: "",
+    group3: "",
   });
   const [alertRouting, setAlertRouting]               = useState({
     down: [], trouble: [], critical: []
@@ -508,8 +508,8 @@ const AddUrl = ({
     setResponseThresholdMs("15000");
     setCheckFrequency(60_000);
     setAlertRouting({ down: [], trouble: [], critical: [] });
-    setAlertGroupInputs({ developer: "", pm: "", avp: "" });
-    setAlertGroups({ developer: [], pm: [], avp: [] });
+    setAlertGroupInputs({ group1: "", group2: "", group3: "" });
+    setAlertGroups({ group1: [], group2: [], group3: [] });
   };
 
   const toggleChannel = (ch) =>
@@ -964,9 +964,9 @@ const AddUrl = ({
                       {/* Email Fields Grid */}
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                         {[
-                          { key: "developer", label: "Developer" },
-                          { key: "pm", label: "Product Manager" },
-                          { key: "avp", label: "AVP" },
+                          { key: "group1", label: "group 1" },
+                          { key: "group2", label: "group 2" },
+                          { key: "group3", label: "Group 3" },
                         ].map(({ key, label }) => (
                           <div key={key}>
                             <label className="block text-xs font-medium mb-2" style={{ 

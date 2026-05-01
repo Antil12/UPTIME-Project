@@ -340,9 +340,9 @@ export const addSite = async (req, res) => {
     const now = Date.now();
 
     const normalizedAlertGroups = {
-      developer: normalizeAlertGroupValue(alertGroups?.developer),
-      pm:        normalizeAlertGroupValue(alertGroups?.pm),
-      avp:       normalizeAlertGroupValue(alertGroups?.avp),
+      group1: normalizeAlertGroupValue(alertGroups?.group1),
+      group2:        normalizeAlertGroupValue(alertGroups?.group2),
+      group3:       normalizeAlertGroupValue(alertGroups?.group3),
     };
 
     await validateAlertGroupEmails(normalizedAlertGroups);
@@ -466,9 +466,9 @@ export const updateSite = async (req, res) => {
 
     if (alertGroups) {
       const normalizedAlertGroups = {
-        developer: normalizeAlertGroupValue(alertGroups.developer),
-        pm:        normalizeAlertGroupValue(alertGroups.pm),
-        avp:       normalizeAlertGroupValue(alertGroups.avp),
+        group1: normalizeAlertGroupValue(alertGroups.group1),
+        group2:        normalizeAlertGroupValue(alertGroups.group2),
+        group3:       normalizeAlertGroupValue(alertGroups.group3),
       };
       await validateAlertGroupEmails(normalizedAlertGroups);
       updatedData.alertGroups = normalizedAlertGroups;

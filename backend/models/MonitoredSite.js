@@ -102,9 +102,9 @@ const monitoredSiteSchema = new mongoose.Schema({
 
   // ── Alert Groups (specific emails for each role) ─────────────────────────────
   alertGroups: {
-    developer: { type: [String], default: [] },
-    pm:        { type: [String], default: [] },
-    avp:       { type: [String], default: [] },
+    group1: { type: [String], default: [] },
+    group2:        { type: [String], default: [] },
+    group3:       { type: [String], default: [] },
   },
 
   // ── Outage Tracking ──────────────────────────────────────────────────────────

@@ -8,9 +8,9 @@ const ALERT_LEVELS = [
 ];
 
 const ALERT_ROLES = [
-  { key: "developer", label: "Developer"       },
-  { key: "pm",        label: "Product Manager" },
-  { key: "avp",       label: "AVP"             },
+  { key: "group1", label: "group 1"       },
+  { key: "group2",        label: "Group 2" },
+  { key: "group3",       label: "Group 3"             },
 ];
 
 const AlertRoutingForm = ({ value, onChange }) => {
