@@ -34,18 +34,7 @@ const userSchema = new mongoose.Schema(
     default: [],
   },
 
-  // ── Alert Role (separate from auth role: SUPERADMIN/USER/VIEWER) ─────────────
-  alertRole: {
-    type: String,
-    enum: ["group1", "group2", "group3", null],
-    default: null,
-  },
-
-  // ── Alert Categories (site categories this user wants alerts for) ────────────
-  alertCategories: {
-    type: [String],
-    default: [],
-  },
+ 
 },
 { timestamps: true }  
 );

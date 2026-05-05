@@ -269,7 +269,7 @@ const DomainFilterDropdown = ({
 };
 
 // ─── HUD Column Settings ──────────────────────────────────────────────────────
-const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleColumn, searchColumn, setSearchColumn, DEFAULT_COLUMNS, menuRef }) => (
+const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleColumn, searchColumn, setSearchColumn, DEFAULT_COLUMNS, menuRef, visibleColumnsForRole }) => (
   <PortalDropdown anchorRef={anchorRef} open={open} align="right">
     <motion.div
       ref={menuRef}
@@ -323,7 +323,7 @@ const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleCol
       </div>
       <div className="px-4 py-2.5" style={{ borderTop: "1px solid rgba(56,189,248,0.07)" }}>
         <span style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.75)" }}>
-          {DEFAULT_COLUMNS.length - hiddenColumns.length} columns visible
+          {visibleColumnsForRole.filter((col) => !hiddenColumns.includes(col)).length} columns visible
         </span>
       </div>
     </motion.div>
@@ -379,10 +379,12 @@ const SslBadge = ({ item }) => {
   return <span style={{ ...monoLabel, fontSize: "10px", color }}>{getText()}</span>;
 };
 
+// ─── ActionBtn — stops propagation so row-click selection isn't triggered ─────
 const ActionBtn = ({ onClick, title, children, danger = false }) => (
   <motion.button
     whileHover={{ scale: 1.14, y: -1 }} whileTap={{ scale: 0.88 }}
-    onClick={onClick} title={title}
+    onClick={(e) => { e.stopPropagation(); onClick?.(e); }}
+    title={title}
     className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200"
     style={{ background: danger ? "rgba(248,113,113,0.07)" : "rgba(56,189,248,0.07)", border: danger ? "1px solid rgba(248,113,113,0.14)" : "1px solid rgba(56,189,248,0.12)", color: danger ? "rgba(248,113,113,0.7)" : "rgba(56,189,248,0.65)" }}
   >
@@ -425,6 +427,7 @@ const UrlTable = forwardRef(({
     if (isViewer && col === "actions") return false;
     return true;
   });
+
   const filteredColumns = visibleColumnsForRole.filter((col) =>
     col.toLowerCase().includes(searchColumn.toLowerCase())
   );
@@ -542,10 +545,6 @@ const UrlTable = forwardRef(({
     }
   };
 
-  // ── handleGlobalCheck — calls the rewritten globalCheckSite endpoint ──────────
-  // The backend now runs a real HTTP check for each region independently.
-  // Results are different per region (not India stamped on all).
-  // The modal shows a warning banner when Lambda is not yet deployed.
   const handleGlobalCheck = async (siteId) => {
     setGlobalCheckLoading(siteId);
     try {
@@ -591,6 +590,16 @@ const UrlTable = forwardRef(({
     ...monoLabel, fontSize: "9px", color: "#38bdf8", whiteSpace: "nowrap",
   };
 
+  // ─── Row click handler for selection mode ─────────────────────────────────
+  const handleRowClick = useCallback((itemId) => {
+    if (!selectionMode) return;
+    setSelectedIds((prev) =>
+      prev.includes(itemId)
+        ? prev.filter((id) => id !== itemId)
+        : [...prev, itemId]
+    );
+  }, [selectionMode, setSelectedIds]);
+
   return (
     <div className="w-full">
       {/* ─── Global Check Modal ─── */}
@@ -617,7 +626,6 @@ const UrlTable = forwardRef(({
                 </motion.button>
               </div>
 
-              {/* ── Warning banner: shown when Lambda workers are not deployed ── */}
               {globalCheckModalData.isBackendDirect && (
                 <motion.div
                   initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
@@ -694,6 +702,7 @@ const UrlTable = forwardRef(({
             filteredColumns={filteredColumns} hiddenColumns={hiddenColumns}
             toggleColumn={toggleColumn} searchColumn={searchColumn}
             setSearchColumn={setSearchColumn} DEFAULT_COLUMNS={DEFAULT_COLUMNS}
+            visibleColumnsForRole={visibleColumnsForRole}
           />
         )}
       </AnimatePresence>
@@ -832,6 +841,7 @@ const UrlTable = forwardRef(({
                     onPin={onPin} onEdit={onEdit} onDelete={onDelete}
                     siteLogs={siteLogs} theme={theme} colSpan={visibleColsCount}
                     handleGlobalCheck={handleGlobalCheck} globalCheckLoading={globalCheckLoading}
+                    onRowClick={handleRowClick}
                   />
                 ))}
               </tbody>
@@ -867,25 +877,54 @@ const UrlTable = forwardRef(({
       <div className="lg:hidden space-y-4">
         {sortedData.map((item, idx) => {
           const isExpanded     = expandedSite === item._id;
+          const isSelected     = selectedIds.includes(item._id);
           const statusColorMap = { UP: "#34d399", SLOW: "#fbbf24", DOWN: "#f87171" };
           const accentColor    = statusColorMap[item.status] || "rgba(148,163,184,0.3)";
 
           return (
-            <motion.div key={item._id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}>
-              <div className="relative rounded-2xl overflow-hidden" style={{ background: "rgba(3,7,18,0.75)", border: "1px solid rgba(56,189,248,0.1)", backdropFilter: "blur(20px)", boxShadow: "0 0 24px rgba(56,189,248,0.03)" }}>
+            <motion.div
+              key={item._id}
+              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.04, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+              onClick={() => selectionMode && handleRowClick(item._id)}
+            >
+              <div
+                className="relative rounded-2xl overflow-hidden transition-all duration-200"
+                style={{
+                  background: isSelected && selectionMode ? "rgba(56,189,248,0.06)" : "rgba(3,7,18,0.75)",
+                  border: isSelected && selectionMode ? "1px solid rgba(56,189,248,0.35)" : "1px solid rgba(56,189,248,0.1)",
+                  backdropFilter: "blur(20px)",
+                  boxShadow: "0 0 24px rgba(56,189,248,0.03)",
+                  cursor: selectionMode ? "pointer" : "default",
+                }}
+              >
                 <div className="h-[1px]" style={{ background: `linear-gradient(90deg, transparent 0%, ${accentColor}55 40%, transparent 100%)` }} />
                 <div className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: `linear-gradient(to bottom, ${accentColor}70, transparent)` }} />
 
                 <div className="p-5 pl-6">
                   <div className="flex items-center justify-between mb-4">
-                    <button onClick={() => handleToggleSite(item)} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", color: "#38bdf8", fontWeight: 400 }}
-                      className="hover:underline text-left flex items-center gap-2">
+                    {selectionMode && (
+                      <div
+                        className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 mr-3 transition-all duration-200"
+                        style={{
+                          border: isSelected ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.1)",
+                          background: isSelected ? "rgba(56,189,248,0.15)" : "transparent",
+                        }}
+                      >
+                        {isSelected && <span style={{ color: "#38bdf8", fontSize: "8px" }}>✓</span>}
+                      </div>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleToggleSite(item); }}
+                      style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", color: "#38bdf8", fontWeight: 400 }}
+                      className="hover:underline text-left flex items-center gap-2 flex-1"
+                    >
                       {item.domain}<ExpandChevron expanded={isExpanded} />
                     </button>
                     <StatusBadge status={item.status} />
                   </div>
 
-                  <a href={item.url} target="_blank" rel="noreferrer" className="block mb-4 break-all hover:underline" style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)" }}>{item.url}</a>
+                  <a href={item.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="block mb-4 break-all hover:underline" style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)" }}>{item.url}</a>
 
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     {[{ label: "Status Code", value: item.statusCode || "--" }, { label: "SSL", value: <SslBadge item={item} /> }].map(({ label, value }) => (
@@ -900,13 +939,20 @@ const UrlTable = forwardRef(({
 
                   <div className="flex items-center justify-between">
                     {!isViewer && (
-                      <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => onEdit(item)}
+                      <motion.button
+                        whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
                         className="px-4 py-2 rounded-xl"
-                        style={{ ...monoLabel, fontSize: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.22)", color: "#38bdf8" }}>
+                        style={{ ...monoLabel, fontSize: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.22)", color: "#38bdf8" }}
+                      >
                         Edit
                       </motion.button>
                     )}
-                    <button onClick={() => handleToggleSite(item)} style={{ ...monoLabel, fontSize: "10px", color: "rgba(56,189,248,0.6)" }} className="hover:underline ml-auto">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleToggleSite(item); }}
+                      style={{ ...monoLabel, fontSize: "10px", color: "rgba(56,189,248,0.6)" }}
+                      className="hover:underline ml-auto"
+                    >
                       {isExpanded ? "Hide Report ↑" : "View Report ↓"}
                     </button>
                   </div>
@@ -942,7 +988,10 @@ const FragmentRow = ({
   item, i, selectionMode, selectedIds, setSelectedIds, hiddenColumns,
   isSuperAdmin, isViewer, expandedSite, handleToggleSite, onPin, onEdit,
   onDelete, siteLogs, theme, colSpan, handleGlobalCheck, globalCheckLoading,
+  onRowClick,
 }) => {
+  const isSelected = selectedIds.includes(item._id);
+
   return (
     <>
       <motion.tr
@@ -950,18 +999,38 @@ const FragmentRow = ({
         transition={{ delay: i * 0.025, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         role="row" tabIndex={0}
         className="group transition-all duration-200"
-        style={{ borderTop: "1px solid rgba(56,189,248,0.045)" }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(56,189,248,0.03)"; e.currentTarget.style.boxShadow = "inset 2px 0 0 rgba(56,189,248,0.25)"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.boxShadow = "none"; }}
+        onClick={() => onRowClick(item._id)}
+        style={{
+          borderTop: "1px solid rgba(56,189,248,0.045)",
+          cursor: selectionMode ? "pointer" : "default",
+          background: isSelected && selectionMode ? "rgba(56,189,248,0.05)" : "transparent",
+          boxShadow: isSelected && selectionMode ? "inset 2px 0 0 rgba(56,189,248,0.5)" : "none",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = isSelected && selectionMode
+            ? "rgba(56,189,248,0.07)"
+            : "rgba(56,189,248,0.03)";
+          if (!isSelected) e.currentTarget.style.boxShadow = "inset 2px 0 0 rgba(56,189,248,0.25)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = isSelected && selectionMode ? "rgba(56,189,248,0.05)" : "transparent";
+          e.currentTarget.style.boxShadow  = isSelected && selectionMode ? "inset 2px 0 0 rgba(56,189,248,0.5)" : "none";
+        }}
       >
         {selectionMode && (
           <td className="px-4 py-3">
             <div
               className="w-4 h-4 rounded flex items-center justify-center cursor-pointer transition-all duration-200"
-              style={{ border: selectedIds.includes(item._id) ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.1)", background: selectedIds.includes(item._id) ? "rgba(56,189,248,0.15)" : "transparent" }}
-              onClick={() => setSelectedIds((prev) => prev.includes(item._id) ? prev.filter((id) => id !== item._id) : [...prev, item._id])}
+              style={{
+                border: isSelected ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.1)",
+                background: isSelected ? "rgba(56,189,248,0.15)" : "transparent",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRowClick(item._id);
+              }}
             >
-              {selectedIds.includes(item._id) && <span style={{ color: "#38bdf8", fontSize: "8px" }}>✓</span>}
+              {isSelected && <span style={{ color: "#38bdf8", fontSize: "8px" }}>✓</span>}
             </div>
           </td>
         )}
@@ -974,9 +1043,11 @@ const FragmentRow = ({
           <td className="px-4 py-3">
             <div className="flex items-center gap-2">
               {item.pinned && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ color: "rgba(56,189,248,0.6)", fontSize: "11px" }}>📌</motion.span>}
-              <button onClick={() => handleToggleSite(item)}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleToggleSite(item); }}
                 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "#38bdf8", letterSpacing: "0.02em", fontWeight: 400 }}
-                className="hover:underline text-left flex items-center gap-1.5">
+                className="hover:underline text-left flex items-center gap-1.5"
+              >
                 {item.domain}<ExpandChevron expanded={expandedSite === item._id} />
               </button>
             </div>
@@ -985,7 +1056,12 @@ const FragmentRow = ({
 
         {!hiddenColumns.includes("url") && (
           <td className="px-4 py-3 max-w-xs">
-            <a href={item.url} target="_blank" rel="noreferrer" className="hover:underline truncate block" style={{ ...monoLabel, fontSize: "10px", color: "rgba(56,189,248,0.78)" }}>{item.url}</a>
+            <a
+              href={item.url} target="_blank" rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="hover:underline truncate block"
+              style={{ ...monoLabel, fontSize: "10px", color: "rgba(56,189,248,0.78)" }}
+            >{item.url}</a>
           </td>
         )}
 
@@ -1003,7 +1079,7 @@ const FragmentRow = ({
               <StatusBadge status={item.globalStatus || "UNKNOWN"} />
               <motion.button
                 whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
-                onClick={() => handleGlobalCheck(item._id)}
+                onClick={(e) => { e.stopPropagation(); handleGlobalCheck(item._id); }}
                 disabled={globalCheckLoading === item._id}
                 title="Manual Global Check — runs real HTTP check for each region"
                 className="w-5 h-5 flex items-center justify-center rounded transition-all"
