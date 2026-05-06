@@ -998,7 +998,18 @@ const BulkUpload = () => {
                       color: "rgba(148,163,184,0.74)",
                     }}
                   >
-                    <li>• <span className="text-white">category</span> → default: <span className="text-sky-300">UNCATEGORIZED</span></li>
+                    <li className="leading-relaxed">
+                   • <span className="text-white font-medium">Category</span>
+                     <span className="text-gray-400"> (default: </span>
+                     <span className="text-sky-300 font-semibold">UNCATEGORIZED</span>
+                     <span className="text-gray-400">)</span>
+                     <br />
+                     <span className="text-gray-400">Allowed values:</span>
+                     <span className="text-sky-300 font-medium">
+                       {" "}
+                    JOURNALS, E-JAYPEE, JPMEDPUB, JP-DIGITAL, DIGINERVE
+                    </span>
+                    </li>
                     <li>• <span className="text-white">priority</span> → default: <span className="text-sky-300">0</span></li>
                     <li>• <span className="text-white">email</span> → contact email(s), comma-separated for multiple</li>
                   </ul>
