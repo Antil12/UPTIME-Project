@@ -12,6 +12,7 @@
     "seed": "node seed/createSuperAdmin.js"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.1043.0",
     "@bull-board/api": "^6.20.3",
     "@bull-board/express": "^6.20.3",
     "@sendgrid/mail": "^8.1.6",
