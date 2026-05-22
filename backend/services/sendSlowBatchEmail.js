@@ -4,51 +4,122 @@ import { fileURLToPath } from "url";
 import Mustache from "mustache";
 import emailService, { formatToIST } from "./emailService.js";
 
-// Compute __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname  = path.dirname(__filename);
 
-// Resolve template path: support being run from project root or from backend folder
-const tplCandidates = [
-  path.join(process.cwd(), "templates", "emailjs_style_slowBatch.html"),
-  path.join(process.cwd(), "backend", "templates", "emailjs_style_slowBatch.html"),
-  path.join(__dirname, "..", "templates", "emailjs_style_slowBatch.html"),
-  path.join(__dirname, "templates", "emailjs_style_slowBatch.html"),
+// ─── Template filenames — exact names on disk ─────────────────────────────────
+const TEMPLATE_FILES = {
+  DOWN:          "Site_down_email.html",
+  HIGH_PRIORITY: "High_priority_email.html",
+  SLOW:          "Slow_response_email.html",
+};
+
+// Search roots — checked in order, first match wins
+const SEARCH_ROOTS = [
+  path.join(process.cwd(), "templates"),
+  path.join(process.cwd(), "backend", "templates"),
+  path.join(__dirname, "..", "templates"),
+  path.join(__dirname, "templates"),
 ];
 
-let tplPath = tplCandidates.find((p) => p && fs.existsSync(p));
+// ─── Resolve template path ────────────────────────────────────────────────────
+const resolveTemplatePath = (alertType) => {
+  const filename = TEMPLATE_FILES[alertType] || TEMPLATE_FILES.SLOW;
 
+  for (const root of SEARCH_ROOTS) {
+    const full = path.join(root, filename);
+    console.log(`🔍 [TEMPLATE] Checking: ${full}`);
+    if (fs.existsSync(full)) {
+      console.log(`✅ [TEMPLATE] Found: ${full}`);
+      return full;
+    }
+  }
+
+  // Last-resort: SLOW fallback
+  for (const root of SEARCH_ROOTS) {
+    const full = path.join(root, TEMPLATE_FILES.SLOW);
+    if (fs.existsSync(full)) {
+      console.warn(`⚠️  [TEMPLATE] Using SLOW fallback: ${full}`);
+      return full;
+    }
+  }
+
+  console.error(`❌ [TEMPLATE] No template found for alertType="${alertType}". Roots searched:`, SEARCH_ROOTS);
+  return null;
+};
+
+// ─── Plain inline fallback (only if NO file found at all) ─────────────────────
+const INLINE_FALLBACK = `<!doctype html><html><body>
+<h3>{{title}}</h3>
+<table style="width:100%;border-collapse:collapse;">
+{{#slowSites}}
+<tr style="border-bottom:1px solid #e5e7eb;">
+  <td style="padding:12px;font-size:14px;">{{domain}}</td>
+  <td style="padding:12px;font-size:14px;font-weight:bold;">{{status}}</td>
+  <td style="padding:12px;font-size:14px;">{{responseTimeMs}}ms</td>
+  <td style="padding:12px;font-size:14px;">{{checkedAt}}</td>
+</tr>
+{{/slowSites}}
+</table>
+</body></html>`;
+
+// ─── Render ───────────────────────────────────────────────────────────────────
 const renderHtml = (batch) => {
-  let tpl = null;
+  const alertType = (batch.alertType || "SLOW").toUpperCase();
+
+  console.log(`📧 [RENDER] alertType="${alertType}"`);
+
+  const tplPath = resolveTemplatePath(alertType);
+
+  let tpl;
   if (tplPath) {
     tpl = fs.readFileSync(tplPath, "utf8");
   } else {
-    // fallback inline template if file missing
-    tpl = `<!doctype html><html><body><h3>{{title}} — {{downCount}}</h3><table style="width:100%; border-collapse:collapse;">{{#slowSites}}<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:12px; font-size:14px;">{{domain}}</td><td style="padding:12px; font-size:14px; color:{{statusColor}}; font-weight:bold;">{{status}}</td><td style="padding:12px; font-size:14px;">{{responseTimeMs}}</td><td style="padding:12px; font-size:14px;">{{checkedAt}}</td></tr>{{/slowSites}}</table></body></html>`;
-    console.warn("⚠️ Template file not found; using fallback inline template");
+    console.warn("⚠️  [RENDER] No template file found; using inline fallback");
+    tpl = INLINE_FALLBACK;
   }
 
-  const defaultStatus = batch.alertType === "DOWN" ? "DOWN" : (batch.alertType === "HIGH_PRIORITY" ? "HIGH PRIORITY" : "SLOW");
+  const labelMap = {
+    DOWN:          "DOWN",
+    HIGH_PRIORITY: "HIGH PRIORITY",
+    SLOW:          "SLOW",
+  };
+  const defaultStatus = labelMap[alertType] || "SLOW";
 
   const payload = {
-    title: `${defaultStatus} sites detected (${batch.downCount || 0})`,
+    title:     `${defaultStatus} sites detected (${batch.downCount || 0})`,
     checkedAt: batch.checkedAt ? formatToIST(batch.checkedAt) : formatToIST(new Date()),
-    slowSites: (batch.slowSites || []).map((s) => ({
-      domain: s.domain,
-      url: s.url,
-      responseTimeMs: s.responseTimeMs ?? "—",
-      threshold: s.threshold ?? "—",
-      status: s.status || defaultStatus,
-      statusColor: (s.status || defaultStatus) === "DOWN" || (s.status || defaultStatus) === "HIGH PRIORITY" ? "#DB2511" : "#0f5132",
-      checkedAt: s.checkedAt ? formatToIST(s.checkedAt) : formatToIST(new Date()),
-    })),
+    slowSites: (batch.slowSites || []).map((s) => {
+      const status = s.status || defaultStatus;
+      return {
+        domain:         s.domain,
+        url:            s.url,
+        responseTimeMs: s.responseTimeMs ?? "—",
+        threshold:      s.threshold ?? "—",
+        status,
+        statusColor:    ["DOWN", "HIGH PRIORITY"].includes(status) ? "#DB2511" : "#0f5132",
+        checkedAt:      s.checkedAt ? formatToIST(s.checkedAt) : formatToIST(new Date()),
+      };
+    }),
     downCount: batch.downCount || 0,
   };
+
   return Mustache.render(tpl, payload);
 };
 
+// ─── Subject prefix ───────────────────────────────────────────────────────────
+const subjectPrefix = (alertType) => {
+  switch ((alertType || "").toUpperCase()) {
+    case "DOWN":          return "down";
+    case "HIGH_PRIORITY": return "high-priority";
+    default:              return "slow";
+  }
+};
+
+// ─── Main export ──────────────────────────────────────────────────────────────
 export const sendSlowBatchEmail = async (batch) => {
-  // Group slow sites by recipient: site-specific `emailContact` if present, otherwise fallback to ALERT_RECIPIENTS
+  console.log(`🚀 [sendSlowBatchEmail] alertType="${batch.alertType}" | sites=${batch.slowSites?.length ?? 0}`);
+
   const globalRecipients = (process.env.ALERT_RECIPIENTS || "")
     .split(",")
     .map((s) => s.trim())
@@ -64,25 +135,22 @@ export const sendSlowBatchEmail = async (batch) => {
       : [];
 
     if (siteEmails.length > 0) {
-      // add site to each recipient's bucket
       siteEmails.forEach((target) => {
         if (!recipientMap.has(target)) recipientMap.set(target, []);
         recipientMap.get(target).push(s);
       });
     } else {
-      // attach to global bucket
       const key = globalRecipients.join(",") || "__GLOBAL__";
       if (!recipientMap.has(key)) recipientMap.set(key, []);
       recipientMap.get(key).push(s);
     }
   });
 
-  // If there were no site-specific recipients and no global recipients, bail
-  if (recipientMap.size === 0) {
-    if (globalRecipients.length === 0) throw new Error("No ALERT_RECIPIENTS configured and no site emailContact provided");
+  if (recipientMap.size === 0 && globalRecipients.length === 0) {
+    throw new Error("No ALERT_RECIPIENTS configured and no site emailContact provided");
   }
 
-  // Send one email per recipient (or one email to global recipients with combined sites)
+  const prefix = subjectPrefix(batch.alertType);
   const sendPromises = [];
 
   for (const [key, sites] of recipientMap.entries()) {
@@ -96,25 +164,25 @@ export const sendSlowBatchEmail = async (batch) => {
     }
 
     const miniBatch = {
-      batchId: batch.batchId,
+      batchId:   batch.batchId,
       downCount: sites.length,
       slowSites: sites,
       checkedAt: batch.checkedAt,
-      alertType: batch.alertType || null,
+      alertType: batch.alertType || "SLOW",
     };
 
     const html = renderHtml(miniBatch);
 
-    const prefix = miniBatch.alertType === "DOWN" ? "down" : (miniBatch.alertType === "HIGH_PRIORITY" ? "high-priority" : "slow");
-
     sendPromises.push(
-      emailService.sendEmail({
-        to,
-        subject: `UPTIME Alert — ${miniBatch.downCount} ${prefix} site(s)`,
-        html,
-      }).catch((err) => {
-        console.error(`Failed to send slow-batch email to ${to}:`, err.message || err);
-      })
+      emailService
+        .sendEmail({
+          to,
+          subject: `UPTIME Alert — ${miniBatch.downCount} ${prefix} site(s)`,
+          html,
+        })
+        .catch((err) => {
+          console.error(`❌ Failed to send email to ${to}:`, err.message || err);
+        })
     );
   }
 
