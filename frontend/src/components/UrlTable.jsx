@@ -446,6 +446,7 @@ const UrlTable = forwardRef(({
   const [sortOrder,          setSortOrder]           = useState("ASC");
   const [expandedSite,       setExpandedSite]        = useState(null);
   const [siteLogs,           setSiteLogs]            = useState({});
+  const [siteStats,          setSiteStats]           = useState({});
 
   const [showDomainFilter,   setShowDomainFilter]    = useState(false);
   const [showSslFilter,      setShowSslFilter]       = useState(false);
@@ -541,11 +542,26 @@ const UrlTable = forwardRef(({
     if (next && !siteLogs[item._id]) {
       try {
         const token = localStorage.getItem("loginToken");
-        const res   = await axios.get(`${LOG_API_BASE}/${item._id}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-        setSiteLogs((prev) => ({ ...prev, [item._id]: res.data?.data || [] }));
+        
+        // Fetch logs
+        const logsRes = await axios.get(`${LOG_API_BASE}/${item._id}`, { 
+          headers: token ? { Authorization: `Bearer ${token}` } : {} 
+        });
+        setSiteLogs((prev) => ({ ...prev, [item._id]: logsRes.data?.data || [] }));
+        
+        // Fetch stats (7 days by default)
+        const statsRes = await axios.get(`${LOG_API_BASE}/report-data`, {
+          params: { siteIds: item._id, range: "7d" },
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        
+        if (statsRes.data?.data?.statsMap?.[item._id]) {
+          setSiteStats((prev) => ({ ...prev, [item._id]: statsRes.data.data.statsMap[item._id] }));
+        }
       } catch (err) {
-        console.error("Failed to fetch site logs", err);
+        console.error("Failed to fetch site logs or stats", err);
         setSiteLogs((prev) => ({ ...prev, [item._id]: [] }));
+        setSiteStats((prev) => ({ ...prev, [item._id]: {} }));
       }
     }
   };
@@ -844,7 +860,7 @@ const UrlTable = forwardRef(({
                     hiddenColumns={hiddenColumns} isSuperAdmin={isSuperAdmin} isViewer={isViewer}
                     expandedSite={expandedSite} handleToggleSite={handleToggleSite}
                     onPin={onPin} onEdit={onEdit} onDelete={onDelete}
-                    siteLogs={siteLogs} theme={theme} colSpan={visibleColsCount}
+                    siteLogs={siteLogs} siteStats={siteStats} theme={theme} colSpan={visibleColsCount}
                     handleGlobalCheck={handleGlobalCheck} globalCheckLoading={globalCheckLoading}
                     onRowClick={handleRowClick}
                   />
@@ -973,7 +989,7 @@ const UrlTable = forwardRef(({
                     style={{ background: "rgba(3,7,18,0.68)", border: "1px solid rgba(56,189,248,0.09)", backdropFilter: "blur(16px)" }}
                   >
                     <div className="p-4">
-                      <SiteReport site={item} logs={siteLogs[item._id] || []} theme={theme} />
+                      <SiteReport site={item} logs={siteLogs[item._id] || []} stats={siteStats[item._id] || {}} theme={theme} />
                     </div>
                   </motion.div>
                 )}
@@ -992,7 +1008,7 @@ UrlTable.displayName = "UrlTable";
 const FragmentRow = ({
   item, i, selectionMode, selectedIds, setSelectedIds, hiddenColumns,
   isSuperAdmin, isViewer, expandedSite, handleToggleSite, onPin, onEdit,
-  onDelete, siteLogs, theme, colSpan, handleGlobalCheck, globalCheckLoading,
+  onDelete, siteLogs, siteStats, theme, colSpan, handleGlobalCheck, globalCheckLoading,
   onRowClick,
 }) => {
   const isSelected = selectedIds.includes(item._id);
@@ -1153,7 +1169,7 @@ const FragmentRow = ({
                 style={{ background: "rgba(56,189,248,0.018)", borderTop: "1px solid rgba(56,189,248,0.09)", borderBottom: "1px solid rgba(56,189,248,0.09)" }}
               >
                 <div className="p-5">
-                  <SiteReport site={item} logs={siteLogs[item._id] || []} theme={theme} />
+                  <SiteReport site={item} logs={siteLogs[item._id] || []} stats={siteStats[item._id] || {}} theme={theme} />
                 </div>
               </motion.div>
             </td>
