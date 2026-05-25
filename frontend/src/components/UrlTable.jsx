@@ -474,7 +474,12 @@ const UrlTable = forwardRef(({
   }, [allUrls]);
 
   const filteredData = urls.filter((u) => {
-    const categoryMatch = selectedCategories.includes("ALL") || selectedCategories.includes(u.category);
+    const categoryMatch = selectedCategories.includes("ALL") || selectedCategories.some(cat => {
+      if (cat === "UNCATEGORIZED") {
+        return !u.category;
+      }
+      return u.category === cat;
+    });
     const statusMatch   = selectedStatus    === "ALL" || u.status    === selectedStatus;
     const sslMatch      = selectedSslStatus === "ALL" || u.sslStatus === selectedSslStatus;
     const roleMatch     = selectedRole      === "ALL" || u.ownerRole === selectedRole;

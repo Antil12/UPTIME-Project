@@ -663,7 +663,7 @@ const Dashboard = ({
  
         {/* ─── Table / Empty State ─── */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32, duration: 0.5 }}>
-          {tableRows.length === 0 ? (
+          {tableRows.length === 0 && !filtersActive && !search ? (
             <div className="rounded-2xl p-12 text-center" style={{ background: "rgba(3,7,18,0.68)", border: "1px solid rgba(56,189,248,0.08)", backdropFilter: "blur(16px)" }}>
               <div className="mx-auto mb-5 w-14 h-14 rounded-2xl flex items-center justify-center border" style={{ borderColor: "rgba(56,189,248,0.12)", background: "rgba(255,255,255,0.02)" }}>
                 <Globe2 size={22} style={{ color: "#38bdf8" }} />
@@ -672,25 +672,36 @@ const Dashboard = ({
               <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(148,163,184,0.45)" }}>Try adjusting your search or filters.</p>
             </div>
           ) : (
-            <UrlTable
-              ref={urlTableRef}
-              urls={tableRows}
-              allUrls={urls}
-              currentUser={currentUser}
-              selectionMode={selectionMode}
-              selectedIds={selectedIds}
-              setSelectedIds={setSelectedIds}
-              selectedSslStatus={selectedSslStatus}
-              setSelectedSslStatus={setSelectedSslStatus}
-              onPin={onPin}
-              onDelete={onDelete}
-              onEdit={onEdit}
-              categories={categories}
-              selectedCategories={selectedCategories}
-              setSelectedCategories={setSelectedCategories}
-              selectedStatus={selectedStatus}
-              setSelectedStatus={setSelectedStatus}
-            />
+            <>
+              <UrlTable
+                ref={urlTableRef}
+                urls={tableRows}
+                allUrls={urls}
+                currentUser={currentUser}
+                selectionMode={selectionMode}
+                selectedIds={selectedIds}
+                setSelectedIds={setSelectedIds}
+                selectedSslStatus={selectedSslStatus}
+                setSelectedSslStatus={setSelectedSslStatus}
+                onPin={onPin}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                categories={categories}
+                selectedCategories={selectedCategories}
+                setSelectedCategories={setSelectedCategories}
+                selectedStatus={selectedStatus}
+                setSelectedStatus={setSelectedStatus}
+              />
+              {tableRows.length === 0 && (filtersActive || search) && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.3 }} className="rounded-2xl p-12 text-center mt-4" style={{ background: "rgba(3,7,18,0.68)", border: "1px solid rgba(56,189,248,0.08)", backdropFilter: "blur(16px)" }}>
+                  <div className="mx-auto mb-5 w-14 h-14 rounded-2xl flex items-center justify-center border" style={{ borderColor: "rgba(56,189,248,0.12)", background: "rgba(255,255,255,0.02)" }}>
+                    <Globe2 size={22} style={{ color: "#38bdf8" }} />
+                  </div>
+                  <h3 className="text-white mb-2" style={{ fontFamily: "'Orbitron', sans-serif", letterSpacing: "0.05em", fontWeight: 700, fontSize: "14px" }}>NO RESULTS FOUND</h3>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(148,163,184,0.45)" }}>Try adjusting your search or filters.</p>
+                </motion.div>
+              )}
+            </>
           )}
         </motion.div>
  
