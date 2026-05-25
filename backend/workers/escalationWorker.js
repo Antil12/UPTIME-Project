@@ -10,10 +10,15 @@ import { handleRoutedAlertBatch } from "../services/alertService.js";
    Level 1 → 30 min  → Group 1 "down"     (first alert — site has been down 30 min)
    Level 2 → 1 hr    → Group 2 "trouble"  (still down after 1 hr)
    Level 3 → 3 hrs   → Group 3 "critical" (still down after 3 hrs)
+
+   After Level 3 fires:
+   → escalationLevel resets to 0 and downSince is reset to NOW
+   → the full 30 min → 1 hr → 3 hr cycle restarts automatically
+   → this continues indefinitely until the site recovers
 ───────────────────────────────────────────────────────────────────────────── */
 const ESCALATION_RULES = [
-  { level: 1, delay:  2 * 60 * 1000,      alertLevel: "down"     }, // 30 min → Group 1
-  { level: 2, delay: 4 * 60 * 1000,      alertLevel: "trouble"  }, // 1 hr   → Group 2
+  { level: 1, delay:  2 * 60 * 1000,     alertLevel: "down"     }, // 30 min → Group 1
+  { level: 2, delay:  4 * 60 * 1000,     alertLevel: "trouble"  }, // 1 hr   → Group 2
   { level: 3, delay:   3 * 60 * 60 * 1000, alertLevel: "critical" }, // 3 hrs  → Group 3
 ];
 
@@ -123,16 +128,38 @@ export const startEscalationWorker = () => {
               );
             }
 
-            // Advance escalation level — even if no recipients, so we don't retry forever
-            await MonitoredSite.updateOne(
-              { _id: site._id },
-              {
-                $set: {
-                  escalationLevel:  rule.level,
-                  lastEscalationAt: now,
-                },
-              }
-            );
+            // ── Level 3 reached: reset cycle so escalation restarts from Level 1
+            //    The site is still DOWN — we keep it in escalation but reset the
+            //    downSince clock to NOW so the 30 min → 1 hr → 3 hr window begins
+            //    again. This continues indefinitely until the cron marks the site UP.
+            if (rule.level === 3) {
+              console.log(
+                `[ESCALATION] ${site.domain} — Level 3 complete. ` +
+                `Resetting escalation cycle (site still DOWN).`
+              );
+
+              await MonitoredSite.updateOne(
+                { _id: site._id },
+                {
+                  $set: {
+                    escalationLevel:  0,
+                    downSince:        now,   // restart the clock from now
+                    lastEscalationAt: now,
+                  },
+                }
+              );
+            } else {
+              // Advance escalation level normally for Level 1 and Level 2
+              await MonitoredSite.updateOne(
+                { _id: site._id },
+                {
+                  $set: {
+                    escalationLevel:  rule.level,
+                    lastEscalationAt: now,
+                  },
+                }
+              );
+            }
 
             // One escalation step per site per cycle
             break;
