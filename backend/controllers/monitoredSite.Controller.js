@@ -652,7 +652,9 @@ export const checkAndUpdateSiteStatus = async (req, res) => {
         status = "DOWN"; reason = "INVALID_RESPONSE";
       }
     } catch (err) {
-      responseTimeMs = null; statusCode = null; status = "DOWN";
+      responseTimeMs = null;
+      statusCode = err.response?.status ?? 0;
+      status = "DOWN";
       reason = err.code === "ECONNABORTED" ? "TIMEOUT" : (err.message || "REQUEST_FAILED");
     }
 

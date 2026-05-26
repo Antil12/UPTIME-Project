@@ -343,7 +343,7 @@ export default function SiteReport({
                   </p>
                   <div style={{ display:"flex", alignItems:"center", gap:"12px", flexWrap:"wrap" }}>
                     <StatusBadge status={globalCheckModalData.liveStatus} />
-                    {globalCheckModalData.liveStatusCode && (
+                    {globalCheckModalData.liveStatusCode != null && (
                       <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:"10px", color:"rgba(148,163,184,0.5)" }}>
                         HTTP {globalCheckModalData.liveStatusCode}
                       </span>
@@ -410,7 +410,7 @@ export default function SiteReport({
                               {region.responseTimeMs != null && (
                                 <p style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:"9px", color:"rgba(148,163,184,0.5)" }}>{region.responseTimeMs}ms</p>
                               )}
-                              {region.statusCode && (
+                              {region.statusCode != null && (
                                 <p style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:"9px", color:"rgba(148,163,184,0.5)" }}>HTTP {region.statusCode}</p>
                               )}
                             </div>
@@ -605,7 +605,7 @@ export default function SiteReport({
                   {latestDown.responseTimeMs > 0 && (
                     <div style={{ color:"rgba(148,163,184,0.55)", fontSize:"10px", marginTop:2 }}>Response: {latestDown.responseTimeMs} ms</div>
                   )}
-                  {latestDown.statusCode && (
+                  {latestDown.statusCode != null && (
                     <div style={{ color:"rgba(148,163,184,0.55)", fontSize:"10px" }}>HTTP {latestDown.statusCode}</div>
                   )}
                 </div>

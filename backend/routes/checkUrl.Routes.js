@@ -42,7 +42,7 @@ router.get("/check-url", async (req, res) => {
       success: true,
       url,
       status: "DOWN",
-      statusCode: null,
+      statusCode: error.response?.status ?? 0,
       responseTimeMs: null,
       error: error.message,
       checkedAt: new Date(),

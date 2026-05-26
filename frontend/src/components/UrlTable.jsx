@@ -693,10 +693,10 @@ const UrlTable = forwardRef(({
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color, fontWeight: 600 }}>{region.status}</p>
-                          {region.responseTimeMs && (
+                          {region.responseTimeMs != null && (
                             <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>{region.responseTimeMs}ms</p>
                           )}
-                          {region.statusCode && (
+                          {region.statusCode != null && (
                             <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>HTTP {region.statusCode}</p>
                           )}
                         </div>
@@ -948,7 +948,7 @@ const UrlTable = forwardRef(({
                   <a href={item.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="block mb-4 break-all hover:underline" style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)" }}>{item.url}</a>
 
                   <div className="grid grid-cols-2 gap-3 mb-4">
-                    {[{ label: "Status Code", value: item.statusCode || "--" }, { label: "SSL", value: <SslBadge item={item} /> }].map(({ label, value }) => (
+                    {[{ label: "Status Code", value: item.statusCode != null ? item.statusCode : "--" }, { label: "SSL", value: <SslBadge item={item} /> }].map(({ label, value }) => (
                       <div key={label} className="rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
                         <div style={{ ...monoLabel, fontSize: "8px", color: "rgba(148,163,184,0.4)", marginBottom: "6px" }}>{label}</div>
                         <div style={{ ...monoLabel, fontSize: "11px", color: "rgba(148,163,184,0.8)" }}>{value}</div>
@@ -1130,7 +1130,7 @@ const FragmentRow = ({
 
         {!hiddenColumns.includes("statusCode") && (
           <td className="px-4 py-3 text-center" style={{ ...monoLabel, fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>
-            {item.statusCode ? (
+            {item.statusCode != null ? (
               <span style={{ color: item.statusCode >= 200 && item.statusCode < 300 ? "#34d399" : item.statusCode >= 400 ? "#f87171" : "rgba(148,163,184,0.6)" }}>{item.statusCode}</span>
             ) : "--"}
           </td>
