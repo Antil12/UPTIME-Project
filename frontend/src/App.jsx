@@ -57,10 +57,10 @@ const fetchPinnedIds = async () => {
 /**
  * Fetches ONE page of monitored sites from the server.
  */
-const fetchPagedSites = async (status, searchQuery, pageNum) => {
+const fetchPagedSites = async (status, searchQuery, pageNum, limit = PAGE_SIZE) => {
   pagedSitesFlight = (async () => {
     try {
-      let url = `${API_BASE}?page=${pageNum}&limit=${PAGE_SIZE}`;
+      let url = `${API_BASE}?page=${pageNum}&limit=${limit}`;
       if (status && status !== "ALL") url += `&status=${status}`;
       if (searchQuery && searchQuery.trim())
         url += `&q=${encodeURIComponent(searchQuery.trim())}`;
@@ -184,59 +184,82 @@ function App() {
       const resolvedPage = pageNum ?? page;
 
       try {
-        const { data: pagedData, totalCount } =
-          await fetchPagedSites(resolvedStatus, resolvedSearch, resolvedPage);
-
         const pinnedIds = await fetchPinnedIds();
 
-        let pageData = pagedData.map((u) => ({
-          ...u,
-          pinned: pinnedIds.has(u._id),
-        }));
-
-        if (resolvedPage === 1 && pinnedIds.size > 0) {
+        // If there are pinned sites, fetch ALL sites and handle pagination manually
+        if (pinnedIds.size > 0) {
           const rawAll = await fetchAllSitesFull();
 
-          let pinnedFull = rawAll
+          // Separate pinned and unpinned
+          let pinned = rawAll
             .filter((u) => pinnedIds.has(u._id))
             .map((u) => ({ ...u, pinned: true }));
 
+          let unpinned = rawAll
+            .filter((u) => !pinnedIds.has(u._id))
+            .map((u) => ({ ...u, pinned: false }));
+
+          // Apply filters to both
           if (resolvedSearch && resolvedSearch.trim()) {
             const q = resolvedSearch.toLowerCase();
-            pinnedFull = pinnedFull.filter(
-              (u) =>
-                (u.domain || "").toLowerCase().includes(q) ||
-                (u.url || "").toLowerCase().includes(q)
-            );
+            const matchesSearch = (u) =>
+              (u.domain || "").toLowerCase().includes(q) ||
+              (u.url || "").toLowerCase().includes(q);
+            pinned = pinned.filter(matchesSearch);
+            unpinned = unpinned.filter(matchesSearch);
           }
 
           if (resolvedStatus && resolvedStatus !== "ALL") {
-            pinnedFull = pinnedFull.filter(
-              (u) => u.status === resolvedStatus
-            );
+            pinned = pinned.filter((u) => u.status === resolvedStatus);
+            unpinned = unpinned.filter((u) => u.status === resolvedStatus);
           }
 
-          const pinnedSet = new Set(pinnedFull.map((p) => p._id));
-          const unpinnedPage = pageData.filter((u) => !pinnedSet.has(u._id));
-          pageData = [...pinnedFull, ...unpinnedPage].slice(0, PAGE_SIZE);
+          // Combine: pinned first, then unpinned
+          const combined = [...pinned, ...unpinned];
+          const actualTotalCount = combined.length;
+
+          // Paginate
+          const start = (resolvedPage - 1) * PAGE_SIZE;
+          const pageData = combined.slice(start, start + PAGE_SIZE);
+
+          setUrls(pageData);
+          const pages = Math.max(1, Math.ceil(actualTotalCount / PAGE_SIZE));
+          setTotalCount(actualTotalCount);
+          setTotalPages(pages);
+          setPage(Math.min(resolvedPage, pages));
+
+          // Set allUrls for popups
+          setAllUrls(
+            rawAll.map((u) => ({
+              ...u,
+              pinned: pinnedIds.has(u._id),
+            }))
+          );
         } else {
-          pageData = pageData.filter((u) => !u.pinned);
-        }
+          // No pinned sites, use normal pagination
+          const { data: pagedData, totalCount } =
+            await fetchPagedSites(resolvedStatus, resolvedSearch, resolvedPage);
 
-        setUrls(pageData);
-
-        const pages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-        setTotalCount(totalCount);
-        setTotalPages(pages);
-        setPage(Math.min(resolvedPage, pages));
-
-        fetchAllSitesFull().then((rawAll) => {
-          const allWithPinned = rawAll.map((u) => ({
+          const pageData = pagedData.map((u) => ({
             ...u,
-            pinned: pinnedIds.has(u._id),
+            pinned: false,
           }));
-          setAllUrls(allWithPinned);
-        });
+
+          setUrls(pageData);
+          const pages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+          setTotalCount(totalCount);
+          setTotalPages(pages);
+          setPage(Math.min(resolvedPage, pages));
+
+          fetchAllSitesFull().then((rawAll) => {
+            setAllUrls(
+              rawAll.map((u) => ({
+                ...u,
+                pinned: pinnedIds.has(u._id),
+              }))
+            );
+          });
+        }
       } catch (err) {
         if (!isAbortError(err)) {
           console.error("Load data failed:", err);
