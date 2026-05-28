@@ -68,6 +68,33 @@ const axiosRequestWithRetry = async (axiosConfig, retries = 2) => {
   throw lastError;
 };
 
+/* =========================================================
+   Compute the next scheduled time by advancing from the
+   site's CURRENT nextCheckAt, not from wall-clock "now".
+
+   This keeps the schedule perfectly anchored:
+     - A site due at 00:01:00 with 60s frequency will next
+       fire at 00:02:00 regardless of whether the tick ran
+       at 00:01:00 or 00:01:09.
+     - After a restart, nextCheckAt may be far in the past
+       (e.g. 5 missed intervals). We fast-forward it to the
+       first future slot so the site fires on the next tick
+       and then resumes its normal cadence — no burst, no lag.
+========================================================= */
+const computeNextCheckAt = (currentNextCheckAt, siteFrequency, now) => {
+  // Start from the scheduled time (not wall-clock now) so there is zero drift.
+  let next = new Date(currentNextCheckAt.getTime());
+
+  // If the schedule is in the past (e.g. after a restart or long downtime),
+  // fast-forward by whole intervals until we land in the future.
+  // This prevents a burst of back-to-back checks for every missed interval.
+  while (next <= now) {
+    next = new Date(next.getTime() + siteFrequency);
+  }
+
+  return next;
+};
+
 /* ========================================================= */
 
 export const startMonitoringCron = () => {
@@ -84,6 +111,10 @@ export const startMonitoringCron = () => {
       const now = new Date();
       console.log(`🕒 Scheduler tick at ${now.toISOString()}`);
 
+      // ── Fetch sites that are due for a check ──────────────────────────────
+      // We only read the list here.  The actual "claim" — atomically advancing
+      // nextCheckAt — happens per-site inside the map so two concurrent ticks
+      // (e.g. during a rolling restart) cannot double-fire the same site.
       let sites = [];
       try {
         sites = await MonitoredSite.find({
@@ -100,8 +131,8 @@ export const startMonitoringCron = () => {
       console.log(`🔍 ${sites.length} site(s) due for check`);
 
       const checkedAt = new Date();
-      const slowSitesTemp = [];
-      const downSitesTemp = [];
+      const slowSitesTemp    = [];
+      const downSitesTemp    = [];
       const highPriorityTemp = [];
 
       await Promise.all(
@@ -112,20 +143,54 @@ export const startMonitoringCron = () => {
               ? site.checkFrequency
               : DEFAULT_FREQUENCY_MS;
 
-          let status = "UP";
+          // ── ATOMIC CLAIM ──────────────────────────────────────────────────
+          // Compute the next scheduled time anchored to site.nextCheckAt so
+          // the cadence never drifts.  If the schedule was stale (restart /
+          // long pause) we fast-forward to the first future slot.
+          //
+          // The $lte guard in the filter means only the first concurrent tick
+          // that reaches this site will match; subsequent ticks see a future
+          // nextCheckAt and get null → they bail out silently.
+          const scheduledTime = site.nextCheckAt || now; // fallback: treat as due now
+          const nextCheckAt   = computeNextCheckAt(scheduledTime, siteFrequency, now);
+
+          const claimed = await MonitoredSite.findOneAndUpdate(
+            {
+              _id:         site._id,
+              isActive:    1,
+              nextCheckAt: { $lte: now },   // still due — not yet claimed by another tick
+            },
+            {
+              $set: { nextCheckAt },        // anchor to scheduled time, not wall-clock
+            },
+            { new: false }                  // we don't need the updated doc
+          );
+
+          if (!claimed) {
+            // Another tick already claimed and advanced this site — skip.
+            return;
+          }
+
+          console.log(
+            `[CRON] Checking ${site.domain} | freq=${siteFrequency}ms | ` +
+            `was due=${scheduledTime.toISOString()} | next=${nextCheckAt.toISOString()}`
+          );
+
+          // ── HTTP Check ────────────────────────────────────────────────────
+          let status        = "UP";
           let responseTimeMs = null;
-          let statusCode = 0;
+          let statusCode    = 0;
 
           try {
-            const SLOW_THRESHOLD = site.responseThresholdMs || 15000;
+            const SLOW_THRESHOLD       = site.responseThresholdMs || 15000;
             const SHOULD_FALLBACK_TO_GET = [403, 405, 408, 429, 500, 501, 502, 503, 504];
 
             let response;
             let triedGet = false;
-            let start = Date.now();
+            let start    = Date.now();
 
             const baseConfig = {
-              timeout: 15000,
+              timeout:        15000,
               validateStatus: () => true,
               httpsAgent,
               headers: { "User-Agent": "UptimeMonitor/1.0" },
@@ -135,44 +200,44 @@ export const startMonitoringCron = () => {
               response = await axiosRequestWithRetry({
                 ...baseConfig,
                 method: "head",
-                url: site.url,
+                url:    site.url,
               });
             } catch (headErr) {
               logger.warn({ url: site.url, err: headErr.message }, "HEAD failed, trying GET");
               triedGet = true;
-              start = Date.now();
+              start    = Date.now();
               response = await axiosRequestWithRetry({
                 ...baseConfig,
                 method: "get",
-                url: site.url,
+                url:    site.url,
               });
             }
 
             let measuredTime = Date.now() - start;
 
             if (!triedGet && SHOULD_FALLBACK_TO_GET.includes(response.status)) {
-              start = Date.now();
+              start    = Date.now();
               response = await axiosRequestWithRetry({
                 ...baseConfig,
                 method: "get",
-                url: site.url,
+                url:    site.url,
               });
               measuredTime = Date.now() - start;
             }
 
             responseTimeMs = measuredTime;
-            statusCode = response.status;
+            statusCode     = response.status;
 
             if (statusCode >= 200 && statusCode < 400) {
               if (responseTimeMs > SLOW_THRESHOLD) {
                 status = "SLOW";
                 slowSitesTemp.push({
-                  domain: site.domain,
-                  url: site.url,
+                  domain:        site.domain,
+                  url:           site.url,
                   responseTimeMs,
-                  threshold: SLOW_THRESHOLD,
+                  threshold:     SLOW_THRESHOLD,
                   checkedAt,
-                  emailContact: site.emailContact || null,
+                  emailContact:  site.emailContact || null,
                 });
               }
             } else {
@@ -185,9 +250,9 @@ export const startMonitoringCron = () => {
           }
 
           let statusPriority = 4;
-          if (status === "DOWN") statusPriority = 1;
+          if (status === "DOWN")      statusPriority = 1;
           else if (status === "SLOW") statusPriority = 2;
-          else if (status === "UP") statusPriority = 3;
+          else if (status === "UP")   statusPriority = 3;
 
           await SiteCurrentStatus.findOneAndUpdate(
             { siteId: site._id },
@@ -210,21 +275,18 @@ export const startMonitoringCron = () => {
             checkedAt,
           });
 
-          // ──── SLOW: immediate "trouble" routed alert ──────────────────────────────
-          // SLOW alerts fire immediately — they are not escalated.
+          // ──── SLOW: immediate "trouble" routed alert ─────────────────────
           if (status === "SLOW") {
             await handleRoutedAlert(site, "trouble");
           }
 
-          // ──── DOWN: only record downSince — NO alert sent here ───────────────────
-          // The escalation worker owns all routed alerts for DOWN sites:
+          // ──── DOWN: stamp downSince — escalation worker handles alerts ───
           //   Level 1 (30 min)  → Group 1 "down"
           //   Level 2 (1 hr)    → Group 2 "trouble"
           //   Level 3 (3 hrs)   → Group 3 "critical"
           if (status === "DOWN") {
             if (!site.downSince) {
-              // First detection — stamp downSince so the escalation worker can time it
-              site.downSince        = checkedAt; // update in-memory so block won't re-run
+              site.downSince        = checkedAt;
               site.escalationLevel  = 0;
               site.lastEscalationAt = null;
 
@@ -245,7 +307,6 @@ export const startMonitoringCron = () => {
               );
             }
 
-            // failureCount batching still runs (for emailQueue down/high-priority batches)
             const alertResult = await handleStatusAlert(site, "DOWN", checkedAt, responseTimeMs);
             if (alertResult && alertResult.alert) {
               const entry = {
@@ -263,11 +324,10 @@ export const startMonitoringCron = () => {
             }
           }
 
-          // ──── UP: recovery + reset outage tracking ────────────────────────────────
+          // ──── UP: recovery + reset outage tracking ───────────────────────
           if (status === "UP") {
             await handleStatusAlert(site, "UP", checkedAt, responseTimeMs);
 
-            // Only write to DB if the site was previously recorded as down
             if (site.downSince) {
               await MonitoredSite.updateOne(
                 { _id: site._id },
@@ -282,15 +342,14 @@ export const startMonitoringCron = () => {
             }
           }
 
-          // ──── Region checks ───────────────────────────────────────────────────────
+          // ──── Region checks ──────────────────────────────────────────────
           if (site.regions && site.regions.length > 0) {
             const regionResults = await checkRegions(site);
-
-            const downCount = Object.values(regionResults).filter((r) => r === "DOWN").length;
+            const downCount     = Object.values(regionResults).filter((r) => r === "DOWN").length;
 
             const shouldTriggerRegionAlert =
               (!site.alertIfAllRegionsDown && downCount > 0) ||
-              (site.alertIfAllRegionsDown && downCount === site.regions.length);
+              (site.alertIfAllRegionsDown  && downCount === site.regions.length);
 
             if (shouldTriggerRegionAlert) {
               const regionResult = await handleStatusAlert(site, "DOWN", checkedAt, responseTimeMs);
@@ -312,17 +371,7 @@ export const startMonitoringCron = () => {
             await checkSsl(site);
           }
 
-          /* advance nextCheckAt */
-          let nextTime = site.nextCheckAt || checkedAt;
-
-          if (nextTime <= checkedAt) {
-            nextTime = new Date(nextTime.getTime() + siteFrequency);
-          }
-
-          await MonitoredSite.updateOne(
-            { _id: site._id },
-            { $set: { nextCheckAt: nextTime } }
-          );
+          // nextCheckAt was already set in the atomic claim above — no extra write needed.
         })
       );
 
