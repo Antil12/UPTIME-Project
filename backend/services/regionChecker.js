@@ -124,6 +124,40 @@ export async function checkRegion(regionName) {
   return results;
 }
 
+/**
+ * checkSiteAcrossRegions(site)
+ *
+ * Checks a single site across all its assigned regions in parallel.
+ * Used by globalMonitorCron to respect per-site checkFrequency.
+ *
+ * Returns: Array of result objects with siteId, region, status, etc.
+ */
+export async function checkSiteAcrossRegions(site) {
+  const { _id: siteId, regions, url, name, responseThresholdMs } = site;
+  const label = name || url;
+
+  if (!regions || regions.length === 0) {
+    console.log(`  [checkSiteAcrossRegions] ${label}: No regions assigned — skipping.`);
+    return [];
+  }
+
+  console.log(`  [checkSiteAcrossRegions] Checking ${label} across ${regions.length} region(s)…`);
+
+  const results = await Promise.all(
+    regions.map((region) => checkOneSite(site, region))
+  );
+
+  const up   = results.filter((r) => r.status === "UP").length;
+  const slow = results.filter((r) => r.status === "SLOW").length;
+  const down = results.filter((r) => r.status === "DOWN").length;
+
+  console.log(
+    `  [checkSiteAcrossRegions] ${label} done → UP: ${up}  SLOW: ${slow}  DOWN: ${down}`
+  );
+
+  return results;
+}
+
 /** Legacy shim — keeps old imports working. Real work is in checkRegion(). */
 export async function checkRegions() {
   return {};

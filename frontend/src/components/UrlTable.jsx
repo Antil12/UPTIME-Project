@@ -647,19 +647,6 @@ const UrlTable = forwardRef(({
                 </motion.button>
               </div>
 
-              {globalCheckModalData.isBackendDirect && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                  className="mb-5 p-3 rounded-xl flex items-start gap-3"
-                  style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.25)" }}
-                >
-                  <span style={{ fontSize: "14px", flexShrink: 0, marginTop: "1px" }}>⚠️</span>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(251,191,36,0.8)", lineHeight: 1.6 }}>
-                    Response times reflect your backend server location, not true regional latency.
-                    Deploy Lambda workers for accurate geographic checks.
-                  </p>
-                </motion.div>
-              )}
 
               <div className="mb-6 p-4 rounded-xl" style={{ background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.15)" }}>
                 <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(56,189,248,0.5)", marginBottom: "8px", letterSpacing: "0.06em" }}>GLOBAL STATUS</p>

@@ -369,7 +369,8 @@ export const addSite = async (req, res) => {
       priority:     Number(priority ?? 0),
       owner:        req.user?._id,
       checkFrequency: resolvedFrequency,
-      nextCheckAt:    new Date(now + resolvedFrequency),  // ← first check after one interval
+      nextCheckAt:    new Date(now),  // ← immediately eligible for monitorCron
+      nextRegionalCheckAt: new Date(now),  // ← immediately eligible for globalMonitorCron
       alertRouting: req.body.alertRouting || {
         down: [], trouble: [], critical: []
       },
@@ -485,8 +486,9 @@ export const updateSite = async (req, res) => {
         });
       }
       updatedData.checkFrequency = freq;
-      // Reset schedule immediately so new frequency is honoured right away
-      updatedData.nextCheckAt = new Date(Date.now() + freq);
+      // Reset both schedules to now so new frequency takes effect immediately
+      updatedData.nextCheckAt = new Date(Date.now());
+      updatedData.nextRegionalCheckAt = new Date(Date.now());
     }
 
     const hasChanges = Object.keys(updatedData).some(

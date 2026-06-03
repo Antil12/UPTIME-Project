@@ -93,6 +93,15 @@ const monitoredSiteSchema = new mongoose.Schema({
     default: false,
   },
 
+  // ── Regional Check Schedule (for globalMonitorCron) ────────────────────────────
+  // Separate from monitorCron's nextCheckAt — allows independent scheduling
+  // of regional multi-region checks vs single-site checks.
+  // Initialized to Date.now() so regional checks start immediately after creation.
+  nextRegionalCheckAt: {
+    type: Date,
+    default: Date.now,
+  },
+
   // ── Alert Routing (role-based, separate from auth roles) ──────────────────────
   alertRouting: {
     down:     { type: [String], default: [] },
