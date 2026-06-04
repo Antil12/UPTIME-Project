@@ -14,20 +14,17 @@ const REGIONS = ["South America", "Australia", "North America", "Europe", "Asia"
 const CATEGORY_OPTIONS = ["JOURNALS", "E-JAYPEE", "JPMEDPUB", "JP-DIGITAL", "DIGINERVE", "Others"];
 const FREQUENCY_OPTIONS = [
   { label: "10 seconds", value: 10_000 },
-  
   { label: "1 minute",   value: 60_000 },
-  
   { label: "5 minutes",  value: 300_000 },
   { label: "10 minutes", value: 600_000 },
   { label: "15 minutes", value: 900_000 },
   { label: "30 minutes", value: 1_800_000 },
-  { label: "1 hour",  value: 3_600_000 },
-  { label: "2 hours",  value: 7_200_000 },
-  { label: "3 hours",  value: 10_800_000 },
-  { label: "4 hours",  value: 14_400_000 },
-  { label: "5 hours",  value: 18_000_000 },
+  { label: "1 hour",     value: 3_600_000 },
+  { label: "2 hours",    value: 7_200_000 },
+  { label: "3 hours",    value: 10_800_000 },
+  { label: "4 hours",    value: 14_400_000 },
+  { label: "5 hours",    value: 18_000_000 },
   { label: "6 hours",    value: 21_600_000 },
- 
   { label: "1 day",      value: 86_400_000 },
 ];
 
@@ -69,48 +66,33 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
     const button = buttonRef.current;
     if (!button) return;
     const rect = button.getBoundingClientRect();
-    setMenuRect({
-      top: rect.bottom + window.scrollY,
-      left: rect.left + window.scrollX,
-      width: rect.width,
-    });
+    setMenuRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: rect.width });
   };
 
   useEffect(() => {
     if (!open) return undefined;
     updateMenuRect();
-
-    const handleResize = () => updateMenuRect();
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("scroll", handleResize, true);
-
+    window.addEventListener("resize", updateMenuRect);
+    window.addEventListener("scroll", updateMenuRect, true);
     return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleResize, true);
+      window.removeEventListener("resize", updateMenuRect);
+      window.removeEventListener("scroll", updateMenuRect, true);
     };
   }, [open]);
-
-  const handleToggle = () => {
-    if (!open) updateMenuRect();
-    setOpen((prev) => !prev);
-  };
 
   return (
     <div className="relative">
       <button
         ref={buttonRef}
         type="button"
-        onClick={handleToggle}
+        onClick={() => { if (!open) updateMenuRect(); setOpen((p) => !p); }}
         className="w-full px-3.5 py-2.5 rounded-xl outline-none transition-all duration-150 flex items-center justify-between"
         style={{
           background: open ? "rgba(56,189,248,0.04)" : "rgba(255,255,255,0.018)",
           border: open ? "1px solid rgba(56,189,248,0.32)" : "1px solid rgba(56,189,248,0.1)",
           color: displayLabel ? "rgba(248,250,252,0.92)" : "rgba(148,163,184,0.4)",
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: "12px",
-          letterSpacing: "0.01em",
+          fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", letterSpacing: "0.01em",
           boxShadow: open ? "0 0 0 3px rgba(56,189,248,0.07)" : "none",
-          zIndex: 10,
         }}
       >
         <span>{displayLabel || placeholder}</span>
@@ -124,21 +106,13 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
           <motion.div
             initial={{ opacity: 0, y: 5, scale: 0.975 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 3, scale: 0.975 }}
             transition={{ duration: 0.12 }}
             className="rounded-xl overflow-hidden"
             style={{
-              position: "absolute",
-              top: menuRect.top,
-              left: menuRect.left,
-              width: menuRect.width,
-              background: "rgba(4,9,20,0.98)",
-              border: "1px solid rgba(56,189,248,0.13)",
-              backdropFilter: "blur(32px)",
-              boxShadow: "0 12px 40px rgba(0,0,0,0.65)",
-              maxHeight: "210px",
-              overflowY: "auto",
-              zIndex: 9999,
+              position: "absolute", top: menuRect.top, left: menuRect.left, width: menuRect.width,
+              background: "rgba(4,9,20,0.98)", border: "1px solid rgba(56,189,248,0.13)",
+              backdropFilter: "blur(32px)", boxShadow: "0 12px 40px rgba(0,0,0,0.65)",
+              maxHeight: "210px", overflowY: "auto", zIndex: 9999,
             }}
           >
             {options.map((opt, idx) => {
@@ -147,8 +121,7 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
               const isSel = typeof opt === "string" ? opt === value : opt.value === value;
               return (
                 <button
-                  key={optValue ?? idx}
-                  type="button"
+                  key={optValue ?? idx} type="button"
                   onClick={() => { onChange(typeof opt === "string" ? opt : opt.value); setOpen(false); }}
                   className="w-full px-3.5 py-2.5 text-left transition-colors duration-100 flex items-center justify-between"
                   style={{
@@ -191,21 +164,14 @@ const Input = ({ value, onChange, placeholder, type = "text", onKeyDown }) => {
   const [focused, setFocused] = useState(false);
   return (
     <input
-      type={type}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      onKeyDown={onKeyDown}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
+      type={type} value={value} onChange={onChange} placeholder={placeholder} onKeyDown={onKeyDown}
+      onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
       className="w-full px-3.5 py-2.5 rounded-xl outline-none transition-all duration-150 text-white placeholder:text-slate-600"
       style={{
         background: focused ? "rgba(56,189,248,0.03)" : "rgba(255,255,255,0.018)",
         border: focused ? "1px solid rgba(56,189,248,0.3)" : "1px solid rgba(56,189,248,0.1)",
         boxShadow: focused ? "0 0 0 3px rgba(56,189,248,0.06)" : "none",
-        fontSize: "12px",
-        letterSpacing: "0.01em",
-        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "12px", letterSpacing: "0.01em", fontFamily: "'JetBrains Mono', monospace",
       }}
     />
   );
@@ -286,19 +252,29 @@ const secondaryBtnStyle = {
 // Main Component
 // ═════════════════════════════════════════════════════════════════════════════
 export default function EditPage({
-  item, editDomain, editUrl, setEditDomain, setEditUrl,
+  item,
+  editDomain, editUrl, setEditDomain, setEditUrl,
   editEmail, editPhone, editPriority, editResponseThresholdMs,
-  editRegions, editCheckFrequency, editAlertRouting, editAlertGroups,
+  editRegions, editCheckFrequency,
+  // ✅ alertRouting now holds { down: [groupId, ...], trouble: [...], critical: [...] }
+  editAlertRouting,
   setEditEmail, setEditPhone, setEditPriority, setEditResponseThresholdMs,
-  setEditRegions, setEditCheckFrequency, setEditAlertRouting, setEditAlertGroups,
+  setEditRegions, setEditCheckFrequency,
+  setEditAlertRouting,
   urlError, onSave, onClose, initialCategory,
 }) {
   const navigate = useNavigate();
-  const [category,      setCategory]      = useState(item?.category || "");
-  const [emailInput,    setEmailInput]    = useState("");
-  const [phoneInput,    setPhoneInput]    = useState("");
-  const [groupInput,    setGroupInput]    = useState({ group1: "", group2: "", group3: "" });
-  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [category,          setCategory]          = useState(item?.category || "");
+  const [emailInput,        setEmailInput]        = useState("");
+  const [phoneInput,        setPhoneInput]        = useState("");
+  const [showRoutingPanel,  setShowRoutingPanel]  = useState(false);
+
+  // ── Normalise alertRouting so it always has the three keys ────────────────
+  const safeAlertRouting = {
+    down:     Array.isArray(editAlertRouting?.down)     ? editAlertRouting.down     : [],
+    trouble:  Array.isArray(editAlertRouting?.trouble)  ? editAlertRouting.trouble  : [],
+    critical: Array.isArray(editAlertRouting?.critical) ? editAlertRouting.critical : [],
+  };
 
   useEffect(() => { if (item?.category !== undefined) setCategory(item.category || ""); }, [item]);
   useEffect(() => { if (initialCategory !== undefined) setCategory(initialCategory || ""); }, [initialCategory]);
@@ -306,11 +282,11 @@ export default function EditPage({
 
   if (!item) return null;
 
-  const isValidEmail     = (v = "") => /\S+@\S+\.\S+/.test(v.trim());
   const normalizedEmails = Array.isArray(editEmail) ? editEmail : editEmail ? [editEmail] : [];
   const normalizedPhones = Array.isArray(editPhone) ? editPhone : editPhone ? [editPhone] : [];
 
-  const toggleRegion = (r) => setEditRegions((p) => p.includes(r) ? p.filter((x) => x !== r) : [...p, r]);
+  const toggleRegion = (r) =>
+    setEditRegions((p) => p.includes(r) ? p.filter((x) => x !== r) : [...p, r]);
 
   const handleAddEmail = () => {
     const v = emailInput.trim();
@@ -318,27 +294,24 @@ export default function EditPage({
     if (!normalizedEmails.includes(v)) setEditEmail([...normalizedEmails, v]);
     setEmailInput("");
   };
+
   const handleAddPhone = () => {
     const v = phoneInput.trim();
     if (!v) return;
     if (!normalizedPhones.includes(v)) setEditPhone([...normalizedPhones, v]);
     setPhoneInput("");
   };
-  const addGroupEmail = (role) => {
-    const v = groupInput[role]?.trim();
-    if (!v || !isValidEmail(v)) return;
-    const cur = Array.isArray(editAlertGroups?.[role]) ? editAlertGroups[role] : [];
-    if (!cur.includes(v)) setEditAlertGroups((p) => ({ ...p, [role]: [...cur, v] }));
-    setGroupInput((p) => ({ ...p, [role]: "" }));
-  };
-  const removeGroupEmail = (role, email) => {
-    const cur = Array.isArray(editAlertGroups?.[role]) ? editAlertGroups[role] : [];
-    setEditAlertGroups((p) => ({ ...p, [role]: cur.filter((e) => e !== email) }));
-  };
+
   const handleClose = () => {
     if (typeof onClose === "function") onClose();
     navigate("/dashboard");
   };
+
+  // Count how many groups are currently assigned across all levels
+  const totalRoutingAssigned =
+    safeAlertRouting.down.length +
+    safeAlertRouting.trouble.length +
+    safeAlertRouting.critical.length;
 
   return (
     <>
@@ -394,7 +367,6 @@ export default function EditPage({
                 EDIT WEBSITE
               </h1>
             </div>
-            
           </motion.div>
 
           {/* ── Grid Layout ── */}
@@ -449,7 +421,12 @@ export default function EditPage({
                         border: Number(editPriority) === 1 ? "1px solid rgba(248,113,113,0.22)" : "1px solid rgba(56,189,248,0.1)",
                       }}
                     >
-                      <input type="checkbox" checked={Number(editPriority) === 1} onChange={(e) => setEditPriority(e.target.checked ? 1 : 0)} className="accent-red-500 w-3.5 h-3.5 shrink-0" />
+                      <input
+                        type="checkbox"
+                        checked={Number(editPriority) === 1}
+                        onChange={(e) => setEditPriority(e.target.checked ? 1 : 0)}
+                        className="accent-red-500 w-3.5 h-3.5 shrink-0"
+                      />
                       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: Number(editPriority) === 1 ? "#f87171" : "rgba(148,163,184,0.5)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
                         High Priority
                       </span>
@@ -474,60 +451,90 @@ export default function EditPage({
                 </div>
               </Card>
 
-              {/* Alert Groups */}
-              <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(3,7,18,0.68)", border: "1px solid rgba(56,189,248,0.09)", backdropFilter: "blur(20px)" }}>
+              {/* ── ✅ Alert Routing — Escalation Groups (replaces old Alert Groups) ── */}
+              <div
+                className="rounded-2xl overflow-visible"
+                style={{ background: "rgba(3,7,18,0.68)", border: "1px solid rgba(56,189,248,0.09)", backdropFilter: "blur(20px)" }}
+              >
+                {/* Collapsible Header */}
                 <button
                   type="button"
-                  onClick={() => setShowGroupForm(!showGroupForm)}
+                  onClick={() => setShowRoutingPanel(!showRoutingPanel)}
                   className="w-full px-4 py-2.5 flex items-center justify-between transition-colors duration-150"
-                  style={{ borderBottom: showGroupForm ? "1px solid rgba(56,189,248,0.07)" : "1px solid transparent", background: showGroupForm ? "rgba(56,189,248,0.03)" : "rgba(56,189,248,0.018)" }}
+                  style={{
+                    borderBottom: showRoutingPanel ? "1px solid rgba(56,189,248,0.07)" : "1px solid transparent",
+                    background: showRoutingPanel ? "rgba(56,189,248,0.03)" : "rgba(56,189,248,0.018)",
+                    borderRadius: showRoutingPanel ? "16px 16px 0 0" : "16px",
+                  }}
                 >
                   <div className="flex items-center gap-2">
-                    <Bell size={11} style={{ color: showGroupForm ? "#38bdf8" : "rgba(56,189,248,0.45)" }} />
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", letterSpacing: "0.2em", textTransform: "uppercase", color: showGroupForm ? "rgba(56,189,248,0.65)" : "rgba(56,189,248,0.4)" }}>
-                      Alert Group Configuration
+                    <ShieldAlert size={11} style={{ color: showRoutingPanel ? "#c084fc" : "rgba(192,132,252,0.45)" }} />
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", letterSpacing: "0.2em", textTransform: "uppercase", color: showRoutingPanel ? "rgba(192,132,252,0.75)" : "rgba(192,132,252,0.4)" }}>
+                      Alert Routing — Escalation Groups
                     </span>
+                    {/* Badge showing how many groups are currently assigned */}
+                    {totalRoutingAssigned > 0 && (
+                      <span
+                        className="px-2 py-0.5 rounded-full"
+                        style={{
+                          background: "rgba(192,132,252,0.12)",
+                          border: "1px solid rgba(192,132,252,0.25)",
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: "8px",
+                          color: "#c084fc",
+                          letterSpacing: "0.06em",
+                        }}
+                      >
+                        {totalRoutingAssigned} assigned
+                      </span>
+                    )}
                   </div>
-                  <motion.span animate={{ rotate: showGroupForm ? 180 : 0 }} transition={{ duration: 0.18 }} style={{ color: "rgba(56,189,248,0.38)" }}>
+                  <motion.span
+                    animate={{ rotate: showRoutingPanel ? 180 : 0 }}
+                    transition={{ duration: 0.18 }}
+                    style={{ color: "rgba(192,132,252,0.38)" }}
+                  >
                     <ChevronDown size={13} />
                   </motion.span>
                 </button>
 
+                {/* Collapsible Body */}
                 <AnimatePresence>
-                  {showGroupForm && (
+                  {showRoutingPanel && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                      className="overflow-hidden"
+                      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                      className="overflow-visible"
                     >
-                      <div className="p-4 space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {[{ key: "group1", label: "group 1" }, { key: "group2", label: "group 2" }, { key: "group3", label: "Group 3" }].map(({ key, label }) => (
-                            <div key={key}>
-                              <FieldLabel text={`${label} Email`} />
-                              <AddRow
-                                type="email"
-                                value={groupInput[key] || ""}
-                                onChange={(e) => setGroupInput((p) => ({ ...p, [key]: e.target.value }))}
-                                onAdd={() => addGroupEmail(key)}
-                                placeholder="user@company.com"
-                              />
-                              <ChipList
-                                items={Array.isArray(editAlertGroups?.[key]) ? editAlertGroups[key] : []}
-                                onRemove={(email) => removeGroupEmail(key, email)}
-                                emptyText={`No ${label.toLowerCase()} emails`}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <div className="pt-3 border-t" style={{ borderTopColor: "rgba(56,189,248,0.07)" }}>
-                          <AlertRoutingForm
-                            value={editAlertRouting || { down: [], trouble: [], critical: [] }}
-                            onChange={setEditAlertRouting}
-                          />
-                        </div>
+                      <div className="p-4">
+                        {/* Description */}
+                        <p
+                          className="mb-4"
+                          style={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: "9px",
+                            color: "rgba(248,250,252,0.28)",
+                            letterSpacing: "0.04em",
+                            lineHeight: 1.7,
+                          }}
+                        >
+                          Assign escalation groups to each alert level. When an alert fires, all emails in the selected groups are notified. You can also create new groups inline.
+                        </p>
+
+                        {/*
+                          AlertRoutingForm receives:
+                            alertRouting  → { down: [id,...], trouble: [id,...], critical: [id,...] }
+                            setAlertRouting → setter that updates those arrays
+                          It fetches groups from /api/escalation-groups/my-groups,
+                          pre-selects any ids already in editAlertRouting,
+                          and allows creating new groups inline.
+                        */}
+                        <AlertRoutingForm
+                          alertRouting={safeAlertRouting}
+                          setAlertRouting={setEditAlertRouting}
+                        />
                       </div>
                     </motion.div>
                   )}
@@ -546,9 +553,7 @@ export default function EditPage({
                     const sel = editRegions.includes(region);
                     return (
                       <button
-                        key={region}
-                        type="button"
-                        onClick={() => toggleRegion(region)}
+                        key={region} type="button" onClick={() => toggleRegion(region)}
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-150 text-left"
                         style={{
                           background: sel ? "rgba(52,211,153,0.09)" : "rgba(255,255,255,0.018)",
@@ -590,6 +595,13 @@ export default function EditPage({
                     { label: "Regions",  value: editRegions.length > 0 ? `${editRegions.length} selected` : "None", accent: editRegions.length > 0 ? "#34d399" : null },
                     { label: "Emails",   value: normalizedEmails.length > 0 ? `${normalizedEmails.length} contact${normalizedEmails.length > 1 ? "s" : ""}` : "None" },
                     { label: "Phones",   value: normalizedPhones.length > 0 ? `${normalizedPhones.length} number${normalizedPhones.length > 1 ? "s" : ""}` : "None" },
+                    {
+                      label: "Routing",
+                      value: totalRoutingAssigned > 0
+                        ? `${totalRoutingAssigned} group${totalRoutingAssigned > 1 ? "s" : ""} assigned`
+                        : "None",
+                      accent: totalRoutingAssigned > 0 ? "#c084fc" : null,
+                    },
                   ].map(({ label, value, accent }) => (
                     <div key={label} className="flex items-start justify-between gap-3 py-1.5 border-b last:border-0" style={{ borderBottomColor: "rgba(56,189,248,0.05)" }}>
                       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", color: "rgba(100,116,139,0.55)", letterSpacing: "0.08em", textTransform: "uppercase", flexShrink: 0 }}>

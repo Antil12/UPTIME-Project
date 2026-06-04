@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, useMotionValue, useSpring } from "framer-motion";
@@ -15,6 +14,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Timer,
+  ShieldAlert,
 } from "lucide-react";
 import AlertRoutingForm from "../components/AlertRoutingForm";
 
@@ -425,45 +425,15 @@ const AddUrl = ({
   const [priority, setPriority]                       = useState(0);
   const [submitted, setSubmitted]                     = useState(false);
   const [checkFrequency, setCheckFrequency]           = useState(60_000);
-  const [alertGroups, setAlertGroups]                 = useState({
-    group1: [],
-    group2: [],
-    group3: [],
+
+  // ── alertRouting now stores arrays of escalation group _ids ──────────────
+  const [alertRouting, setAlertRouting] = useState({
+    down: [],
+    trouble: [],
+    critical: [],
   });
-  const [alertGroupInputs, setAlertGroupInputs]       = useState({
-   group1: "",
-    group2: "",
-    group3: "",
-  });
-  const [alertRouting, setAlertRouting]               = useState({
-    down: [], trouble: [], critical: []
-  });
-  const [showGroupForm, setShowGroupForm]             = useState(false);
 
   const normalize = (v = "") => v.trim().toLowerCase().replace(/\/$/, "");
-
-  const isValidEmail = (value = "") => /\S+@\S+\.\S+/.test(value.trim());
-
-  const addAlertGroupEmail = (role) => {
-    const value = alertGroupInputs[role]?.trim();
-    if (!value || !isValidEmail(value)) return;
-    if (alertGroups[role].includes(value)) {
-      setAlertGroupInputs((prev) => ({ ...prev, [role]: "" }));
-      return;
-    }
-    setAlertGroups((prev) => ({
-      ...prev,
-      [role]: [...(prev[role] || []), value],
-    }));
-    setAlertGroupInputs((prev) => ({ ...prev, [role]: "" }));
-  };
-
-  const removeAlertGroupEmail = (role, email) => {
-    setAlertGroups((prev) => ({
-      ...prev,
-      [role]: (prev[role] || []).filter((item) => item !== email),
-    }));
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -491,11 +461,9 @@ const AddUrl = ({
       phoneContact: phoneContacts,
       priority,
       checkFrequency,
+      // alertRouting contains group _ids for down / trouble / critical
       alertRouting,
-      alertGroups,
     });
-
-    console.log("DEBUG: Sending alertGroups:", alertGroups);
 
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 2000);
@@ -508,8 +476,6 @@ const AddUrl = ({
     setResponseThresholdMs("15000");
     setCheckFrequency(60_000);
     setAlertRouting({ down: [], trouble: [], critical: [] });
-    setAlertGroupInputs({ group1: "", group2: "", group3: "" });
-    setAlertGroups({ group1: [], group2: [], group3: [] });
   };
 
   const toggleChannel = (ch) =>
@@ -517,8 +483,6 @@ const AddUrl = ({
 
   const toggleRegion = (r) =>
     setRegions((p) => p.includes(r) ? p.filter((x) => x !== r) : [...p, r]);
-
-  const freqLabel = CHECK_FREQUENCY_OPTIONS.find((o) => o.value === checkFrequency)?.label || "1 min";
 
   return (
     <>
@@ -609,7 +573,7 @@ const AddUrl = ({
           <form onSubmit={handleSubmit}>
             <div className="space-y-4">
 
-              {/* ── Identity Section - Two Column Layout ── */}
+              {/* ── Identity Section ── */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -694,7 +658,6 @@ const AddUrl = ({
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Response threshold */}
                   <div className="relative lg:col-span-1">
                     <HudInput
                       type="number"
@@ -718,7 +681,6 @@ const AddUrl = ({
                     </div>
                   </div>
 
-                  {/* Check Frequency dropdown */}
                   <div className="lg:col-span-1">
                     <PortalDropdown
                       value={checkFrequency}
@@ -818,22 +780,13 @@ const AddUrl = ({
                           if (e.key === "Enter") {
                             e.preventDefault();
                             const v = phoneInput.trim();
-                            if (v && !phoneContacts.includes(v)) {
-                              setPhoneContacts((p) => [...p, v]);
-                              setPhoneInput("");
-                            }
+                            if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput(""); }
                           }
                         }}
                         label="Phone Number"
                       />
                       <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                        onClick={() => {
-                          const v = phoneInput.trim();
-                          if (v && !phoneContacts.includes(v)) {
-                            setPhoneContacts((p) => [...p, v]);
-                            setPhoneInput("");
-                          }
-                        }}
+                        onClick={() => { const v = phoneInput.trim(); if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput(""); } }}
                         className="px-3 rounded-xl flex items-center justify-center"
                         style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "44px", height: "44px" }}>
                         <Plus size={14} />
@@ -912,139 +865,41 @@ const AddUrl = ({
                 </label>
               </motion.div>
 
-              {/* ── Alert Group Configuration ── */}
+              {/* ── ✅ NEW: Alert Routing (Escalation Groups) ── */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.33, duration: 0.45 }}
+                className="rounded-xl p-5 relative overflow-visible"
+                style={{
+                  background: "rgba(3,7,18,0.72)",
+                  border: "1px solid rgba(56,189,248,0.09)",
+                  backdropFilter: "blur(18px)",
+                  boxShadow: "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                }}
               >
-                <div className="space-y-3">
-                  {/* Create Group Button */}
-                  <motion.button
-                    type="button"
-                    onClick={() => setShowGroupForm(!showGroupForm)}
-                    className="w-full px-4 py-3 rounded-xl flex items-center justify-between"
-                    style={{
-                      background: "rgba(255,255,255,0.02)",
-                      border: "1px solid rgba(56,189,248,0.10)",
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: "10px",
-                      letterSpacing: "0.10em",
-                      textTransform: "uppercase",
-                      color: "rgba(56,189,248,0.8)",
-                    }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <span className="flex items-center gap-2">
-                      <Bell size={13} />
-                      Create Alert Group
-                    </span>
-                    <ChevronDown
-                      size={13}
-                      style={{
-                        transform: showGroupForm ? "rotate(180deg)" : "rotate(0deg)",
-                        transition: "transform 0.2s",
-                      }}
-                    />
-                  </motion.button>
+                {/* purple-ish top gradient to visually differentiate */}
+                <div className="absolute top-0 left-0 right-0 h-[1px]"
+                  style={{ background: "linear-gradient(90deg, transparent 0%, rgba(192,132,252,0.35) 30%, rgba(248,113,113,0.28) 70%, transparent 100%)" }} />
 
-                  {/* Collapsible Group Form */}
-                  {showGroupForm && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="space-y-3 overflow-hidden rounded-xl p-5"
-                      style={{
-                        background: "rgba(56,189,248,0.03)",
-                        border: "1px solid rgba(56,189,248,0.08)",
-                      }}
-                    >
-                      {/* Email Fields Grid */}
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                        {[
-                          { key: "group1", label: "group 1" },
-                          { key: "group2", label: "group 2" },
-                          { key: "group3", label: "Group 3" },
-                        ].map(({ key, label }) => (
-                          <div key={key}>
-                            <label className="block text-xs font-medium mb-2" style={{ 
-                              fontFamily: "'JetBrains Mono', monospace",
-                              letterSpacing: "0.1em",
-                              color: "rgba(56,189,248,0.88)", 
-                              textTransform: "uppercase"
-                            }}>
-                              {label}
-                            </label>
-                            <div className="flex gap-2 mb-3">
-                              <input
-                                type="email"
-                                value={alertGroupInputs[key]}
-                                onChange={(e) => setAlertGroupInputs((prev) => ({ ...prev, [key]: e.target.value }))}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    addAlertGroupEmail(key);
-                                  }
-                                }}
-                                placeholder="dev@company.com"
-                                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                                style={{
-                                  background: "rgba(255,255,255,0.02)",
-                                  border: "1px solid rgba(56,189,248,0.10)",
-                                  color: "white",
-                                  fontFamily: "'JetBrains Mono', monospace",
-                                  fontSize: "11px",
-                                }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => addAlertGroupEmail(key)}
-                                className="px-3 rounded-xl flex items-center justify-center"
-                                style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.20)", color: "#38bdf8", minWidth: "44px", height: "44px" }}
-                              >
-                                <Plus size={14} />
-                              </button>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {(alertGroups[key] || []).map((email, idx) => (
-                                <span
-                                  key={`${key}-${email}-${idx}`}
-                                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
-                                  style={{
-                                    background: "rgba(56,189,248,0.06)",
-                                    border: "1px solid rgba(56,189,248,0.14)",
-                                    fontFamily: "'JetBrains Mono', monospace",
-                                    fontSize: "9px",
-                                    color: "rgba(148,163,184,0.8)",
-                                  }}
-                                >
-                                  {email}
-                                  <button
-                                    type="button"
-                                    onClick={() => removeAlertGroupEmail(key, email)}
-                                    className="text-red-400/60 hover:text-red-400 transition-colors"
-                                  >
-                                    <X size={9} />
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                <SectionLabel icon={ShieldAlert} label="Alert Routing — Escalation Groups" />
 
-                      {/* Alert Routing */}
-                      <div className="mt-3 pt-3 border-t border-rgba(56,189,248,0.08)">
-                        <AlertRoutingForm
-                          value={alertRouting}
-                          onChange={setAlertRouting}
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
+                <p style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "9px",
+                  color: "rgba(248,250,252,0.32)",
+                  letterSpacing: "0.05em",
+                  marginBottom: "16px",
+                  lineHeight: 1.6,
+                }}>
+                  Assign escalation groups to each alert level. When triggered, emails stored in those groups will be notified automatically.
+                </p>
+
+                {/* AlertRoutingForm handles fetching groups + inline create */}
+                <AlertRoutingForm
+                  alertRouting={alertRouting}
+                  setAlertRouting={setAlertRouting}
+                />
               </motion.div>
 
               {/* ─── Error ─── */}
@@ -1066,7 +921,7 @@ const AddUrl = ({
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.36, duration: 0.45 }}
+                transition={{ delay: 0.38, duration: 0.45 }}
               >
                 <motion.button
                   type="submit"

@@ -18,6 +18,7 @@ import authRoutes from "./routes/auth.Routes.js";
 import userRoutes from "./routes/user.routes.js";
 import emailRoutes from "./routes/email.Routes.js";
 import regionReportRoutes from "./routes/regionReport.routes.js";
+import escalationGroupRoutes from "./routes/escalationGroup.routes.js";
 import { emailWorker, workerStatus } from "./workers/emailWorker.js";
 import connection from "./queue/redisConnection.js";
 import logger from "./logger.js";
@@ -126,6 +127,7 @@ app.use("/api", checkUrlRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/region-report", regionReportRoutes);
+app.use("/api/escalation-groups", escalationGroupRoutes);
 
 /* ======================
    START SERVER

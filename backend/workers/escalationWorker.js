@@ -1,5 +1,6 @@
 import MonitoredSite from "../models/MonitoredSite.js";
 import User from "../models/User.js";
+import EscalationGroup from "../models/EscalationGroup.js";
 import { handleRoutedAlertBatch } from "../services/alertService.js";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -24,60 +25,71 @@ const ESCALATION_RULES = [
 
 /* ─────────────────────────────────────────────────────────────────────────────
    resolveRecipientsForLevel
-   - roles come from site.alertRouting[alertLevel]
-   - email comes from site.alertGroups[role]
-   - cross-checks User.alertCategories:
+   - Fetches escalation group IDs from site.alertRouting[alertLevel]
+   - Queries EscalationGroup collection for those groups
+   - Extracts emails from the groups
+   - Cross-checks User.alertCategories:
        • user has no alertCategories → receives all alerts (no filter)
        • user has alertCategories set → only receives alert if site.category matches
        • email not found as a User → manual entry, passes through unconditionally
 ───────────────────────────────────────────────────────────────────────────── */
 const resolveRecipientsForLevel = async (site, alertLevel) => {
-  const roles = site.alertRouting?.[alertLevel] || [];
-  if (roles.length === 0) return [];
+  const groupIds = site.alertRouting?.[alertLevel] || [];
+  if (groupIds.length === 0) return [];
 
-  const rawEmails = [...new Set(
-    roles
-      .flatMap((role) => {
-        const group = site.alertGroups?.[role];
-        if (!group) return [];
-        return Array.isArray(group) ? group : [group];
-      })
-      .map((email) => (typeof email === "string" ? email.trim() : ""))
-      .filter(Boolean)
-  )];
+  try {
+    // Fetch all escalation groups for the given IDs
+    const groups = await EscalationGroup.find({
+      _id: { $in: groupIds },
+      isActive: true,
+    }).lean();
 
-  if (rawEmails.length === 0) return [];
+    if (groups.length === 0) return [];
 
-  const filtered = [];
+    // Collect all unique emails from all groups
+    const rawEmails = [...new Set(
+      groups
+        .flatMap((group) => group.emails || [])
+        .map((email) => (typeof email === "string" ? email.trim() : ""))
+        .filter(Boolean)
+    )];
 
-  for (const email of rawEmails) {
-    const user = await User.findOne({ email }).select("alertCategories").lean();
+    if (rawEmails.length === 0) return [];
 
-    if (!user) {
-      // Not a registered User — manual email, no filter applied
-      filtered.push(email);
-      continue;
+    const filtered = [];
+
+    for (const email of rawEmails) {
+      const user = await User.findOne({ email }).select("alertCategories").lean();
+
+      if (!user) {
+        // Not a registered User — manual email, no filter applied
+        filtered.push(email);
+        continue;
+      }
+
+      const cats = user.alertCategories || [];
+
+      if (cats.length === 0) {
+        // User has no category preference — receives everything
+        filtered.push(email);
+        continue;
+      }
+
+      if (site.category && cats.includes(site.category)) {
+        filtered.push(email);
+      } else {
+        console.log(
+          `[ESCALATION] Category filter: skipping ${email} for "${site.domain}" ` +
+          `(site category "${site.category}" not in user alertCategories: [${cats.join(", ")}])`
+        );
+      }
     }
 
-    const cats = user.alertCategories || [];
-
-    if (cats.length === 0) {
-      // User has no category preference — receives everything
-      filtered.push(email);
-      continue;
-    }
-
-    if (site.category && cats.includes(site.category)) {
-      filtered.push(email);
-    } else {
-      console.log(
-        `[ESCALATION] Category filter: skipping ${email} for "${site.domain}" ` +
-        `(site category "${site.category}" not in user alertCategories: [${cats.join(", ")}])`
-      );
-    }
+    return filtered;
+  } catch (err) {
+    console.error("[resolveRecipientsForLevel] Error:", err.message);
+    return [];
   }
-
-  return filtered;
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────

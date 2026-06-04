@@ -485,6 +485,17 @@ const IconAdmin = ({ size = 14, color = "currentColor" }) => (
   </svg>
 );
 
+const IconGroups = ({ size = 14, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+    <circle cx="7" cy="6" r="2.5" stroke={color} strokeWidth="1.3" />
+    <circle cx="13" cy="6" r="2.5" stroke={color} strokeWidth="1.3" />
+    <path d="M3 14C3 12.5 4.5 11 6.5 11H7.5C9.5 11 11 12.5 11 14V15C11 15.5 10.5 16 10 16H4C3.5 16 3 15.5 3 15V14Z"
+      stroke={color} strokeWidth="1.3" strokeLinejoin="round" />
+    <path d="M9 14C9 12.5 10.5 11 12.5 11H13.5C15.5 11 17 12.5 17 14V15C17 15.5 16.5 16 16 16H10C9.5 16 9 15.5 9 15V14Z"
+      stroke={color} strokeWidth="1.3" strokeLinejoin="round" />
+  </svg>
+);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Header
 // ─────────────────────────────────────────────────────────────────────────────
@@ -624,6 +635,7 @@ const Header = ({ handleRefresh, isRefreshing, handleLogout, currentUser }) => {
                 {currentUser?.role !== "VIEWER" && (
                   <CrystalButton label="Add URL" onClick={() => navigate("/add")} />
                 )}
+                <CrystalButton label="Groups" onClick={() => navigate("/escalation-groups")} />
                 <CrystalButton label="Reports" onClick={() => navigate("/reports")} />
                 {currentUser?.role?.toUpperCase() === "SUPERADMIN" && (
                   <CrystalButton label="Super Admin" onClick={() => navigate("/superadmin")} />
@@ -648,6 +660,13 @@ const Header = ({ handleRefresh, isRefreshing, handleLogout, currentUser }) => {
                     icon={<IconAdd size={12} />}
                   />
                 )}
+                <MobileNavButton
+                  onClick={() => handleNav("/escalation-groups")}
+                  label="Groups"
+                  active={activePath === "/escalation-groups"}
+                  accent="#a78bfa"
+                  icon={<IconGroups size={12} />}
+                />
                 <MobileNavButton
                   onClick={() => handleNav("/reports")}
                   label="Report"

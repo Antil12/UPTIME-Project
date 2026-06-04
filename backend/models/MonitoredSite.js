@@ -102,19 +102,19 @@ const monitoredSiteSchema = new mongoose.Schema({
     default: Date.now,
   },
 
-  // ── Alert Routing (role-based, separate from auth roles) ──────────────────────
+  // ── Alert Routing (references to escalation groups) ──────────────────────────
   alertRouting: {
-    down:     { type: [String], default: [] },
-    trouble:  { type: [String], default: [] },
-    critical: { type: [String], default: [] },
+    down:     { type: [mongoose.Schema.Types.ObjectId], ref: "EscalationGroup", default: [] },
+    trouble:  { type: [mongoose.Schema.Types.ObjectId], ref: "EscalationGroup", default: [] },
+    critical: { type: [mongoose.Schema.Types.ObjectId], ref: "EscalationGroup", default: [] },
   },
 
-  // ── Alert Groups (specific emails for each role) ─────────────────────────────
-  alertGroups: {
-    group1: { type: [String], default: [] },
-    group2:        { type: [String], default: [] },
-    group3:       { type: [String], default: [] },
-  },
+  // DEPRECATED: Old alertGroups field (keeping for backward compatibility)
+  // alertGroups: {
+  //   group1: { type: [String], default: [] },
+  //   group2: { type: [String], default: [] },
+  //   group3: { type: [String], default: [] },
+  // },
 
   // ── Outage Tracking ──────────────────────────────────────────────────────────
   downSince: {

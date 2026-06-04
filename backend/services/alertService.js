@@ -2,6 +2,7 @@ import AlertState from "../models/AlertState.js";
 import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import User from "../models/User.js";
+import EscalationGroup from "../models/EscalationGroup.js";
 import emailService, { formatToIST } from "./emailService.js";
 import { emailQueue } from "../queue/emailQueue.js";
 import fs from "fs";
@@ -312,53 +313,67 @@ const buildFallbackHtml = (sites, alertLevel, meta, checkedAt) => {
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   resolveEmailsForLevel
+   resolveEmailsForLevel — Fetch emails from escalation groups
 ───────────────────────────────────────────────────────────────────────────── */
 const resolveEmailsForLevel = async (site, alertLevel) => {
-  const roles = site.alertRouting?.[alertLevel] || [];
-  if (roles.length === 0) return [];
+  const groupIds = site.alertRouting?.[alertLevel] || [];
+  if (groupIds.length === 0) return [];
 
-  const rawEmails = [...new Set(
-    roles
-      .flatMap((role) => {
-        const group = site.alertGroups?.[role];
-        if (!group) return [];
-        return Array.isArray(group) ? group : [group];
-      })
-      .map((email) => (typeof email === "string" ? email.trim() : ""))
-      .filter(Boolean)
-  )];
+  try {
+    // Fetch all escalation groups for the given IDs
+    const groups = await EscalationGroup.find({
+      _id: { $in: groupIds },
+      isActive: true,
+    }).lean();
 
-  if (rawEmails.length === 0) return [];
+    if (groups.length === 0) return [];
 
-  const filtered = [];
+    // Collect all unique emails from all groups
+    const rawEmails = [...new Set(
+      groups
+        .flatMap((group) => group.emails || [])
+        .map((email) => (typeof email === "string" ? email.trim() : ""))
+        .filter(Boolean)
+    )];
 
-  for (const email of rawEmails) {
-    const user = await User.findOne({ email }).select("alertCategories").lean();
+    if (rawEmails.length === 0) return [];
 
-    if (!user) {
-      filtered.push(email);
-      continue;
+    // Filter emails based on user preferences
+    const filtered = [];
+
+    for (const email of rawEmails) {
+      const user = await User.findOne({ email }).select("alertCategories").lean();
+
+      if (!user) {
+        // User doesn't exist, but email is in escalation group, so include it
+        filtered.push(email);
+        continue;
+      }
+
+      const cats = user.alertCategories || [];
+
+      if (cats.length === 0) {
+        // User receives all category alerts
+        filtered.push(email);
+        continue;
+      }
+
+      // Only include if site category matches user's alert categories
+      if (site.category && cats.includes(site.category)) {
+        filtered.push(email);
+      } else {
+        console.log(
+          `[ALERT SERVICE] Category filter: skipping ${email} ` +
+          `(site="${site.category}", user accepts=[${cats.join(", ")}])`
+        );
+      }
     }
 
-    const cats = user.alertCategories || [];
-
-    if (cats.length === 0) {
-      filtered.push(email);
-      continue;
-    }
-
-    if (site.category && cats.includes(site.category)) {
-      filtered.push(email);
-    } else {
-      console.log(
-        `[ALERT SERVICE] Category filter: skipping ${email} ` +
-        `(site="${site.category}", user accepts=[${cats.join(", ")}])`
-      );
-    }
+    return filtered;
+  } catch (err) {
+    console.error("[resolveEmailsForLevel] Error:", err.message);
+    return [];
   }
-
-  return filtered;
 };
 
 /* =====================================================================

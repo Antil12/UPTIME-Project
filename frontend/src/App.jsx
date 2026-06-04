@@ -14,6 +14,7 @@ import SuperAdmin from "./pages/SuperAdmin";
 import Logs from "./pages/Logs";
 import setupaxios from "./api/setupAxios";
 import BulkUpload from "./pages/BulkUpload";
+import EscalationGroups from "./pages/EscalationGroups";
 
 setupaxios();
 
@@ -729,6 +730,10 @@ function App() {
                 setReportSearch={setReportSearch}
               />
             }
+          />
+          <Route
+            path="/escalation-groups"
+            element={<EscalationGroups />}
           />
           <Route
             path="/superadmin"
