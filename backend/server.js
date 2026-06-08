@@ -114,11 +114,6 @@ app.get("/api/health", async (req, res) => {
   });
 });
 
-// API root endpoint
-app.get("/api", (req, res) => {
-  res.json({ message: "API is running" });
-});
-
 app.use("/api/auth", authRoutes);
 app.use("/api/monitoredsite", monitoredSiteRoutes);
 app.use("/api/site-current-status", siteCurrentStatusRoutes);

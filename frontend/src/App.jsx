@@ -12,11 +12,11 @@ import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Header from "./components/Header";
 import SuperAdmin from "./pages/SuperAdmin";
 import Logs from "./pages/Logs";
-import setupaxios from "./api/setupAxios";
+import "./api/setupAxios";
 import BulkUpload from "./pages/BulkUpload";
 import EscalationGroups from "./pages/EscalationGroups";
 
-setupaxios();
+// setupaxios();
 
 const API_BASE = "/monitoredsite";
 const PAGE_SIZE = 20;
