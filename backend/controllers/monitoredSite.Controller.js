@@ -1134,6 +1134,22 @@ export const bulkImportSites = async (req, res) => {
           const emailList = emailsStr
             ? emailsStr.split(",").map((e) => e.trim()).filter((e) => e.length > 0)
             : [];
+          
+          // Parse regions from CSV (comma-separated) and validate against allowed regions
+          const validRegions = ["Asia", "South America", "North America", "Europe", "Africa", "Australia"];
+          const regionsStr = row.region ? row.region.trim() : "";
+          const regions = regionsStr
+            ? regionsStr.split(",").map((r) => {
+                const trimmed = r.trim();
+                // Case-insensitive validation against valid regions
+                const normalizedInput = trimmed.toLowerCase();
+                const validRegion = validRegions.find(
+                  vr => vr.toLowerCase() === normalizedInput
+                );
+                return validRegion || null; // Return null if invalid
+              }).filter((r) => r !== null) // Filter out invalid regions
+            : [];
+          
           rows.push({
             domain:       row.domain?.trim() || "",
             url,
@@ -1141,6 +1157,10 @@ export const bulkImportSites = async (req, res) => {
             owner:        req.user._id,
             priority:     Number(row.priority ?? 0),
             emailContact: emailList.length > 0 ? emailList : [],
+            regions:      regions.length > 0 ? regions : [],
+            checkFrequency: 60_000, // Default 1 minute
+            nextCheckAt: new Date(Date.now()),
+            nextRegionalCheckAt: new Date(Date.now()),
           });
         })
         .on("end", () => {
@@ -1172,14 +1192,61 @@ export const bulkImportSites = async (req, res) => {
       }
     });
 
-    const uniqueSites = [], skipped = [], reactivated = [];
+    const uniqueSites = [], skipped = [], reactivated = [], updated = [];
 
     for (const site of rows) {
       const domain = site.domain?.toLowerCase().trim();
       const url    = site.url?.toLowerCase().trim();
 
       if (activeUrls.has(url) || activeDomains.has(domain)) {
-        skipped.push(site);
+        // Find the existing site and update it instead of skipping
+        const existingSite = await MonitoredSite.findOne({
+          owner: req.user._id,
+          $or: [
+            { url: { $regex: new RegExp(`^${url}$`, 'i') } },
+            { domain: { $regex: new RegExp(`^${domain}$`, 'i') } }
+          ]
+        });
+
+        if (existingSite) {
+          existingSite.domain = site.domain;
+          existingSite.url = site.url;
+          existingSite.category = site.category;
+          existingSite.priority = site.priority;
+          existingSite.emailContact = site.emailContact;
+          existingSite.regions = site.regions || [];
+          existingSite.checkFrequency = site.checkFrequency || 60_000;
+          existingSite.nextCheckAt = site.nextCheckAt || new Date(Date.now());
+          existingSite.nextRegionalCheckAt = site.nextRegionalCheckAt || new Date(Date.now());
+          existingSite.updatedBy = req.user._id;
+          existingSite.lastManualUpdateAt = new Date();
+          await existingSite.save();
+          
+          // Sync regions in RegionAssignment
+          if (Array.isArray(site.regions) && site.regions.length > 0) {
+            try {
+              const existing = await RegionAssignment.find({ siteId: existingSite._id });
+              const existingRegions = existing.map((e) => e.region);
+              const toAdd = site.regions.filter((r) => !existingRegions.includes(r));
+              const toRemove = existingRegions.filter((r) => !site.regions.includes(r));
+              if (toAdd.length > 0) {
+                try {
+                  await RegionAssignment.insertMany(
+                    toAdd.map((r) => ({ siteId: existingSite._id, region: r })),
+                    { ordered: false }
+                  );
+                } catch (e) { /* ignore duplicates */ }
+              }
+              if (toRemove.length > 0) {
+                await RegionAssignment.deleteMany({ siteId: existingSite._id, region: { $in: toRemove } });
+              }
+            } catch (e) {
+              console.error("Region sync error during update:", e);
+            }
+          }
+          
+          updated.push(site);
+        }
         continue;
       }
 
@@ -1188,7 +1255,35 @@ export const bulkImportSites = async (req, res) => {
         existing.isActive  = 1;
         existing.deletedAt = null;
         existing.deletedBy = null;
+        existing.regions = site.regions || [];
+        existing.checkFrequency = site.checkFrequency || 60_000;
+        existing.nextCheckAt = site.nextCheckAt || new Date(Date.now());
+        existing.nextRegionalCheckAt = site.nextRegionalCheckAt || new Date(Date.now());
         await existing.save();
+        
+        // Sync regions in RegionAssignment
+        if (Array.isArray(site.regions) && site.regions.length > 0) {
+          try {
+            const existingAssignments = await RegionAssignment.find({ siteId: existing._id });
+            const existingRegions = existingAssignments.map((e) => e.region);
+            const toAdd = site.regions.filter((r) => !existingRegions.includes(r));
+            const toRemove = existingRegions.filter((r) => !site.regions.includes(r));
+            if (toAdd.length > 0) {
+              try {
+                await RegionAssignment.insertMany(
+                  toAdd.map((r) => ({ siteId: existing._id, region: r })),
+                  { ordered: false }
+                );
+              } catch (e) { /* ignore duplicates */ }
+            }
+            if (toRemove.length > 0) {
+              await RegionAssignment.deleteMany({ siteId: existing._id, region: { $in: toRemove } });
+            }
+          } catch (e) {
+            console.error("Region sync error during reactivation:", e);
+          }
+        }
+        
         reactivated.push(site);
         activeUrls.add(url);
         activeDomains.add(domain);
@@ -1201,7 +1296,28 @@ export const bulkImportSites = async (req, res) => {
     }
 
     if (uniqueSites.length > 0) {
-      await MonitoredSite.insertMany(uniqueSites, { ordered: false });
+      const insertedSites = await MonitoredSite.insertMany(uniqueSites, { ordered: false });
+      
+      // Create RegionAssignment entries for sites with regions
+      const regionAssignments = [];
+      for (const site of insertedSites) {
+        if (Array.isArray(site.regions) && site.regions.length > 0) {
+          for (const region of site.regions) {
+            regionAssignments.push({
+              siteId: site._id,
+              region: region
+            });
+          }
+        }
+      }
+      
+      if (regionAssignments.length > 0) {
+        try {
+          await RegionAssignment.insertMany(regionAssignments, { ordered: false });
+        } catch (e) {
+          console.error("Region assignment error during insert:", e);
+        }
+      }
     }
 
     fs.unlinkSync(filePath);
@@ -1212,6 +1328,7 @@ export const bulkImportSites = async (req, res) => {
       inserted:    uniqueSites.length,
       skipped:     skipped.length,
       reactivated: reactivated.length,
+      updated:     updated.length,
     });
   } catch (error) {
     console.error("❌ Bulk import error:", error.message);

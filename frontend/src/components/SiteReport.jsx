@@ -10,6 +10,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   Activity,
@@ -17,6 +18,7 @@ import {
   AlertTriangle,
   Server,
   Radar,
+  ExternalLink,
 } from "lucide-react";
 
 // ─── MAX chart points ─────────────────────────────────────────────────────────
@@ -119,7 +121,6 @@ function GlobalCheckSkeleton() {
           boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(56,189,248,0.08)",
         }}
       >
-        {/* Spinner + title */}
         <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "28px" }}>
           <motion.div
             animate={{ rotate: 360 }}
@@ -141,7 +142,6 @@ function GlobalCheckSkeleton() {
           </div>
         </div>
 
-        {/* Skeleton rows */}
         {["North America", "Europe", "Asia", "South America", "Australia", "Africa"].map((r, i) => (
           <motion.div
             key={r}
@@ -155,7 +155,6 @@ function GlobalCheckSkeleton() {
               border: "1px solid rgba(56,189,248,0.08)",
             }}
           >
-            {/* Dot pulse */}
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <motion.div
                 animate={{ opacity: [0.3, 1, 0.3] }}
@@ -166,7 +165,6 @@ function GlobalCheckSkeleton() {
                 {r}
               </span>
             </div>
-            {/* Skeleton shimmer bar */}
             <motion.div
               animate={{ opacity: [0.2, 0.5, 0.2] }}
               transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.12 }}
@@ -211,10 +209,14 @@ export default function SiteReport({
   range = "7d",
   customFrom,
   customTo,
+  // ─── NEW: when true, shows the "View Full Detail" button ──────────────────
+  showFullDetailBtn = false,
 }) {
-  const [isCheckingGlobal, setIsCheckingGlobal]     = React.useState(false);
+  const navigate = useNavigate();
+
+  const [isCheckingGlobal, setIsCheckingGlobal]         = React.useState(false);
   const [globalCheckModalData, setGlobalCheckModalData] = React.useState(null);
-  const [globalCheckError, setGlobalCheckError]     = React.useState(null);
+  const [globalCheckError, setGlobalCheckError]         = React.useState(null);
 
   const handleGlobalCheck = async () => {
     setIsCheckingGlobal(true);
@@ -235,6 +237,11 @@ export default function SiteReport({
     } finally {
       setIsCheckingGlobal(false);
     }
+  };
+
+  // ─── NEW: navigate to /reports with this site pre-selected ───────────────
+  const handleViewFullDetail = () => {
+    navigate("/reports", { state: { selectedSiteId: site._id } });
   };
 
   // ── Sort & downsample ─────────────────────────────────────────────────────
@@ -295,6 +302,10 @@ export default function SiteReport({
         <p style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:"11px", color:"rgba(148,163,184,0.5)", letterSpacing:"0.06em", textTransform:"uppercase" }}>
           No data available for the selected range
         </p>
+        {/* Still show the button even with no data, so user can navigate */}
+        {showFullDetailBtn && (
+          <ViewFullDetailButton onClick={handleViewFullDetail} domain={site.domain} />
+        )}
       </div>
     );
   }
@@ -319,7 +330,6 @@ export default function SiteReport({
               onClick={(e) => e.stopPropagation()}
               style={{ background:"rgba(3,7,18,0.95)", border:"1px solid rgba(56,189,248,0.2)", borderRadius:"20px", backdropFilter:"blur(20px)", boxShadow:"0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(56,189,248,0.1)", padding:"32px", maxWidth:"600px", width:"90%", maxHeight:"80vh", overflowY:"auto" }}
             >
-              {/* Header */}
               <div className="flex items-center justify-between mb-6 gap-4">
                 <div>
                   <h2 style={{ fontFamily:"'Orbitron',sans-serif", fontSize:"20px", fontWeight:700, color:"white", marginBottom:"4px" }}>
@@ -335,7 +345,6 @@ export default function SiteReport({
                 </motion.button>
               </div>
 
-              {/* Live check result banner */}
               {globalCheckModalData.liveStatus && (
                 <div className="mb-4 p-3 rounded-xl" style={{ background:"rgba(129,140,248,0.06)", border:"1px solid rgba(129,140,248,0.15)" }}>
                   <p style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:"9px", color:"rgba(129,140,248,0.5)", marginBottom:"6px", letterSpacing:"0.06em" }}>
@@ -362,7 +371,6 @@ export default function SiteReport({
                 </div>
               )}
 
-              {/* Aggregated global status */}
               <div className="mb-6 p-4 rounded-xl" style={{ background:"rgba(56,189,248,0.08)", border:"1px solid rgba(56,189,248,0.15)" }}>
                 <p style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:"10px", color:"rgba(56,189,248,0.5)", marginBottom:"8px", letterSpacing:"0.06em" }}>
                   AGGREGATED GLOBAL STATUS
@@ -375,7 +383,6 @@ export default function SiteReport({
                 </div>
               </div>
 
-              {/* Regional breakdown */}
               {Array.isArray(globalCheckModalData.regionalBreakdown) && globalCheckModalData.regionalBreakdown.length > 0 && (
                 <>
                   <p style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:"10px", color:"rgba(56,189,248,0.5)", marginBottom:"12px", letterSpacing:"0.06em" }}>
@@ -422,7 +429,6 @@ export default function SiteReport({
                 </>
               )}
 
-              {/* No regions message */}
               {(!globalCheckModalData.regionalBreakdown || globalCheckModalData.regionalBreakdown.length === 0) && (
                 <div style={{ padding:"16px", borderRadius:"10px", background:"rgba(148,163,184,0.04)", border:"1px solid rgba(148,163,184,0.1)", textAlign:"center" }}>
                   <p style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:"10px", color:"rgba(148,163,184,0.45)", letterSpacing:"0.06em" }}>
@@ -502,7 +508,7 @@ export default function SiteReport({
               </div>
             </div>
             <div style={{ width:"100%", height:280, minWidth:0 }}>
-  <ResponsiveContainer width="100%" height={280}>
+              <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={series} margin={{ top:6, right:12, left:0, bottom:4 }}>
                   <defs>
                     <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -617,9 +623,56 @@ export default function SiteReport({
             </div>
           </GlassCard>
 
+          {/* ── NEW: View Full Detail button — only shown from UrlTable ── */}
+          {showFullDetailBtn && (
+            <ViewFullDetailButton onClick={handleViewFullDetail} domain={site.domain} />
+          )}
+
         </aside>
       </div>
     </>
+  );
+}
+
+// ─── View Full Detail Button ──────────────────────────────────────────────────
+function ViewFullDetailButton({ onClick, domain }) {
+  return (
+    <motion.button
+      whileHover={{ scale: 1.02, y: -1 }}
+      whileTap={{ scale: 0.97 }}
+      onClick={onClick}
+      className="w-full flex items-center justify-center gap-2.5 py-3 rounded-2xl transition-all duration-200"
+      style={{
+        background: "linear-gradient(135deg, rgba(56,189,248,0.1) 0%, rgba(129,140,248,0.08) 100%)",
+        border: "1px solid rgba(56,189,248,0.25)",
+        color: "#38bdf8",
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "11px",
+        fontWeight: 600,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        cursor: "pointer",
+        boxShadow: "0 0 20px rgba(56,189,248,0.05), inset 0 1px 0 rgba(56,189,248,0.08)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = "linear-gradient(135deg, rgba(56,189,248,0.16) 0%, rgba(129,140,248,0.12) 100%)";
+        e.currentTarget.style.borderColor = "rgba(56,189,248,0.4)";
+        e.currentTarget.style.boxShadow = "0 0 28px rgba(56,189,248,0.12), inset 0 1px 0 rgba(56,189,248,0.12)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "linear-gradient(135deg, rgba(56,189,248,0.1) 0%, rgba(129,140,248,0.08) 100%)";
+        e.currentTarget.style.borderColor = "rgba(56,189,248,0.25)";
+        e.currentTarget.style.boxShadow = "0 0 20px rgba(56,189,248,0.05), inset 0 1px 0 rgba(56,189,248,0.08)";
+      }}
+    >
+      <ExternalLink size={13} />
+      View Full Detail
+      {domain && (
+        <span style={{ color: "rgba(148,163,184,0.45)", fontSize: "9px", fontWeight: 400, letterSpacing: "0.06em", marginLeft: 2 }}>
+          · {domain}
+        </span>
+      )}
+    </motion.button>
   );
 }
 

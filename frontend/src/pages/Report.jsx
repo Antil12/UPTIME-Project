@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import axios from "axios";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 import {
   Search,
@@ -14,8 +15,10 @@ import {
 import SiteReport from "../components/SiteReport";
 import ExportButtons from "../components/ExportButtons";
 
+
 const API_URL = import.meta.env.VITE_API_URL;
 const SITE_PER_PAGE = 5;
+
 
 // ─── Font Loader ──────────────────────────────────────────────────────────────
 const FontLoader = () => {
@@ -172,10 +175,21 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
   const [tempFrom, setTempFrom] = useState("");
   const [tempTo, setTempTo] = useState("");
 
+  // ─── Navigation state from "View Detail" button ───────────────────────────
+  const location = useLocation();
+  const navigate = useNavigate();
+  const preSelectedSiteId = location.state?.selectedSiteId ?? null;
+
+  // ─── Highlight state: which card is currently glowing ─────────────────────
+  const [highlightedSiteId, setHighlightedSiteId] = useState(null);
+
+  // ─── Per-card refs map: siteId → DOM element ──────────────────────────────
+  const cardRefs = useRef({});
+
   // Abort in-flight requests when deps change
   const abortRef = useRef(null);
 
-  // ─── 1. Filtered sites (search only, no slice) ──────────────────────────
+  // ─── 1. Filtered sites ────────────────────────────────────────────────────
   const filteredSites = useMemo(
     () =>
       urls.filter(
@@ -186,44 +200,81 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
     [urls, reportSearch]
   );
 
-  // ─── 2. Total pages — pure derivation, no useEffect ─────────────────────
+  // ─── 2. Total pages ───────────────────────────────────────────────────────
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filteredSites.length / SITE_PER_PAGE)),
     [filteredSites.length]
   );
 
-  // ─── 3. Current page slice ───────────────────────────────────────────────
+  // ─── 3. Current page slice ────────────────────────────────────────────────
   const paginatedSites = useMemo(() => {
     const start = (page - 1) * SITE_PER_PAGE;
     return filteredSites.slice(start, start + SITE_PER_PAGE);
   }, [filteredSites, page]);
 
-  // ─── 4. Stable key — only a string, won't cause infinite loops ──────────
+  // ─── 4. Stable key ────────────────────────────────────────────────────────
   const siteIdsKey = useMemo(
     () => paginatedSites.map((s) => s._id).join(","),
     [paginatedSites]
   );
 
-  // ─── 5. Reset page to 1 when filter/range changes ───────────────────────
+  // ─── 5. Reset page to 1 when filter/range changes ─────────────────────────
   useEffect(() => {
     setPage(1);
   }, [reportSearch, range, customFrom, customTo]);
 
-  // ─── 6. Clamp page if filteredSites shrinks (e.g. search narrows) ───────
+  // ─── 6. Clamp page if filteredSites shrinks ───────────────────────────────
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
-  }, [totalPages]); // intentionally omit `page` to avoid loop
+  }, [totalPages]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── 7. Fetch — fires only when siteIdsKey or range params change ────────
+  // ─── 7. Jump to pre-selected site's page + set highlight ─────────────────
+  // Runs when preSelectedSiteId arrives and filteredSites is populated.
+  // Finds which page the site lives on, jumps to it, and arms the highlight.
+  // Then clears location.state so back-navigation doesn't re-trigger.
+  useEffect(() => {
+    if (!preSelectedSiteId || filteredSites.length === 0) return;
+
+    const siteIndex = filteredSites.findIndex((s) => s._id === preSelectedSiteId);
+    if (siteIndex === -1) return;
+
+    const targetPage = Math.floor(siteIndex / SITE_PER_PAGE) + 1;
+    setPage(targetPage);
+    setHighlightedSiteId(preSelectedSiteId);
+
+    // Clear nav state so refresh / back-nav doesn't re-highlight
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [preSelectedSiteId, filteredSites]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── 8. Scroll to card + auto-clear highlight ─────────────────────────────
+  // Waits for the correct page to render, then scrolls the target card into
+  // view and fades the highlight ring out after 2.8 s.
+  useEffect(() => {
+    if (!highlightedSiteId) return;
+
+    const scrollTimer = setTimeout(() => {
+      const el = cardRefs.current[highlightedSiteId];
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+
+    const clearTimer = setTimeout(() => {
+      setHighlightedSiteId(null);
+    }, 2800);
+
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightedSiteId, page]);
+
+  // ─── 9. Fetch page data ───────────────────────────────────────────────────
   const fetchPageData = useCallback(async () => {
-    // Nothing to fetch
     if (!siteIdsKey) {
       setLogsBySite({});
       setStatsMap({});
       return;
     }
 
-    // Validate custom range if selected
     if (range === "custom") {
       if (!customFrom || !customTo) {
         setError("Please select both dates for custom range");
@@ -246,11 +297,9 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
       }
     }
 
-    // Cancel previous in-flight request to prevent race conditions
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
 
-    // Immediately wipe previous page's data so stale stats don't show
     setLogsBySite({});
     setStatsMap({});
     setError(null);
@@ -261,7 +310,6 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
       if (!token) { setLoading(false); return; }
 
       const params = { range, siteIds: siteIdsKey };
-      // Only send from/to when custom range is properly applied
       if (range === "custom" && customFrom && customTo) {
         params.from = customFrom;
         params.to = customTo;
@@ -280,13 +328,9 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
         setError("No data received from server");
       }
     } catch (err) {
-      // Ignore abort errors — they're intentional cancellations
       if (axios.isCancel(err) || err?.code === "ERR_CANCELED") return;
       console.error("Report fetch error:", err);
-
-      const errorMsg = err.response?.data?.message ||
-                       err.message ||
-                       "Failed to load report data. Please try again.";
+      const errorMsg = err.response?.data?.message || err.message || "Failed to load report data. Please try again.";
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -298,7 +342,7 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
     return () => { if (abortRef.current) abortRef.current.abort(); };
   }, [fetchPageData]);
 
-  // ─── Apply custom date range ─────────────────────────────────────────────
+  // ─── Apply custom date range ──────────────────────────────────────────────
   const applyCustomRange = () => {
     if (!tempFrom || !tempTo) {
       setError("Please select both 'From' and 'To' dates");
@@ -389,18 +433,7 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
             className="mb-4 rounded-xl p-3 sm:p-4 relative z-50 overflow-visible"
             style={{ background: "rgba(3,7,18,0.72)", border: "1px solid rgba(56,189,248,0.07)", backdropFilter: "blur(14px)", boxShadow: "0 0 14px rgba(56,189,248,0.02)" }}
           >
-            {/*
-              LAYOUT STRATEGY
-              ─────────────────────────────────────────────────────────────────
-              Mobile  (<xl): Two-row layout inside the controls card.
-                Row 1: Search input (left) + Export button (pushed to far right)
-                Row 2: Range selector pills (full width, wrapping)
-              Desktop (≥xl): Original single-row layout — search + range pills
-                on the left, Export block on the far right. Unchanged.
-              ─────────────────────────────────────────────────────────────────
-            */}
-
-            {/* ── Desktop layout (xl+): exactly as original ── */}
+            {/* ── Desktop layout (xl+) ── */}
             <div className="hidden xl:flex xl:items-start xl:justify-between gap-4 overflow-visible">
               <div className="flex flex-row gap-3">
                 {/* Search */}
@@ -462,7 +495,7 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                 </div>
               </div>
 
-              {/* Export — desktop: far right, exactly as original */}
+              {/* Export */}
               <div className="relative z-[9999] overflow-visible self-start">
                 <div className="rounded-lg px-3 py-2 overflow-visible" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", backdropFilter: "blur(12px)" }}>
                   <div className="mb-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.12em", color: "rgba(56,189,248,0.58)", textTransform: "uppercase" }}>
@@ -477,10 +510,7 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
 
             {/* ── Mobile / tablet layout (<xl) ── */}
             <div className="flex xl:hidden flex-col gap-3 overflow-visible">
-
-              {/* Row 1: Search (left) + Export (far right) */}
               <div className="flex items-center gap-2">
-                {/* Search — grows to fill available space */}
                 <div className="relative flex-1">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-400/60" />
                   <input
@@ -491,8 +521,6 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                     style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", color: "white", fontFamily: "'JetBrains Mono', monospace" }}
                   />
                 </div>
-
-                {/* Export — pushed to far right on mobile */}
                 <div className="relative z-[9999] overflow-visible flex-shrink-0 self-start">
                   <div className="rounded-lg px-3 py-2 overflow-visible" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", backdropFilter: "blur(12px)" }}>
                     <div className="mb-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.12em", color: "rgba(56,189,248,0.58)", textTransform: "uppercase" }}>
@@ -505,7 +533,6 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                 </div>
               </div>
 
-              {/* Row 2: Range selector pills */}
               <div className="flex items-center gap-2 flex-wrap">
                 {[
                   { key: "24h", label: "24H" },
@@ -552,17 +579,13 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
               </div>
             </div>
 
-            {/* Custom Range Picker — shared across both breakpoints */}
+            {/* Custom Range Picker */}
             {range === "custom" && (
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-3 rounded-lg px-3 py-3"
-                style={{
-                  background: "rgba(3,7,18,0.65)",
-                  border: "1px solid rgba(56,189,248,0.06)",
-                  backdropFilter: "blur(14px)",
-                }}
+                style={{ background: "rgba(3,7,18,0.65)", border: "1px solid rgba(56,189,248,0.06)", backdropFilter: "blur(14px)" }}
               >
                 <div className="flex flex-col sm:flex-row items-end gap-2.5">
                   {[
@@ -659,23 +682,79 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                   <SkeletonCard key={i} index={i} />
                 ))
               : paginatedSites.map((site, index) => {
-                  const logs  = logsBySite[site._id] || [];
-                  const stats = statsMap[site._id]   || {};
+                  const logs    = logsBySite[site._id] || [];
+                  const stats   = statsMap[site._id]   || {};
                   const lastLog = logs.length ? logs[logs.length - 1] : null;
                   const isDown  = lastLog?.status === "DOWN";
                   const hasData = logs.length > 0;
+                  const isHighlighted = highlightedSiteId === site._id;
 
                   return (
                     <motion.div
                       key={`${site._id}-${page}`}
+                      // ── Attach ref so we can scrollIntoView this card ─────
+                      ref={(el) => {
+                        if (el) cardRefs.current[site._id] = el;
+                        else delete cardRefs.current[site._id];
+                      }}
                       initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.04, duration: 0.4 }}
-                      whileHover={{ y: -2 }}
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                        // ── Pulse the glow when highlighted ─────────────────
+                        boxShadow: isHighlighted
+                          ? [
+                              "0 0 0px rgba(56,189,248,0)",
+                              "0 0 28px rgba(56,189,248,0.45)",
+                              "0 0 18px rgba(56,189,248,0.28)",
+                              "0 0 28px rgba(56,189,248,0.45)",
+                              "0 0 0px rgba(56,189,248,0)",
+                            ]
+                          : "0 0 18px rgba(56,189,248,0.025)",
+                      }}
+                      transition={{
+                        opacity:   { delay: index * 0.04, duration: 0.4 },
+                        y:         { delay: index * 0.04, duration: 0.4 },
+                        boxShadow: isHighlighted
+                          ? { duration: 2.6, times: [0, 0.2, 0.5, 0.8, 1], ease: "easeInOut" }
+                          : { duration: 0.4 },
+                      }}
+                      whileHover={!isHighlighted ? { y: -2 } : {}}
                       className="group relative overflow-hidden rounded-xl"
-                      style={{ background: "rgba(3,7,18,0.74)", border: "1px solid rgba(56,189,248,0.08)", backdropFilter: "blur(16px)", boxShadow: "0 0 18px rgba(56,189,248,0.025), inset 0 1px 0 rgba(56,189,248,0.03)" }}
+                      style={{
+                        background: "rgba(3,7,18,0.74)",
+                        // ── Border lights up sky-blue while highlighted ──────
+                        border: isHighlighted
+                          ? "1px solid rgba(56,189,248,0.55)"
+                          : "1px solid rgba(56,189,248,0.08)",
+                        backdropFilter: "blur(16px)",
+                        transition: "border-color 0.4s ease",
+                      }}
                     >
-                      <div className="absolute top-0 left-0 right-0 h-[1px]" style={{ background: "rgba(56,189,248,0.18)" }} />
+                      {/* Top accent line — brighter when highlighted */}
+                      <div
+                        className="absolute top-0 left-0 right-0 h-[1px]"
+                        style={{
+                          background: isHighlighted
+                            ? "rgba(56,189,248,0.7)"
+                            : "rgba(56,189,248,0.18)",
+                          transition: "background 0.4s ease",
+                        }}
+                      />
+
+                      {/* Left accent bar — animates in while highlighted */}
+                      {isHighlighted && (
+                        <motion.div
+                          initial={{ height: 0 }}
+                          animate={{ height: "100%" }}
+                          transition={{ duration: 0.35, ease: "easeOut" }}
+                          className="absolute left-0 top-0 w-[3px] rounded-r"
+                          style={{
+                            background: "linear-gradient(to bottom, #38bdf8, rgba(56,189,248,0.1))",
+                            boxShadow: "2px 0 12px rgba(56,189,248,0.4)",
+                          }}
+                        />
+                      )}
 
                       <div className="relative z-10 p-4 sm:p-5">
 
@@ -793,7 +872,6 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                 <ChevronLeft size={15} /> Prev
               </motion.button>
 
-              {/* Page pills with ellipsis */}
               <div className="flex items-center gap-1.5 flex-wrap justify-center">
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)

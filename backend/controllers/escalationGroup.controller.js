@@ -41,7 +41,13 @@ export const getUserEscalationGroups = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const groups = await EscalationGroup.find({ owner: userId, isActive: true })
+    // Superadmins can see all groups, regular users only see their own
+    const query = req.user.role === "SUPERADMIN" 
+      ? { isActive: true }
+      : { owner: userId, isActive: true };
+
+    const groups = await EscalationGroup.find(query)
+      .populate("owner", "name email role")
       .sort({ createdAt: -1 });
 
     res.json({ success: true, data: groups });

@@ -647,7 +647,6 @@ const UrlTable = forwardRef(({
                 </motion.button>
               </div>
 
-
               <div className="mb-6 p-4 rounded-xl" style={{ background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.15)" }}>
                 <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(56,189,248,0.5)", marginBottom: "8px", letterSpacing: "0.06em" }}>GLOBAL STATUS</p>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -976,7 +975,14 @@ const UrlTable = forwardRef(({
                     style={{ background: "rgba(3,7,18,0.68)", border: "1px solid rgba(56,189,248,0.09)", backdropFilter: "blur(16px)" }}
                   >
                     <div className="p-4">
-                      <SiteReport site={item} logs={siteLogs[item._id] || []} stats={siteStats[item._id] || {}} theme={theme} />
+                      {/* ── showFullDetailBtn=true for mobile card view ── */}
+                      <SiteReport
+                        site={item}
+                        logs={siteLogs[item._id] || []}
+                        stats={siteStats[item._id] || {}}
+                        theme={theme}
+                        showFullDetailBtn={true}
+                      />
                     </div>
                   </motion.div>
                 )}
@@ -1156,7 +1162,14 @@ const FragmentRow = ({
                 style={{ background: "rgba(56,189,248,0.018)", borderTop: "1px solid rgba(56,189,248,0.09)", borderBottom: "1px solid rgba(56,189,248,0.09)" }}
               >
                 <div className="p-5">
-                  <SiteReport site={item} logs={siteLogs[item._id] || []} stats={siteStats[item._id] || {}} theme={theme} />
+                  {/* ── showFullDetailBtn=true for desktop expanded row ── */}
+                  <SiteReport
+                    site={item}
+                    logs={siteLogs[item._id] || []}
+                    stats={siteStats[item._id] || {}}
+                    theme={theme}
+                    showFullDetailBtn={true}
+                  />
                 </div>
               </motion.div>
             </td>

@@ -367,16 +367,23 @@ const BulkUpload = () => {
 
       const API = import.meta.env.VITE_API_URL;
 
-      await axios.post(`${API}/monitoredsite/bulk-import`, formData, {
+      const response = await axios.post(`${API}/monitoredsite/bulk-import`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${localStorage.getItem("loginToken")}`,
         },
       });
 
+      const { inserted, skipped, reactivated, updated } = response.data;
+      const messageParts = [];
+      if (inserted > 0) messageParts.push(`${inserted} inserted`);
+      if (updated > 0) messageParts.push(`${updated} updated`);
+      if (reactivated > 0) messageParts.push(`${reactivated} reactivated`);
+      if (skipped > 0) messageParts.push(`${skipped} skipped`);
+
       setMessage({
         type: "success",
-        text: "Sites imported successfully",
+        text: `Bulk upload completed: ${messageParts.join(", ")}`,
       });
 
       setFile(null);
@@ -907,7 +914,7 @@ const BulkUpload = () => {
                       fontSize: "10px",
                     }}
                   >
-                    ✓ Tip: You can also add an optional <span className="text-sky-300">email</span> column
+                    ✓ Tip: You can also add optional <span className="text-sky-300">email</span> and <span className="text-sky-300">region</span> columns
                   </p>
                   <p
                     className="mt-1 text-amber-300"
@@ -917,6 +924,33 @@ const BulkUpload = () => {
                     }}
                   >
                     ✓ Multiple emails can be separated by commas (creates separate entries)
+                  </p>
+                  <p
+                    className="mt-1 text-amber-300"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "10px",
+                    }}
+                  >
+                    ✓ Multiple regions can be separated by commas (e.g., "Asia, Europe")
+                  </p>
+                  <p
+                    className="mt-1 text-amber-300"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "10px",
+                    }}
+                  >
+                    ✓ Valid regions: Asia, South America, North America, Europe, Africa, Australia
+                  </p>
+                  <p
+                    className="mt-1 text-amber-300"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "10px",
+                    }}
+                  >
+                    ✓ Region names are case-insensitive (e.g., "asia", "ASIA", "Asia" all work)
                   </p>
 
                   <p
@@ -1012,6 +1046,7 @@ const BulkUpload = () => {
                     </li>
                     <li>• <span className="text-white">priority</span> → default: <span className="text-sky-300">0</span></li>
                     <li>• <span className="text-white">email</span> → contact email(s), comma-separated for multiple</li>
+                    <li>• <span className="text-white">region</span> → regions(s), comma-separated for multiple</li>
                   </ul>
                 </div>
 

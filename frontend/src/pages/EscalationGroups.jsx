@@ -457,6 +457,12 @@ const GroupCard = ({ group, index, onEdit, onDelete, isDeleting }) => {
             </span>
           )}
 
+          {group.owner && (
+            <span style={{ fontFamily: T.font, fontSize: 8, color: T.dim, letterSpacing: "0.08em" }}>
+              By {group.owner.name || group.owner.email} ({group.owner.role})
+            </span>
+          )}
+
           <button
             onClick={() => setExpanded((v) => !v)}
             style={{ marginLeft: "auto", fontFamily: T.font, fontSize: 8, letterSpacing: "0.12em", color: T.dim, background: "none", border: "none", cursor: "pointer", textTransform: "uppercase", transition: "color 0.15s", display: "flex", alignItems: "center", gap: 4 }}

@@ -288,6 +288,33 @@ const GroupMultiSelect = ({ label, value = [], onChange, groups, color, icon: Ic
                             <Users size={8} />
                             {g.emails?.length ?? 0} recipient{g.emails?.length !== 1 ? "s" : ""}
                           </div>
+                          {g.owner && (
+                            <div style={{ 
+                              fontSize: 9, 
+                              color: `${color}70`, 
+                              marginTop: 4, 
+                              letterSpacing: "0.06em",
+                              fontWeight: 500,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4,
+                              padding: "3px 0",
+                              borderTop: `1px solid ${color}15`,
+                              paddingTop: 6
+                            }}>
+                              <span style={{ opacity: 0.7 }}>Created by</span>
+                              <span style={{ fontWeight: 600 }}>{g.owner.name || g.owner.email}</span>
+                              <span style={{ 
+                                background: `${color}20`, 
+                                padding: "1px 6px", 
+                                borderRadius: 4, 
+                                fontSize: 7,
+                                letterSpacing: "0.1em"
+                              }}>
+                                {g.owner.role}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <AnimatePresence>
                           {sel && (
