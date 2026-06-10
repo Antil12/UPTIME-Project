@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import { Plus, Trash2, Edit2, Mail, X, Check, Users, AlertTriangle, RefreshCw, Shield } from "lucide-react";
 import axios from "axios";
+import DeleteConfirmationModal from "../components/DeleteConfirmationModal";
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
@@ -558,6 +559,9 @@ const EscalationGroups = () => {
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => { fetchGroups(); }, []);
 
@@ -611,16 +615,40 @@ const EscalationGroups = () => {
     setError(""); setSuccess("");
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this escalation group?")) return;
+  const handleDeleteClick = (group) => {
+    setDeleteTarget(group);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
     try {
-      setDeletingId(id);
-      const r = await axios.delete(`/escalation-groups/${id}`);
-      if (r.data.success) { setGroups(groups.filter((g) => g._id !== id)); setSuccess("Group deleted"); }
+      setDeletingId(deleteTarget._id);
+      const r = await axios.delete(`/escalation-groups/${deleteTarget._id}`);
+      if (r.data.success) {
+        setGroups(groups.filter((g) => g._id !== deleteTarget._id));
+        setSuccess("Group deleted");
+        setDeleteModalOpen(false);
+        setDeleteTarget(null);
+      }
     } catch {
       setError("Failed to delete group");
     } finally {
       setDeletingId(null);
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false);
+    setDeleteTarget(null);
+  };
+
+  const handleDelete = async (id) => {
+    const group = groups.find((g) => g._id === id);
+    if (group) {
+      handleDeleteClick(group);
     }
   };
 
@@ -936,6 +964,17 @@ const EscalationGroups = () => {
           </div>
         </div>
       </div>
+
+      {/* ─── Delete Confirmation Modal ─── */}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Escalation Group"
+        message="Are you sure you want to delete this escalation group? All email recipients and routing configurations will be permanently removed."
+        itemName={deleteTarget?.groupName || ""}
+        loading={isDeleting}
+      />
     </>
   );
 };

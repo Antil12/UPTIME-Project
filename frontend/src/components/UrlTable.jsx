@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import SiteReport from "./SiteReport";
+import DeleteConfirmationModal from "./DeleteConfirmationModal";
 
 const API_BASE     = import.meta.env.VITE_API_URL;
 const LOG_API_BASE = `${API_BASE}/uptime-logs`;
@@ -421,6 +422,9 @@ const UrlTable = forwardRef(({
   const [searchColumn,        setSearchColumn]        = useState("");
   const [globalCheckLoading,  setGlobalCheckLoading]  = useState(null);
   const [globalCheckModalData,setGlobalCheckModalData]= useState(null);
+  const [deleteModalOpen,    setDeleteModalOpen]    = useState(false);
+  const [deleteTarget,       setDeleteTarget]       = useState(null);
+  const [isDeleting,         setIsDeleting]         = useState(false);
 
   const visibleColumnsForRole = DEFAULT_COLUMNS.filter((col) => {
     if (!isSuperAdmin && (col === "userEmail" || col === "userRole")) return false;
@@ -595,6 +599,30 @@ const UrlTable = forwardRef(({
     setShowSslFilter(false);
     setShowStatusFilter(false);
     setShowRoleFilter(false);
+  }, []);
+
+  const handleDeleteClick = useCallback((item) => {
+    setDeleteTarget(item);
+    setDeleteModalOpen(true);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await onDelete(deleteTarget._id);
+      setDeleteModalOpen(false);
+      setDeleteTarget(null);
+    } catch (error) {
+      console.error("Delete failed:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteTarget, onDelete]);
+
+  const handleDeleteCancel = useCallback(() => {
+    setDeleteModalOpen(false);
+    setDeleteTarget(null);
   }, []);
 
   const visibleColsCount = DEFAULT_COLUMNS.filter((col) => {
@@ -845,7 +873,7 @@ const UrlTable = forwardRef(({
                     selectionMode={selectionMode} selectedIds={selectedIds} setSelectedIds={setSelectedIds}
                     hiddenColumns={hiddenColumns} isSuperAdmin={isSuperAdmin} isViewer={isViewer}
                     expandedSite={expandedSite} handleToggleSite={handleToggleSite}
-                    onPin={onPin} onEdit={onEdit} onDelete={onDelete}
+                    onPin={onPin} onEdit={onEdit} onDelete={handleDeleteClick}
                     siteLogs={siteLogs} siteStats={siteStats} theme={theme} colSpan={visibleColsCount}
                     handleGlobalCheck={handleGlobalCheck} globalCheckLoading={globalCheckLoading}
                     onRowClick={handleRowClick}
@@ -991,6 +1019,17 @@ const UrlTable = forwardRef(({
           );
         })}
       </div>
+
+      {/* ─── Delete Confirmation Modal ─── */}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Website"
+        message="Are you sure you want to delete this website? All monitoring data, logs, and configurations will be permanently removed."
+        itemName={deleteTarget?.domain || ""}
+        loading={isDeleting}
+      />
     </div>
   );
 });
@@ -1144,7 +1183,7 @@ const FragmentRow = ({
               <ActionBtn onClick={() => onEdit(item)} title="Edit">
                 <span style={{ fontSize: "12px" }}>✏️</span>
               </ActionBtn>
-              <ActionBtn onClick={() => onDelete(item._id)} title="Delete" danger>
+              <ActionBtn onClick={() => onDelete(item)} title="Delete" danger>
                 <Trash2 size={13} />
               </ActionBtn>
             </div>
