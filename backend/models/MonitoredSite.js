@@ -40,11 +40,7 @@ const monitoredSiteSchema = new mongoose.Schema({
     default: true,
   },
 
-  // Voice message to be spoken (TTS)
-  voiceAlertMessage: {
-    type: String,
-    default: 'Alert: Your monitored site is down'
-  },
+
 
   // Track last voice alert for this monitor
   lastVoiceAlertAt: {

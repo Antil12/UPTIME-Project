@@ -11,7 +11,7 @@ export async function getVoiceConfig(req, res) {
     const { monitorId } = req.params;
 
     const monitor = await MonitoredSite.findById(monitorId).select(
-      'domain voiceAlertsEnabled voiceAlertMessage phoneContact priority lastVoiceAlertAt'
+      'domain voiceAlertsEnabled phoneContact priority lastVoiceAlertAt'
     );
 
     if (!monitor) {
@@ -24,7 +24,6 @@ export async function getVoiceConfig(req, res) {
         id: monitor._id,
         domain: monitor.domain,
         voiceAlertsEnabled: monitor.voiceAlertsEnabled,
-        voiceAlertMessage: monitor.voiceAlertMessage,
         phoneContact: monitor.phoneContact || [],
         priority: monitor.priority,
         lastVoiceAlertAt: monitor.lastVoiceAlertAt,
@@ -41,7 +40,7 @@ export async function getVoiceConfig(req, res) {
 export async function updateVoiceConfig(req, res) {
   try {
     const { monitorId } = req.params;
-    const { voiceAlertsEnabled, voiceAlertMessage, priority, phoneContact } = req.body;
+    const { voiceAlertsEnabled, priority, phoneContact } = req.body;
 
     // Validate phone numbers if provided
     if (phoneContact && Array.isArray(phoneContact)) {
@@ -66,18 +65,9 @@ export async function updateVoiceConfig(req, res) {
       });
     }
 
-    // Validate voice message length
-    if (voiceAlertMessage && voiceAlertMessage.length > 500) {
-      return res.status(400).json({
-        error: 'Voice alert message too long',
-        message: 'Maximum 500 characters allowed'
-      });
-    }
-
-    // Build update fields
+      // Build update fields
     const updateFields = {};
     if (voiceAlertsEnabled !== undefined) updateFields.voiceAlertsEnabled = voiceAlertsEnabled;
-    if (voiceAlertMessage !== undefined) updateFields.voiceAlertMessage = voiceAlertMessage;
     if (priority !== undefined) updateFields.priority = priority;
     if (phoneContact !== undefined) updateFields.phoneContact = phoneContact;
     updateFields.updatedBy = req.user?.id || null;
@@ -91,7 +81,7 @@ export async function updateVoiceConfig(req, res) {
       monitorId,
       { $set: updateFields },
       { new: true, runValidators: true }
-    ).select('domain voiceAlertsEnabled voiceAlertMessage phoneContact priority');
+    ).select('domain voiceAlertsEnabled phoneContact priority');
 
     if (!monitor) {
       return res.status(404).json({ error: 'Monitor not found' });
@@ -110,7 +100,6 @@ export async function updateVoiceConfig(req, res) {
         id: monitor._id,
         domain: monitor.domain,
         voiceAlertsEnabled: monitor.voiceAlertsEnabled,
-        voiceAlertMessage: monitor.voiceAlertMessage,
         phoneContact: monitor.phoneContact,
         priority: monitor.priority,
       },
@@ -142,7 +131,7 @@ export async function testVoiceCall(req, res) {
       });
     }
 
-    const monitor = await MonitoredSite.findById(monitorId).select('domain voiceAlertMessage');
+    const monitor = await MonitoredSite.findById(monitorId).select('domain ');
     if (!monitor) {
       return res.status(404).json({ error: 'Monitor not found' });
     }
@@ -154,7 +143,7 @@ export async function testVoiceCall(req, res) {
       monitorId,
       recipientPhone: phone,
       recipientName: `Test - ${monitor.domain}`,
-      alertMessage: monitor.voiceAlertMessage || `Test call for website ${monitor.domain}. This is a test of your voice alert system.`,
+      alertMessage: `Test call for website ${monitor.domain}. This is a test of your voice alert system.`,
       severity: 'info',
       alertType: 'downtime',
       status: 'queued',
@@ -239,12 +228,7 @@ export async function getVoiceConfigHelp(req, res) {
           description: 'Enable/disable voice alerts for this monitor',
           default: false
         },
-        voiceAlertMessage: {
-          type: 'string',
-          description: 'Custom message to be spoken during voice call',
-          maxLength: 500,
-          default: 'Default message based on monitor domain'
-        },
+      
         phoneContact: {
           type: 'array',
           description: 'Array of phone numbers to call',

@@ -21,7 +21,7 @@ export async function triggerVoiceAlertForMonitor({
   }
 
   const monitor = await MonitoredSite.findById(monitorId).select(
-    'lastVoiceAlertAt voiceAlertMessage domain phoneContact voiceAlertsEnabled'
+    'lastVoiceAlertAt  domain phoneContact voiceAlertsEnabled'
   );
   if (!monitor) throw new Error(`Monitor ${monitorId} not found`);
 
@@ -36,8 +36,8 @@ export async function triggerVoiceAlertForMonitor({
   }
 
   // Generate dynamic message with website name if not custom provided
-  const defaultMessage = `Alert. Your website ${monitor.domain} is down. This is an automated alert from uptime monitor.`;
-  const message = alertMessage || monitor.voiceAlertMessage || defaultMessage;
+  const defaultMessage = `Alert. Your website ${monitor.domain} is down. This is an automated alert from pulse.`;
+  const message = alertMessage || defaultMessage;
 
   // Create voice alert record
   const alert = new VoiceAlert({
@@ -76,7 +76,7 @@ export async function triggerVoiceAlertForMonitor({
 export async function checkPriority1Alert(monitorId, currentStatus) {
   try {
     const monitor = await MonitoredSite.findById(monitorId).select(
-      'priority voiceAlertsEnabled phoneContact domain voiceAlertMessage lastVoiceAlertAt'
+      'priority voiceAlertsEnabled phoneContact domain lastVoiceAlertAt'
     );
     if (!monitor) return null;
 
@@ -121,7 +121,7 @@ export async function checkPriority1Alert(monitorId, currentStatus) {
 export async function checkConsecutiveFailures(monitorId, currentStatus) {
   try {
     const monitor = await MonitoredSite.findById(monitorId).select(
-      'failureCount voiceAlertsEnabled phoneContact domain voiceAlertMessage lastVoiceAlertAt priority'
+      'failureCount voiceAlertsEnabled phoneContact domain lastVoiceAlertAt priority'
     );
     if (!monitor) return null;
 
@@ -168,7 +168,7 @@ export async function checkConsecutiveFailures(monitorId, currentStatus) {
 
 // ── MANUAL TRIGGER: Allow users to manually trigger alerts ─────────────────
 export async function triggerManualVoiceAlert(monitorId, phoneNumber) {
-  const monitor = await MonitoredSite.findById(monitorId).select('domain voiceAlertMessage');
+  const monitor = await MonitoredSite.findById(monitorId).select('domain');
   if (!monitor) throw new Error(`Monitor ${monitorId} not found`);
 
   console.log(`[VOICE] 🖱️ Manual alert triggered | domain=${monitor.domain} | phone=${phoneNumber}`);
@@ -177,7 +177,7 @@ export async function triggerManualVoiceAlert(monitorId, phoneNumber) {
     monitorId,
     recipientPhone: phoneNumber,
     recipientName: monitor.domain,
-    alertMessage: monitor.voiceAlertMessage || `Test call for ${monitor.domain}. Please acknowledge.`,
+    alertMessage:`Test call for ${monitor.domain}. Please acknowledge.`,
     severity: 'warning',
     alertType: 'downtime',
     status: 'queued',
