@@ -8,20 +8,17 @@ const monitoredSiteSchema = new mongoose.Schema({
     default: null,
     trim: true,
   },
-  // timeoutMs: { type: Number, default: 5000 },
-  // slowThresholdMs: { type: Number, default: 3000 },
-  // sslMonitoringEnabled: { type: Boolean, default: false },
   sslAlertBeforeDays: { type: Number, default: 7 },
   responseThresholdMs: {
     type: Number,
     default: null,
   },
   alertChannels: {
-    type: [String], // ["email", "sms", "whatsapp"]
+    type: [String],
     default: [],
   },
   regions: {
-    type: [String], // ["North America", "Europe", "Asia", ...]
+    type: [String],
     default: [],
   },
   alertIfAllRegionsDown: {
@@ -36,17 +33,41 @@ const monitoredSiteSchema = new mongoose.Schema({
     type: [String],
     default: [],
   },
+
+  // ── SIMPLIFIED VOICE CONFIG ─────────────────────────────────────
+  voiceAlertsEnabled: {
+    type: Boolean,
+    default: true,
+  },
+
+  // Voice message to be spoken (TTS)
+  voiceAlertMessage: {
+    type: String,
+    default: 'Alert: Your monitored site is down'
+  },
+
+  // Track last voice alert for this monitor
+  lastVoiceAlertAt: {
+    type: Date,
+    default: null,
+  },
+
+  // Priority: 0 = normal, 1 = high (instant voice alert on DOWN)
   priority: {
     type: Number,
     enum: [0, 1],
     default: 0,
   },
+
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false },
   assignedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  
+  // ── EXISTING: failureCount tracks consecutive failures ─────────
   failureCount: {
     type: Number,
     default: 0,
   },
+
   updatedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
@@ -70,20 +91,12 @@ const monitoredSiteSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
-
-  // ── Check Frequency (polling interval) ──────────────────────────────────────
-  // Minimum: 10 000 ms (10 sec), Maximum: 86 400 000 ms (1 day)
-  // Default: 60 000 ms (1 min) so existing sites continue working without change.
   checkFrequency: {
     type: Number,
     default: 60000,
     min: 10000,
     max: 86400000,
   },
-
-  // Timestamp of the next scheduled check for this site.
-  // Initialized to Date.now() so existing sites are picked up on the very
-  // first scheduler run after the migration.
   nextCheckAt: {
     type: Date,
     default: Date.now,
@@ -92,49 +105,35 @@ const monitoredSiteSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-
-  // ── Regional Check Schedule (for globalMonitorCron) ────────────────────────────
-  // Separate from monitorCron's nextCheckAt — allows independent scheduling
-  // of regional multi-region checks vs single-site checks.
-  // Initialized to Date.now() so regional checks start immediately after creation.
   nextRegionalCheckAt: {
     type: Date,
     default: Date.now,
   },
-
-  // ── Alert Routing (references to escalation groups) ──────────────────────────
   alertRouting: {
-    down:     { type: [mongoose.Schema.Types.ObjectId], ref: "EscalationGroup", default: [] },
-    trouble:  { type: [mongoose.Schema.Types.ObjectId], ref: "EscalationGroup", default: [] },
+    down: { type: [mongoose.Schema.Types.ObjectId], ref: "EscalationGroup", default: [] },
+    trouble: { type: [mongoose.Schema.Types.ObjectId], ref: "EscalationGroup", default: [] },
     critical: { type: [mongoose.Schema.Types.ObjectId], ref: "EscalationGroup", default: [] },
   },
-
-  // DEPRECATED: Old alertGroups field (keeping for backward compatibility)
-  // alertGroups: {
-  //   group1: { type: [String], default: [] },
-  //   group2: { type: [String], default: [] },
-  //   group3: { type: [String], default: [] },
-  // },
-
-  // ── Outage Tracking ──────────────────────────────────────────────────────────
   downSince: {
     type: Date,
     default: null,
   },
-
-  // ── Escalation Tracking ──────────────────────────────────────────────────────
   escalationLevel: {
     type: Number,
     default: 0,
   },
-
   lastEscalationAt: {
     type: Date,
     default: null,
   },
 }, { timestamps: true });
 
-// ✅ Check if model already exists, otherwise create it
+// ✅ Indexes
+monitoredSiteSchema.index({ voiceAlertsEnabled: 1 });
+monitoredSiteSchema.index({ lastVoiceAlertAt: 1 });
+monitoredSiteSchema.index({ failureCount: 1 });
+monitoredSiteSchema.index({ priority: 1, status: 1 });
+
 const MonitoredSite =
   mongoose.models.MonitoredSite ||
   mongoose.model("MonitoredSite", monitoredSiteSchema);

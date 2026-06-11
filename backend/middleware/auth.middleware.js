@@ -36,3 +36,6 @@ export const protect = async (req, res, next) => {
     return res.status(401).json({ message: "Not authorized" });
   }
 };
+
+// Alias for consistency with naming conventions
+export const authMiddleware = protect;

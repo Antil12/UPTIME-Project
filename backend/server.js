@@ -19,7 +19,9 @@ import userRoutes from "./routes/user.routes.js";
 import emailRoutes from "./routes/email.Routes.js";
 import regionReportRoutes from "./routes/regionReport.routes.js";
 import escalationGroupRoutes from "./routes/escalationGroup.routes.js";
+import voiceAlertRoutes from "./routes/voiceAlert.Routes.js";
 import { emailWorker, workerStatus } from "./workers/emailWorker.js";
+import { voiceAlertWorker, voiceWorkerStatus } from "./workers/voiceAlertWorker.js";
 import connection from "./queue/redisConnection.js";
 import logger from "./logger.js";
 
@@ -99,8 +101,14 @@ app.get("/api/health", async (req, res) => {
     error: workerStatus.error,
   };
 
+  const voiceQueueStatus = {
+    running: voiceWorkerStatus.running,
+    lastActivity: voiceWorkerStatus.lastActivity,
+    error: voiceWorkerStatus.error,
+  };
+
   const overallStatus =
-    mongoStatus === "up" && redisStatus === "up" && queueStatus.running
+    mongoStatus === "up" && redisStatus === "up" && queueStatus.running && voiceQueueStatus.running
       ? "ok"
       : "degraded";
 
@@ -110,6 +118,7 @@ app.get("/api/health", async (req, res) => {
       mongo: { status: mongoStatus, state: mongoState },
       redis: { status: redisStatus, detail: redisDetail },
       emailWorker: queueStatus,
+      voiceWorker: voiceQueueStatus,
     },
   });
 });
@@ -123,6 +132,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/region-report", regionReportRoutes);
 app.use("/api/escalation-groups", escalationGroupRoutes);
+app.use("/api/voice-alerts", voiceAlertRoutes);
 
 /* ======================
    START SERVER
@@ -142,6 +152,9 @@ const startServer = async () => {
 
     startEscalationWorker();
     logger.info("⚡ Escalation worker started");
+
+    // Voice alert worker is auto-started by BullMQ
+    logger.info("📞 Voice alert worker started");
 
     app.listen(PORT, () => {
       logger.info({ port: PORT }, "🚀 Server running");
