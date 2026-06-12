@@ -12,9 +12,12 @@ function buildSpeakXml(message) {
     .replace(/'/g, '&apos;');
 
   // Vobiz XML format — NOT Twilio-compatible
+  // Using Polly.Joanna with slow rate for clearer alert messages
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Speak>${safe}</Speak>
+  <Speak voice="Polly.Matthew" language="en-US">
+    <prosody rate="slow">${safe}</prosody>
+  </Speak>
 </Response>`;
 
   console.log(`[Vobiz] 📄 XML Response being sent:\n${xml}`);

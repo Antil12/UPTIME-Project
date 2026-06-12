@@ -308,7 +308,13 @@ function App() {
       phoneContact,
       priority,
       checkFrequency,
+      selectedEmailNotificationGroups,
+      selectedPhoneNotificationGroups,
     } = data;
+
+    console.log("handleAddUrl received data:", data);
+    console.log("selectedEmailNotificationGroups:", selectedEmailNotificationGroups);
+    console.log("selectedPhoneNotificationGroups:", selectedPhoneNotificationGroups);
 
     if (!domain || !url) {
       setUrlError("Domain and URL are required");
@@ -320,7 +326,7 @@ function App() {
     }
 
     try {
-      await axios.post(API_BASE, {
+      const payload = {
         domain,
         url,
         category,
@@ -334,7 +340,11 @@ function App() {
         checkFrequency,
         alertRouting: data.alertRouting || { down: [], trouble: [], critical: [] },
         alertGroups: data.alertGroups || { group1: [], group2: [], group3: [] },
-      });
+        selectedEmailNotificationGroups: selectedEmailNotificationGroups || [],
+        selectedPhoneNotificationGroups: selectedPhoneNotificationGroups || [],
+      };
+      console.log("Sending payload to backend:", payload);
+      await axios.post(API_BASE, payload);
       setDomain("");
       setUrl("");
       setUrlError("");
@@ -465,7 +475,7 @@ function App() {
   };
 
   // EDIT SITE — save
-  const handleSaveEdit = async (category) => {
+  const handleSaveEdit = async (category, selectedEmailGroups, selectedPhoneGroups) => {
     if (!editDomain.trim() || !editUrl.trim()) {
       setUrlError("Domain and URL are required");
       return;
@@ -509,6 +519,9 @@ function App() {
           alertRouting: editAlertRouting,
           // ─── NEW: send alertGroups to backend ─────────────────────────
           alertGroups: editAlertGroups,
+          // ─── NEW: send selected notification group IDs ─────────────────
+          selectedEmailNotificationGroups: selectedEmailGroups || [],
+          selectedPhoneNotificationGroups: selectedPhoneGroups || [],
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );

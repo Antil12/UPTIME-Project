@@ -19,6 +19,7 @@ import userRoutes from "./routes/user.routes.js";
 import emailRoutes from "./routes/email.Routes.js";
 import regionReportRoutes from "./routes/regionReport.routes.js";
 import escalationGroupRoutes from "./routes/escalationGroup.routes.js";
+import notificationGroupRoutes from "./routes/notificationGroup.routes.js";
 import voiceAlertRoutes from "./routes/voiceAlert.Routes.js";
 import { emailWorker, workerStatus } from "./workers/emailWorker.js";
 import { voiceAlertWorker, voiceWorkerStatus } from "./workers/voiceAlertWorker.js";
@@ -132,6 +133,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/region-report", regionReportRoutes);
 app.use("/api/escalation-groups", escalationGroupRoutes);
+app.use("/api/notification-groups", notificationGroupRoutes);
 app.use("/api/voice-alerts", voiceAlertRoutes);
 
 /* ======================

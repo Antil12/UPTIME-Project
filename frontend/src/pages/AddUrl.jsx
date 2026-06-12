@@ -17,9 +17,11 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import AlertRoutingForm from "../components/AlertRoutingForm";
+import NotificationGroupSelect from "../components/NotificationGroupSelect";
+import { getUserNotificationGroups } from "../api/notificationGroupApi";
 
 // ─── Font Loader ──────────────────────────────────────────────────────────────
-const FontLoader = () => {
+const FontLoader = () => {  
   useEffect(() => {
     if (document.getElementById("uptime-fonts")) return;
     const link = document.createElement("link");
@@ -433,6 +435,144 @@ const AddUrl = ({
     critical: [],
   });
 
+  // ── Notification groups state ───────────────────────────────────────────────
+  const [notificationGroups, setNotificationGroups]   = useState([]);
+  const [loadingNotificationGroups, setLoadingNotificationGroups] = useState(false);
+  const [selectedEmailGroups, setSelectedEmailGroups] = useState([]);
+  const [selectedPhoneGroups, setSelectedPhoneGroups] = useState([]);
+
+  // Custom handler for email group selection - adds/removes contacts when groups are selected/deselected
+  const handleSetSelectedEmailGroups = (newGroups) => {
+    const oldGroups = selectedEmailGroups;
+    const removedGroups = oldGroups.filter(g => !newGroups.includes(g));
+    const addedGroups = newGroups.filter(g => !oldGroups.includes(g));
+
+    const currentEmails = Array.isArray(emailContacts) ? emailContacts : [];
+    let updatedEmails = [...currentEmails];
+
+    // Remove emails from deselected groups
+    if (removedGroups.length > 0) {
+      const emailsToRemove = removedGroups
+        .map(groupId => {
+          const group = notificationGroups.find(g => g._id === groupId);
+          return group ? (group.emails || []) : [];
+        })
+        .flat();
+      updatedEmails = updatedEmails.filter(email => !emailsToRemove.includes(email));
+    }
+
+    // Add emails from newly selected groups
+    if (addedGroups.length > 0) {
+      const emailsToAdd = addedGroups
+        .map(groupId => {
+          const group = notificationGroups.find(g => g._id === groupId);
+          return group ? (group.emails || []) : [];
+        })
+        .flat();
+      const uniqueEmailsToAdd = emailsToAdd.filter(email => !updatedEmails.includes(email));
+      updatedEmails = [...updatedEmails, ...uniqueEmailsToAdd];
+    }
+
+    setEmailContacts(updatedEmails);
+    setSelectedEmailGroups(newGroups);
+  };
+
+  // Custom handler for phone group selection - adds/removes contacts when groups are selected/deselected
+  const handleSetSelectedPhoneGroups = (newGroups) => {
+    const oldGroups = selectedPhoneGroups;
+    const removedGroups = oldGroups.filter(g => !newGroups.includes(g));
+    const addedGroups = newGroups.filter(g => !oldGroups.includes(g));
+
+    const currentPhones = Array.isArray(phoneContacts) ? phoneContacts : [];
+    let updatedPhones = [...currentPhones];
+
+    // Remove phones from deselected groups
+    if (removedGroups.length > 0) {
+      const phonesToRemove = removedGroups
+        .map(groupId => {
+          const group = notificationGroups.find(g => g._id === groupId);
+          return group ? (group.phoneNumbers || []) : [];
+        })
+        .flat();
+      updatedPhones = updatedPhones.filter(phone => !phonesToRemove.includes(phone));
+    }
+
+    // Add phones from newly selected groups
+    if (addedGroups.length > 0) {
+      const phonesToAdd = addedGroups
+        .map(groupId => {
+          const group = notificationGroups.find(g => g._id === groupId);
+          return group ? (group.phoneNumbers || []) : [];
+        })
+        .flat();
+      const uniquePhonesToAdd = phonesToAdd.filter(phone => !updatedPhones.includes(phone));
+      updatedPhones = [...updatedPhones, ...uniquePhonesToAdd];
+    }
+
+    setPhoneContacts(updatedPhones);
+    setSelectedPhoneGroups(newGroups);
+  };
+
+  // Fetch notification groups on mount
+  useEffect(() => {
+    const fetchNotificationGroups = async () => {
+      try {
+        setLoadingNotificationGroups(true);
+        const response = await getUserNotificationGroups();
+        if (response.success) {
+          setNotificationGroups(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch notification groups:", error);
+      } finally {
+        setLoadingNotificationGroups(false);
+      }
+    };
+    fetchNotificationGroups();
+  }, []);
+
+  // Handle notification group creation
+  const handleNotificationGroupCreated = (newGroup) => {
+    setNotificationGroups((prev) => [newGroup, ...prev]);
+  };
+
+  // Get all emails from selected notification groups
+  const getGroupEmails = () => {
+    return selectedEmailGroups
+      .map((groupId) => {
+        const group = notificationGroups.find((g) => g._id === groupId);
+        return group ? (Array.isArray(group.emails) ? group.emails : []) : [];
+      })
+      .flat();
+  };
+
+  // Get all phones from selected notification groups
+  const getGroupPhones = () => {
+    return selectedPhoneGroups
+      .map((groupId) => {
+        const group = notificationGroups.find((g) => g._id === groupId);
+        return group ? (Array.isArray(group.phoneNumbers) ? group.phoneNumbers : []) : [];
+      })
+      .flat();
+  };
+
+  // Merge contacts from manual entry and selected groups
+  const getMergedEmailContacts = () => {
+    const groupEmails = getGroupEmails();
+    return [...new Set([...emailContacts, ...groupEmails])];
+  };
+
+  const getMergedPhoneContacts = () => {
+    const groupPhones = getGroupPhones();
+    return [...new Set([...phoneContacts, ...groupPhones])];
+  };
+
+  // Filter out notification group contacts from manual display
+  const groupEmails = getGroupEmails();
+  const groupPhones = getGroupPhones();
+  const manualOnlyEmails = emailContacts.filter(email => !groupEmails.includes(email));
+  const manualOnlyPhones = phoneContacts.filter(phone => !groupPhones.includes(phone));
+
   const normalize = (v = "") => v.trim().toLowerCase().replace(/\/$/, "");
 
   const handleSubmit = (e) => {
@@ -449,6 +589,9 @@ const AddUrl = ({
     if (urls.some((u) => normalize(u.domain) === nd)) { setLocalError("Domain name already exists."); return; }
     if (urls.some((u) => normalize(u.url) === nu))    { setLocalError("URL already exists."); return; }
 
+    console.log("AddUrl handleSubmit - selectedEmailGroups:", selectedEmailGroups);
+    console.log("AddUrl handleSubmit - selectedPhoneGroups:", selectedPhoneGroups);
+
     onSave({
       domain: domain.trim(),
       url: url.trim(),
@@ -457,12 +600,15 @@ const AddUrl = ({
       alertChannels,
       regions,
       alertIfAllRegionsDown,
-      emailContact: emailContacts,
-      phoneContact: phoneContacts,
+      emailContact: getMergedEmailContacts(),
+      phoneContact: getMergedPhoneContacts(),
       priority,
       checkFrequency,
       // alertRouting contains group _ids for down / trouble / critical
       alertRouting,
+      // Send selected notification group IDs
+      selectedEmailNotificationGroups: selectedEmailGroups,
+      selectedPhoneNotificationGroups: selectedPhoneGroups,
     });
 
     setSubmitted(true);
@@ -476,6 +622,8 @@ const AddUrl = ({
     setResponseThresholdMs("15000");
     setCheckFrequency(60_000);
     setAlertRouting({ down: [], trouble: [], critical: [] });
+    setSelectedEmailGroups([]);
+    setSelectedPhoneGroups([]);
   };
 
   const toggleChannel = (ch) =>
@@ -728,38 +876,58 @@ const AddUrl = ({
                       <Mail size={10} style={{ display: "inline", marginRight: "6px" }} />
                       Alert Emails
                     </div>
-                    <div className="flex gap-2 mb-3">
-                      <HudInput
-                        type="email"
-                        placeholder="Add email and press Enter"
-                        value={emailInput}
-                        onChange={(e) => setEmailInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const v = emailInput.trim();
-                            if (v && !emailContacts.includes(v)) { setEmailContacts((p) => [...p, v]); setEmailInput(""); }
-                          }
-                        }}
-                      />
-                      <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                        onClick={() => { const v = emailInput.trim(); if (v && !emailContacts.includes(v)) { setEmailContacts((p) => [...p, v]); setEmailInput(""); } }}
-                        className="px-3 rounded-xl flex items-center justify-center"
-                        style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "44px", height: "44px" }}>
-                        <Plus size={14} />
-                      </motion.button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {emailContacts.map((em, idx) => (
-                        <motion.span key={idx} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
-                          style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.8)" }}>
-                          {em}
-                          <button type="button" onClick={() => setEmailContacts((p) => p.filter((x) => x !== em))} className="text-red-400/60 hover:text-red-400 transition-colors">
-                            <X size={9} />
-                          </button>
-                        </motion.span>
-                      ))}
+                    
+                    {/* Notification Group Select */}
+                    <NotificationGroupSelect
+                      label="Email"
+                      value={selectedEmailGroups}
+                      onChange={handleSetSelectedEmailGroups}
+                      groups={notificationGroups}
+                      color="#38bdf8"
+                      icon={Mail}
+                      loading={loadingNotificationGroups}
+                      type="email"
+                      onGroupCreated={handleNotificationGroupCreated}
+                    />
+                    
+                    {/* Manual Email Entry */}
+                    <div style={{ marginTop: "12px" }}>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "7px", letterSpacing: "0.12em", color: "rgba(148,163,184,0.5)", textTransform: "uppercase", marginBottom: "8px" }}>
+                        Or add manually
+                      </div>
+                      <div className="flex gap-2 mb-3">
+                        <HudInput
+                          type="email"
+                          placeholder="Add email and press Enter"
+                          value={emailInput}
+                          onChange={(e) => setEmailInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const v = emailInput.trim();
+                              if (v && !emailContacts.includes(v)) { setEmailContacts((p) => [...p, v]); setEmailInput(""); }
+                            }
+                          }}
+                        />
+                        <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                          onClick={() => { const v = emailInput.trim(); if (v && !emailContacts.includes(v)) { setEmailContacts((p) => [...p, v]); setEmailInput(""); } }}
+                          className="px-3 rounded-xl flex items-center justify-center"
+                          style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "44px", height: "44px" }}>
+                          <Plus size={14} />
+                        </motion.button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {manualOnlyEmails.map((em, idx) => (
+                          <motion.span key={idx} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                            style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.8)" }}>
+                            {em}
+                            <button type="button" onClick={() => setEmailContacts((p) => p.filter((x) => x !== em))} className="text-red-400/60 hover:text-red-400 transition-colors">
+                              <X size={9} />
+                            </button>
+                          </motion.span>
+                        ))}
+                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -770,43 +938,63 @@ const AddUrl = ({
                       <Phone size={10} style={{ display: "inline", marginRight: "6px" }} />
                       Mobile Contacts
                     </div>
-                    <div className="flex gap-2 mb-3">
-                      <HudInput
-                        type="tel"
-                        placeholder="+91 9876543210"
-                        value={phoneInput}
-                        onChange={(e) => setPhoneInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const v = phoneInput.trim();
-                            if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput(""); }
-                          }
-                        }}
-                        label="Phone Number"
-                      />
-                      <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                        onClick={() => { const v = phoneInput.trim(); if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput(""); } }}
-                        className="px-3 rounded-xl flex items-center justify-center"
-                        style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "44px", height: "44px" }}>
-                        <Plus size={14} />
-                      </motion.button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {phoneContacts.length > 0 ? (
-                        phoneContacts.map((phone, idx) => (
-                          <motion.span key={idx} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
-                            style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.8)" }}>
-                            {phone}
-                            <button type="button" onClick={() => setPhoneContacts((p) => p.filter((x) => x !== phone))} className="text-red-400/60 hover:text-red-400 transition-colors">
-                              <X size={9} />
-                            </button>
-                          </motion.span>
-                        ))
-                      ) : (
-                        <span className="text-slate-500 text-sm font-mono">No phone numbers added yet</span>
-                      )}
+                    
+                    {/* Notification Group Select */}
+                    <NotificationGroupSelect
+                      label="Phone"
+                      value={selectedPhoneGroups}
+                      onChange={handleSetSelectedPhoneGroups}
+                      groups={notificationGroups}
+                      color="#38bdf8"
+                      icon={Phone}
+                      loading={loadingNotificationGroups}
+                      type="phone"
+                      onGroupCreated={handleNotificationGroupCreated}
+                    />
+                    
+                    {/* Manual Phone Entry */}
+                    <div style={{ marginTop: "12px" }}>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "7px", letterSpacing: "0.12em", color: "rgba(148,163,184,0.5)", textTransform: "uppercase", marginBottom: "8px" }}>
+                        Or add manually
+                      </div>
+                      <div className="flex gap-2 mb-3">
+                        <HudInput
+                          type="tel"
+                          placeholder="+91 9876543210"
+                          value={phoneInput}
+                          onChange={(e) => setPhoneInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const v = phoneInput.trim();
+                              if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput(""); }
+                            }
+                          }}
+                          label="Phone Number"
+                        />
+                        <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                          onClick={() => { const v = phoneInput.trim(); if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput(""); } }}
+                          className="px-3 rounded-xl flex items-center justify-center"
+                          style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "44px", height: "44px" }}>
+                          <Plus size={14} />
+                        </motion.button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {manualOnlyPhones.length > 0 ? (
+                          manualOnlyPhones.map((phone, idx) => (
+                            <motion.span key={idx} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                              style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.8)" }}>
+                              {phone}
+                              <button type="button" onClick={() => setPhoneContacts((p) => p.filter((x) => x !== phone))} className="text-red-400/60 hover:text-red-400 transition-colors">
+                                <X size={9} />
+                              </button>
+                            </motion.span>
+                          ))
+                        ) : (
+                          <span className="text-slate-500 text-sm font-mono">No phone numbers added yet</span>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 )}

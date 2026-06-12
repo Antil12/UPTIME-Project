@@ -4,6 +4,7 @@ import MonitoredSite from "../models/MonitoredSite.js";
 import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import RegionAssignment from "../models/RegionAssignment.js";
 import RegionCurrentStatus from "../models/RegionCurrentStatus.js";
+import NotificationGroup from "../models/NotificationGroup.js";
 import { getSlowBatch, clearSlowBatch } from "../services/slowBatchStore.js";
 import User from "../models/User.js";
 import { emailQueue } from "../queue/emailQueue.js";
@@ -131,6 +132,22 @@ export const getMonitoredSites = async (req, res) => {
         },
       },
       { $unwind: { path: "$ssl", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "notificationgroups",
+          localField: "selectedEmailNotificationGroups",
+          foreignField: "_id",
+          as: "selectedEmailNotificationGroupsData",
+        },
+      },
+      {
+        $lookup: {
+          from: "notificationgroups",
+          localField: "selectedPhoneNotificationGroups",
+          foreignField: "_id",
+          as: "selectedPhoneNotificationGroupsData",
+        },
+      },
       ...(status && status !== "ALL"
         ? [{ $match: { "uptime.status": status } }]
         : []),
@@ -153,6 +170,9 @@ export const getMonitoredSites = async (req, res) => {
 
           alertRouting: 1,
           alertGroups: 1,
+
+          selectedEmailNotificationGroups: "$selectedEmailNotificationGroupsData",
+          selectedPhoneNotificationGroups: "$selectedPhoneNotificationGroupsData",
 
           ownerEmail: "$ownerData.email",
           ownerRole:  "$ownerData.role",
@@ -273,7 +293,9 @@ export const getStatusStats = async (req, res) => {
 ===================================================================== */
 export const getSiteById = async (req, res) => {
   try {
-    const site = await MonitoredSite.findById(req.params.id);
+    const site = await MonitoredSite.findById(req.params.id)
+      .populate('selectedEmailNotificationGroups', 'groupName emails phoneNumbers')
+      .populate('selectedPhoneNotificationGroups', 'groupName emails phoneNumbers');
     if (!site) {
       return res.status(404).json({ success: false, message: "Site not found" });
     }
@@ -316,9 +338,13 @@ export const addSite = async (req, res) => {
       emailContact, phoneContact, priority,
       checkFrequency,   // ← NEW
       alertGroups,      // ← NEW
+      selectedEmailNotificationGroups,  // ← NEW
+      selectedPhoneNotificationGroups,  // ← NEW
     } = req.body;
 
     console.log("DEBUG: Received alertGroups:", alertGroups);
+    console.log("DEBUG: Received selectedEmailNotificationGroups:", selectedEmailNotificationGroups);
+    console.log("DEBUG: Received selectedPhoneNotificationGroups:", selectedPhoneNotificationGroups);
 
     if (!url) {
       return res.status(400).json({ success: false, message: "URL is required" });
@@ -375,6 +401,8 @@ export const addSite = async (req, res) => {
         down: [], trouble: [], critical: []
       },
       alertGroups: normalizedAlertGroups,
+      selectedEmailNotificationGroups: Array.isArray(selectedEmailNotificationGroups) ? selectedEmailNotificationGroups : [],
+      selectedPhoneNotificationGroups: Array.isArray(selectedPhoneNotificationGroups) ? selectedPhoneNotificationGroups : [],
     });
 
     console.log("DEBUG: Site created with alertGroups:", site.alertGroups);
@@ -410,6 +438,8 @@ export const updateSite = async (req, res) => {
       emailContact, phoneContact, priority, responseThresholdMs,
       checkFrequency,   // ← NEW
       alertGroups,      // ← NEW
+      selectedEmailNotificationGroups,  // ← NEW
+      selectedPhoneNotificationGroups,  // ← NEW
     } = req.body;
 
     console.log("DEBUG: Update received alertGroups:", alertGroups);
@@ -440,21 +470,90 @@ export const updateSite = async (req, res) => {
       }
     }
 
+    // ── Handle notification group changes ─────────────────────────────────────
+    const oldEmailGroups = Array.isArray(site.selectedEmailNotificationGroups)
+      ? site.selectedEmailNotificationGroups.map(g => g.toString ? g.toString() : g.toString())
+      : [];
+    const oldPhoneGroups = Array.isArray(site.selectedPhoneNotificationGroups)
+      ? site.selectedPhoneNotificationGroups.map(g => g.toString ? g.toString() : g.toString())
+      : [];
+
+    const newEmailGroups = Array.isArray(selectedEmailNotificationGroups)
+      ? selectedEmailNotificationGroups.map(g => g.toString ? g.toString() : g.toString())
+      : [];
+    const newPhoneGroups = Array.isArray(selectedPhoneNotificationGroups)
+      ? selectedPhoneNotificationGroups.map(g => g.toString ? g.toString() : g.toString())
+      : [];
+
+    // Find removed email groups and get their emails
+    const removedEmailGroups = oldEmailGroups.filter(g => !newEmailGroups.includes(g));
+    let emailsToRemove = [];
+    if (removedEmailGroups.length > 0) {
+      const removedGroupsData = await NotificationGroup.find({ _id: { $in: removedEmailGroups } });
+      emailsToRemove = removedGroupsData.flatMap(g => g.emails || []);
+    }
+
+    // Find removed phone groups and get their phone numbers
+    const removedPhoneGroups = oldPhoneGroups.filter(g => !newPhoneGroups.includes(g));
+    let phonesToRemove = [];
+    if (removedPhoneGroups.length > 0) {
+      const removedGroupsData = await NotificationGroup.find({ _id: { $in: removedPhoneGroups } });
+      phonesToRemove = removedGroupsData.flatMap(g => g.phoneNumbers || []);
+    }
+
+    // Find newly added email groups and get their emails
+    const addedEmailGroups = newEmailGroups.filter(g => !oldEmailGroups.includes(g));
+    let emailsToAdd = [];
+    if (addedEmailGroups.length > 0) {
+      const addedGroupsData = await NotificationGroup.find({ _id: { $in: addedEmailGroups } });
+      emailsToAdd = addedGroupsData.flatMap(g => g.emails || []);
+    }
+
+    // Find newly added phone groups and get their phone numbers
+    const addedPhoneGroups = newPhoneGroups.filter(g => !oldPhoneGroups.includes(g));
+    let phonesToAdd = [];
+    if (addedPhoneGroups.length > 0) {
+      const addedGroupsData = await NotificationGroup.find({ _id: { $in: addedPhoneGroups } });
+      phonesToAdd = addedGroupsData.flatMap(g => g.phoneNumbers || []);
+    }
+
     // ── Build the update object (existing fields) ────────────────────────────
+    const incomingEmailContact = emailContact
+      ? Array.isArray(emailContact) ? emailContact : [emailContact]
+      : [];
+    const incomingPhoneContact = phoneContact
+      ? Array.isArray(phoneContact) ? phoneContact : [phoneContact]
+      : [];
+
+    // Filter out emails from removed groups
+    let filteredEmailContact = emailsToRemove.length > 0
+      ? incomingEmailContact.filter(email => !emailsToRemove.includes(email))
+      : incomingEmailContact;
+
+    // Add emails from newly added groups
+    if (emailsToAdd.length > 0) {
+      const uniqueEmailsToAdd = emailsToAdd.filter(email => !filteredEmailContact.includes(email));
+      filteredEmailContact = [...filteredEmailContact, ...uniqueEmailsToAdd];
+    }
+
+    // Filter out phones from removed groups
+    let filteredPhoneContact = phonesToRemove.length > 0
+      ? incomingPhoneContact.filter(phone => !phonesToRemove.includes(phone))
+      : incomingPhoneContact;
+
+    // Add phones from newly added groups
+    if (phonesToAdd.length > 0) {
+      const uniquePhonesToAdd = phonesToAdd.filter(phone => !filteredPhoneContact.includes(phone));
+      filteredPhoneContact = [...filteredPhoneContact, ...uniquePhonesToAdd];
+    }
+
     const updatedData = {
       domain,
       url,
       category,
       regions: Array.isArray(regions) ? regions : undefined,
-      emailContact: emailContact
-        ? Array.isArray(emailContact) ? emailContact : [emailContact]
-        : [],
-      phoneContact:
-        Array.isArray(phoneContact)
-          ? phoneContact
-          : phoneContact
-          ? [phoneContact]
-          : [],
+      emailContact: filteredEmailContact,
+      phoneContact: filteredPhoneContact,
       priority:            priority !== undefined ? Number(priority) : 0,
       responseThresholdMs:
         responseThresholdMs !== undefined && responseThresholdMs !== null
@@ -473,6 +572,18 @@ export const updateSite = async (req, res) => {
       };
       await validateAlertGroupEmails(normalizedAlertGroups);
       updatedData.alertGroups = normalizedAlertGroups;
+    }
+
+    // Update notification group references
+    if (selectedEmailNotificationGroups !== undefined) {
+      updatedData.selectedEmailNotificationGroups = Array.isArray(selectedEmailNotificationGroups)
+        ? selectedEmailNotificationGroups
+        : [];
+    }
+    if (selectedPhoneNotificationGroups !== undefined) {
+      updatedData.selectedPhoneNotificationGroups = Array.isArray(selectedPhoneNotificationGroups)
+        ? selectedPhoneNotificationGroups
+        : [];
     }
 
 

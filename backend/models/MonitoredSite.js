@@ -34,6 +34,18 @@ const monitoredSiteSchema = new mongoose.Schema({
     default: [],
   },
 
+  // ── NOTIFICATION GROUP REFERENCES ─────────────────────────────────
+  selectedEmailNotificationGroups: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: "NotificationGroup",
+    default: [],
+  },
+  selectedPhoneNotificationGroups: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: "NotificationGroup",
+    default: [],
+  },
+
   // ── SIMPLIFIED VOICE CONFIG ─────────────────────────────────────
   voiceAlertsEnabled: {
     type: Boolean,

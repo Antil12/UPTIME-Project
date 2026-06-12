@@ -2,12 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 import {
   ArrowLeft, Globe2, Link2, Tag, ShieldAlert,
   Mail, Phone, TimerReset, MapPin, Check,
   ChevronDown, Clock, Bell, Plus, X, Zap,
 } from "lucide-react";
 import AlertRoutingForm from "../components/AlertRoutingForm";
+import NotificationGroupSelect from "../components/NotificationGroupSelect";
+import { getUserNotificationGroups } from "../api/notificationGroupApi";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const REGIONS = ["South America", "Australia", "North America", "Europe", "Asia", "Africa"];
@@ -269,6 +272,84 @@ export default function EditPage({
   const [phoneInput,        setPhoneInput]        = useState("");
   const [showRoutingPanel,  setShowRoutingPanel]  = useState(false);
 
+  // ── Notification groups state ───────────────────────────────────────────────
+  const [notificationGroups, setNotificationGroups]   = useState([]);
+  const [loadingNotificationGroups, setLoadingNotificationGroups] = useState(false);
+  const [selectedEmailGroups, setSelectedEmailGroups] = useState([]);
+  const [selectedPhoneGroups, setSelectedPhoneGroups] = useState([]);
+
+  // Custom handler for email group selection - adds/removes contacts when groups are selected/deselected
+  const handleSetSelectedEmailGroups = (newGroups) => {
+    const oldGroups = selectedEmailGroups;
+    const removedGroups = oldGroups.filter(g => !newGroups.includes(g));
+    const addedGroups = newGroups.filter(g => !oldGroups.includes(g));
+
+    const currentEmails = Array.isArray(editEmail) ? editEmail : [];
+    let updatedEmails = [...currentEmails];
+
+    // Remove emails from deselected groups
+    if (removedGroups.length > 0) {
+      const emailsToRemove = removedGroups
+        .map(groupId => {
+          const group = notificationGroups.find(g => g._id === groupId);
+          return group ? (group.emails || []) : [];
+        })
+        .flat();
+      updatedEmails = updatedEmails.filter(email => !emailsToRemove.includes(email));
+    }
+
+    // Add emails from newly selected groups
+    if (addedGroups.length > 0) {
+      const emailsToAdd = addedGroups
+        .map(groupId => {
+          const group = notificationGroups.find(g => g._id === groupId);
+          return group ? (group.emails || []) : [];
+        })
+        .flat();
+      const uniqueEmailsToAdd = emailsToAdd.filter(email => !updatedEmails.includes(email));
+      updatedEmails = [...updatedEmails, ...uniqueEmailsToAdd];
+    }
+
+    setEditEmail(updatedEmails);
+    setSelectedEmailGroups(newGroups);
+  };
+
+  // Custom handler for phone group selection - adds/removes contacts when groups are selected/deselected
+  const handleSetSelectedPhoneGroups = (newGroups) => {
+    const oldGroups = selectedPhoneGroups;
+    const removedGroups = oldGroups.filter(g => !newGroups.includes(g));
+    const addedGroups = newGroups.filter(g => !oldGroups.includes(g));
+
+    const currentPhones = Array.isArray(editPhone) ? editPhone : [];
+    let updatedPhones = [...currentPhones];
+
+    // Remove phones from deselected groups
+    if (removedGroups.length > 0) {
+      const phonesToRemove = removedGroups
+        .map(groupId => {
+          const group = notificationGroups.find(g => g._id === groupId);
+          return group ? (group.phoneNumbers || []) : [];
+        })
+        .flat();
+      updatedPhones = updatedPhones.filter(phone => !phonesToRemove.includes(phone));
+    }
+
+    // Add phones from newly selected groups
+    if (addedGroups.length > 0) {
+      const phonesToAdd = addedGroups
+        .map(groupId => {
+          const group = notificationGroups.find(g => g._id === groupId);
+          return group ? (group.phoneNumbers || []) : [];
+        })
+        .flat();
+      const uniquePhonesToAdd = phonesToAdd.filter(phone => !updatedPhones.includes(phone));
+      updatedPhones = [...updatedPhones, ...uniquePhonesToAdd];
+    }
+
+    setEditPhone(updatedPhones);
+    setSelectedPhoneGroups(newGroups);
+  };
+
   // ── Normalise alertRouting so it always has the three keys ────────────────
   const safeAlertRouting = {
     down:     Array.isArray(editAlertRouting?.down)     ? editAlertRouting.down     : [],
@@ -280,10 +361,138 @@ export default function EditPage({
   useEffect(() => { if (initialCategory !== undefined) setCategory(initialCategory || ""); }, [initialCategory]);
   useEffect(() => { if (!item) navigate("/dashboard", { replace: true }); }, [item, navigate]);
 
+  // Fetch notification groups on mount
+  useEffect(() => {
+    const fetchNotificationGroups = async () => {
+      try {
+        setLoadingNotificationGroups(true);
+        const response = await getUserNotificationGroups();
+        if (response.success) {
+          setNotificationGroups(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch notification groups:", error);
+      } finally {
+        setLoadingNotificationGroups(false);
+      }
+    };
+    fetchNotificationGroups();
+  }, []);
+
+  // Fetch fresh site data to ensure notification groups are populated
+  useEffect(() => {
+    const fetchFreshSiteData = async () => {
+      if (item && item._id) {
+        try {
+          const token = localStorage.getItem("loginToken");
+          const response = await axios.get(`/monitoredsite/${item._id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (response.data.success) {
+            const freshItem = response.data.data;
+            console.log("Fresh site data:", freshItem);
+            console.log("selectedEmailNotificationGroups:", freshItem.selectedEmailNotificationGroups);
+            console.log("selectedPhoneNotificationGroups:", freshItem.selectedPhoneNotificationGroups);
+            // Extract IDs from populated notification group objects
+            let emailGroupIds = Array.isArray(freshItem.selectedEmailNotificationGroups)
+              ? freshItem.selectedEmailNotificationGroups.map(g => g._id || g)
+              : [];
+            let phoneGroupIds = Array.isArray(freshItem.selectedPhoneNotificationGroups)
+              ? freshItem.selectedPhoneNotificationGroups.map(g => g._id || g)
+              : [];
+
+            // Fallback: if no notification group IDs are saved, try to auto-select based on matching emails/phone numbers
+            if (emailGroupIds.length === 0 && notificationGroups.length > 0) {
+              const siteEmails = Array.isArray(freshItem.emailContact) ? freshItem.emailContact : [];
+              emailGroupIds = notificationGroups
+                .filter(group => {
+                  const groupEmails = Array.isArray(group.emails) ? group.emails : [];
+                  return groupEmails.some(email => siteEmails.includes(email));
+                })
+                .map(group => group._id);
+              console.log("Auto-selected email groups based on matching emails:", emailGroupIds);
+            }
+
+            if (phoneGroupIds.length === 0 && notificationGroups.length > 0) {
+              const sitePhones = Array.isArray(freshItem.phoneContact) ? freshItem.phoneContact : [];
+              phoneGroupIds = notificationGroups
+                .filter(group => {
+                  const groupPhones = Array.isArray(group.phoneNumbers) ? group.phoneNumbers : [];
+                  return groupPhones.some(phone => sitePhones.includes(phone));
+                })
+                .map(group => group._id);
+              console.log("Auto-selected phone groups based on matching phones:", phoneGroupIds);
+            }
+
+            console.log("Setting emailGroupIds:", emailGroupIds);
+            console.log("Setting phoneGroupIds:", phoneGroupIds);
+            handleSetSelectedEmailGroups(emailGroupIds);
+            handleSetSelectedPhoneGroups(phoneGroupIds);
+          }
+        } catch (error) {
+          console.error("Failed to fetch fresh site data:", error);
+          // Fallback to using the item prop
+          const emailGroupIds = Array.isArray(item.selectedEmailNotificationGroups)
+            ? item.selectedEmailNotificationGroups.map(g => g._id || g)
+            : [];
+          const phoneGroupIds = Array.isArray(item.selectedPhoneNotificationGroups)
+            ? item.selectedPhoneNotificationGroups.map(g => g._id || g)
+            : [];
+
+          handleSetSelectedEmailGroups(emailGroupIds);
+          handleSetSelectedPhoneGroups(phoneGroupIds);
+        }
+      }
+    };
+    fetchFreshSiteData();
+  }, [item, notificationGroups]);
+
+  // Handle notification group creation
+  const handleNotificationGroupCreated = (newGroup) => {
+    setNotificationGroups((prev) => [newGroup, ...prev]);
+  };
+
+  // Get all emails from selected notification groups
+  const getGroupEmails = () => {
+    return selectedEmailGroups
+      .map((groupId) => {
+        const group = notificationGroups.find((g) => g._id === groupId);
+        return group ? (Array.isArray(group.emails) ? group.emails : []) : [];
+      })
+      .flat();
+  };
+
+  // Get all phones from selected notification groups
+  const getGroupPhones = () => {
+    return selectedPhoneGroups
+      .map((groupId) => {
+        const group = notificationGroups.find((g) => g._id === groupId);
+        return group ? (Array.isArray(group.phoneNumbers) ? group.phoneNumbers : []) : [];
+      })
+      .flat();
+  };
+
+  // Merge contacts from manual entry and selected groups
+  const getMergedEmailContacts = () => {
+    const groupEmails = getGroupEmails();
+    return [...new Set([...normalizedEmails, ...groupEmails])];
+  };
+
+  const getMergedPhoneContacts = () => {
+    const groupPhones = getGroupPhones();
+    return [...new Set([...normalizedPhones, ...groupPhones])];
+  };
+
   if (!item) return null;
 
   const normalizedEmails = Array.isArray(editEmail) ? editEmail : editEmail ? [editEmail] : [];
   const normalizedPhones = Array.isArray(editPhone) ? editPhone : editPhone ? [editPhone] : [];
+
+  // Filter out notification group contacts from manual display
+  const groupEmails = getGroupEmails();
+  const groupPhones = getGroupPhones();
+  const manualOnlyEmails = normalizedEmails.filter(email => !groupEmails.includes(email));
+  const manualOnlyPhones = normalizedPhones.filter(phone => !groupPhones.includes(phone));
 
   const toggleRegion = (r) =>
     setEditRegions((p) => p.includes(r) ? p.filter((x) => x !== r) : [...p, r]);
@@ -440,13 +649,53 @@ export default function EditPage({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <FieldLabel icon={Mail} text="Contact Emails" />
-                    <AddRow value={emailInput} onChange={(e) => setEmailInput(e.target.value)} onAdd={handleAddEmail} placeholder="alert@example.com" type="email" />
-                    <ChipList items={normalizedEmails} onRemove={(e) => setEditEmail((p) => p.filter((x) => x !== e))} emptyText="No emails added" />
+                    
+                    {/* Notification Group Select */}
+                    <NotificationGroupSelect
+                      label="Email"
+                      value={selectedEmailGroups}
+                      onChange={handleSetSelectedEmailGroups}
+                      groups={notificationGroups}
+                      color="#38bdf8"
+                      icon={Mail}
+                      loading={loadingNotificationGroups}
+                      type="email"
+                      onGroupCreated={handleNotificationGroupCreated}
+                    />
+                    
+                    {/* Manual Email Entry */}
+                    <div style={{ marginTop: "12px" }}>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "7px", letterSpacing: "0.12em", color: "rgba(148,163,184,0.5)", textTransform: "uppercase", marginBottom: "8px" }}>
+                        Or add manually
+                      </div>
+                      <AddRow value={emailInput} onChange={(e) => setEmailInput(e.target.value)} onAdd={handleAddEmail} placeholder="alert@example.com" type="email" />
+                      <ChipList items={manualOnlyEmails} onRemove={(e) => setEditEmail((p) => p.filter((x) => x !== e))} emptyText="No emails added" />
+                    </div>
                   </div>
                   <div>
                     <FieldLabel icon={Phone} text="Contact Phones" />
-                    <AddRow value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} onAdd={handleAddPhone} placeholder="+91 9876543210" />
-                    <ChipList items={normalizedPhones} onRemove={(p) => setEditPhone((prev) => prev.filter((x) => x !== p))} emptyText="No numbers added" />
+                    
+                    {/* Notification Group Select */}
+                    <NotificationGroupSelect
+                      label="Phone"
+                      value={selectedPhoneGroups}
+                      onChange={handleSetSelectedPhoneGroups}
+                      groups={notificationGroups}
+                      color="#38bdf8"
+                      icon={Phone}
+                      loading={loadingNotificationGroups}
+                      type="phone"
+                      onGroupCreated={handleNotificationGroupCreated}
+                    />
+                    
+                    {/* Manual Phone Entry */}
+                    <div style={{ marginTop: "12px" }}>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "7px", letterSpacing: "0.12em", color: "rgba(148,163,184,0.5)", textTransform: "uppercase", marginBottom: "8px" }}>
+                        Or add manually
+                      </div>
+                      <AddRow value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} onAdd={handleAddPhone} placeholder="+91 9876543210" />
+                      <ChipList items={manualOnlyPhones} onRemove={(p) => setEditPhone((prev) => prev.filter((x) => x !== p))} emptyText="No numbers added" />
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -632,7 +881,7 @@ export default function EditPage({
 
               {/* Mobile save buttons */}
               <div className="flex flex-col gap-2 lg:hidden">
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => onSave(category)} className="w-full py-2.5 rounded-xl text-white" style={primaryBtnStyle}>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => onSave(category, selectedEmailGroups, selectedPhoneGroups)} className="w-full py-2.5 rounded-xl text-white" style={primaryBtnStyle}>
                   Save Changes
                 </motion.button>
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleClose} className="w-full py-2.5 rounded-xl text-white" style={secondaryBtnStyle}>
@@ -658,7 +907,7 @@ export default function EditPage({
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleClose} className="px-4 py-2 rounded-xl text-white" style={secondaryBtnStyle}>
                 Cancel
               </motion.button>
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => onSave(category)} className="px-5 py-2 rounded-xl text-white" style={primaryBtnStyle}>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => onSave(category, selectedEmailGroups, selectedPhoneGroups)} className="px-5 py-2 rounded-xl text-white" style={primaryBtnStyle}>
                 Save Changes
               </motion.button>
             </div>
