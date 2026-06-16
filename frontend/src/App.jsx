@@ -358,7 +358,6 @@ function App() {
 
   // DELETE SITE
   const handleDelete = async (id) => {
-    if (!confirm("Delete this website?")) return;
     try {
       await axios.delete(`${API_BASE}/${id}`);
       await loadData(selectedStatus, search, page);
@@ -526,7 +525,7 @@ function App() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log("DEBUG: Sending update alertGroups:", editAlertGroups);
+      // console.log("DEBUG: Sending update alertGroups:", editAlertGroups);
 
       setEditItem(null);
       setUrlError("");

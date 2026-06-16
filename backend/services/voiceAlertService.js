@@ -36,7 +36,8 @@ export async function triggerVoiceAlertForMonitor({
   }
 
   // Generate dynamic message with website name if not custom provided
-  const defaultMessage = `Alert. Your website ${monitor.domain} is down. This is an automated alert from pulse.`;
+  const alertText= `Alert. Your website ${monitor.domain} is down . This is an automated alert from pulse. `;
+  const defaultMessage = `${alertText} ${alertText}`;
   const message = alertMessage || defaultMessage;
 
   // Create voice alert record

@@ -217,21 +217,32 @@ const ChipList = ({ items, onRemove, color, emptyText }) => (
 );
 
 // ─── Card Header ─────────────────────────────────────────────────────────────
-const CardHeader = ({ icon: Icon, title }) => (
-  <div className="px-4 py-2.5 border-b flex items-center gap-2" style={{ borderBottomColor: "rgba(56,189,248,0.07)", background: "rgba(56,189,248,0.022)" }}>
-    {Icon && <Icon size={11} style={{ color: "rgba(56,189,248,0.7)" }} />}
-    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(56,189,248,0.55)" }}>
+const CardHeader = ({ icon: Icon, title, accentColor = "#38bdf8" }) => (
+  <div className="px-4 py-2.5 border-b flex items-center gap-2" style={{ borderBottomColor: `${accentColor}15`, background: `${accentColor}08` }}>
+    {Icon && <Icon size={11} style={{ color: accentColor }} />}
+    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", letterSpacing: "0.2em", textTransform: "uppercase", color: accentColor }}>
       {title}
     </span>
   </div>
 );
 
 // ─── Card Wrapper ─────────────────────────────────────────────────────────────
-const Card = ({ children, header }) => (
-  <div className="rounded-2xl overflow-visible" style={{ background: "rgba(3,7,18,0.68)", border: "1px solid rgba(56,189,248,0.09)", backdropFilter: "blur(20px)" }}>
+const Card = ({ children, header, accentColor = "#38bdf8" }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+    className="rounded-2xl overflow-visible"
+    style={{ 
+      background: "rgba(3,7,18,0.68)", 
+      border: `1px solid ${accentColor}15`,
+      backdropFilter: "blur(20px)",
+      boxShadow: `0 0 0 1px ${accentColor}08, 0 4px 24px -4px rgba(0,0,0,0.4)`
+    }}
+  >
     {header}
     <div className="p-4">{children}</div>
-  </div>
+  </motion.div>
 );
 
 // ─── Button styles ────────────────────────────────────────────────────────────
@@ -269,7 +280,7 @@ export default function EditPage({
   const navigate = useNavigate();
   const [category,          setCategory]          = useState(item?.category || "");
   const [emailInput,        setEmailInput]        = useState("");
-  const [phoneInput,        setPhoneInput]        = useState("");
+  const [phoneInput,        setPhoneInput]        = useState("+91");
   const [showRoutingPanel,  setShowRoutingPanel]  = useState(false);
 
   // ── Notification groups state ───────────────────────────────────────────────
@@ -390,9 +401,6 @@ export default function EditPage({
           });
           if (response.data.success) {
             const freshItem = response.data.data;
-            console.log("Fresh site data:", freshItem);
-            console.log("selectedEmailNotificationGroups:", freshItem.selectedEmailNotificationGroups);
-            console.log("selectedPhoneNotificationGroups:", freshItem.selectedPhoneNotificationGroups);
             // Extract IDs from populated notification group objects
             let emailGroupIds = Array.isArray(freshItem.selectedEmailNotificationGroups)
               ? freshItem.selectedEmailNotificationGroups.map(g => g._id || g)
@@ -410,7 +418,6 @@ export default function EditPage({
                   return groupEmails.some(email => siteEmails.includes(email));
                 })
                 .map(group => group._id);
-              console.log("Auto-selected email groups based on matching emails:", emailGroupIds);
             }
 
             if (phoneGroupIds.length === 0 && notificationGroups.length > 0) {
@@ -421,11 +428,8 @@ export default function EditPage({
                   return groupPhones.some(phone => sitePhones.includes(phone));
                 })
                 .map(group => group._id);
-              console.log("Auto-selected phone groups based on matching phones:", phoneGroupIds);
             }
 
-            console.log("Setting emailGroupIds:", emailGroupIds);
-            console.log("Setting phoneGroupIds:", phoneGroupIds);
             handleSetSelectedEmailGroups(emailGroupIds);
             handleSetSelectedPhoneGroups(phoneGroupIds);
           }
@@ -508,7 +512,7 @@ export default function EditPage({
     const v = phoneInput.trim();
     if (!v) return;
     if (!normalizedPhones.includes(v)) setEditPhone([...normalizedPhones, v]);
-    setPhoneInput("");
+    setPhoneInput("+91");
   };
 
   const handleClose = () => {
@@ -583,69 +587,200 @@ export default function EditPage({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.06, duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
-            className="grid grid-cols-1 lg:grid-cols-3 gap-3"
+            className="grid grid-cols-1 lg:grid-cols-12 gap-3"
           >
 
-            {/* ── LEFT (2/3) ── */}
-            <div className="lg:col-span-2 space-y-3">
+            {/* ── LEFT (8/12) ── */}
+            <div className="lg:col-span-8 space-y-3">
 
-              {/* Basic Details */}
-              <Card header={<CardHeader icon={Globe2} title="Basic Details" />}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <FieldLabel icon={Globe2} text="Domain Name" />
-                    <Input value={editDomain} onChange={(e) => setEditDomain(e.target.value)} placeholder="example.com" />
+              {/* Section 1: Basic Configuration */}
+              <div className="space-y-3">
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex items-center gap-3 mb-3 px-2"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ background: "linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(59,130,246,0.1) 100%)", border: "1px solid rgba(56,189,248,0.2)" }}>
+                    <Globe2 size={14} style={{ color: "#38bdf8" }} />
                   </div>
-                  <div>
-                    <FieldLabel icon={Tag} text="Category" />
-                    <CategorySelect value={category} onChange={setCategory} />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <FieldLabel icon={Link2} text="Website URL" />
-                    <Input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} placeholder="https://example.com" />
-                  </div>
-                </div>
-              </Card>
-
-              {/* Monitoring Settings */}
-              <Card header={<CardHeader icon={Zap} title="Monitoring Settings" />}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="sm:col-span-2">
-                    <FieldLabel icon={Clock} text="Check Frequency" />
-                    <FrequencySelect value={editCheckFrequency} onChange={setEditCheckFrequency} />
-                    <p className="mt-1" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", color: "rgba(100,116,139,0.42)", letterSpacing: "0.02em" }}>
-                      Min: 10 sec · Max: 1 day · Default: 1 min
+                  <div className="flex-1">
+                    <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.1em", color: "rgba(248,250,252,0.9)", textTransform: "uppercase" }}>
+                      Basic Configuration
+                    </h3>
+                    <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(148,163,184,0.5)", letterSpacing: "0.05em" }}>
+                      Website identity and basic information
                     </p>
                   </div>
-                  <div>
-                    <FieldLabel icon={TimerReset} text="Max Response (ms)" />
-                    <Input type="number" value={editResponseThresholdMs} onChange={(e) => setEditResponseThresholdMs(e.target.value)} placeholder="2000" />
-                  </div>
-                  <div>
-                    <FieldLabel icon={ShieldAlert} text="Priority" />
-                    <label
-                      className="flex items-center gap-2.5 cursor-pointer px-3.5 rounded-xl h-[42px] transition-all duration-150"
-                      style={{
-                        background: Number(editPriority) === 1 ? "rgba(248,113,113,0.08)" : "rgba(255,255,255,0.018)",
-                        border: Number(editPriority) === 1 ? "1px solid rgba(248,113,113,0.22)" : "1px solid rgba(56,189,248,0.1)",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={Number(editPriority) === 1}
-                        onChange={(e) => setEditPriority(e.target.checked ? 1 : 0)}
-                        className="accent-red-500 w-3.5 h-3.5 shrink-0"
-                      />
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: Number(editPriority) === 1 ? "#f87171" : "rgba(148,163,184,0.5)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                        High Priority
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              </Card>
+                  <div className="h-px flex-1" style={{ background: "linear-gradient(90deg, rgba(56,189,248,0.2) 0%, transparent 100%)", marginLeft: "16px" }} />
+                </motion.div>
 
-              {/* Alert Contacts */}
-              <Card header={<CardHeader icon={Mail} title="Alert Contacts" />}>
+                <Card header={<CardHeader icon={Globe2} title="Website Details" accentColor="#38bdf8" />} accentColor="#38bdf8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <FieldLabel icon={Globe2} text="Domain Name" />
+                      <Input value={editDomain} onChange={(e) => setEditDomain(e.target.value)} placeholder="example.com" />
+                    </div>
+                    <div>
+                      <FieldLabel icon={Tag} text="Category" />
+                      <CategorySelect value={category} onChange={setCategory} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <FieldLabel icon={Link2} text="Website URL" />
+                      <Input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} placeholder="https://example.com" />
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Section 2: Monitoring Configuration */}
+              <div className="space-y-3">
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex items-center gap-3 mb-3 px-2"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(34,197,94,0.1) 100%)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                    <Zap size={14} style={{ color: "#10b981" }} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.1em", color: "rgba(248,250,252,0.9)", textTransform: "uppercase" }}>
+                      Monitoring Configuration
+                    </h3>
+                    <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(148,163,184,0.5)", letterSpacing: "0.05em" }}>
+                      Check frequency, response time & regions
+                    </p>
+                  </div>
+                  <div className="h-px flex-1" style={{ background: "linear-gradient(90deg, rgba(16,185,129,0.2) 0%, transparent 100%)", marginLeft: "16px" }} />
+                </motion.div>
+
+                <Card header={<CardHeader icon={Zap} title="Monitoring Settings" accentColor="#10b981" />} accentColor="#10b981">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="sm:col-span-2">
+                      <FieldLabel icon={Clock} text="Check Frequency" />
+                      <FrequencySelect value={editCheckFrequency} onChange={setEditCheckFrequency} />
+                      <p className="mt-1" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", color: "rgba(100,116,139,0.42)", letterSpacing: "0.02em" }}>
+                        Min: 10 sec · Max: 1 day · Default: 1 min
+                      </p>
+                    </div>
+                    <div>
+                      <FieldLabel icon={TimerReset} text="Max Response (ms)" />
+                      <Input type="number" value={editResponseThresholdMs} onChange={(e) => setEditResponseThresholdMs(e.target.value)} placeholder="2000" />
+                    </div>
+                    <div>
+                      <FieldLabel icon={ShieldAlert} text="Priority" />
+                      <label
+                        className="flex items-center gap-2.5 cursor-pointer px-3.5 rounded-xl h-[42px] transition-all duration-150"
+                        style={{
+                          background: Number(editPriority) === 1 ? "rgba(248,113,113,0.08)" : "rgba(255,255,255,0.018)",
+                          border: Number(editPriority) === 1 ? "1px solid rgba(248,113,113,0.22)" : "1px solid rgba(56,189,248,0.1)",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={Number(editPriority) === 1}
+                          onChange={(e) => setEditPriority(e.target.checked ? 1 : 0)}
+                          className="accent-red-500 w-3.5 h-3.5 shrink-0"
+                        />
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: Number(editPriority) === 1 ? "#f87171" : "rgba(148,163,184,0.5)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                          High Priority
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Regions moved to monitoring section */}
+                <Card header={<CardHeader icon={MapPin} title="Monitor Regions" accentColor="#10b981" />} accentColor="#10b981">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {REGIONS.map((region) => {
+                      const sel = editRegions.includes(region);
+                      return (
+                        <motion.button
+                          key={region} 
+                          type="button" 
+                          onClick={() => toggleRegion(region)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex items-center gap-2 px-3 py-2.5 rounded-lg transition-all duration-200 text-left relative overflow-hidden"
+                          style={{
+                            background: sel ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.018)",
+                            border: sel ? "1px solid rgba(52,211,153,0.3)" : "1px solid rgba(56,189,248,0.08)",
+                          }}
+                        >
+                          {sel && (
+                            <motion.div
+                              layoutId={`glow-${region}`}
+                              className="absolute inset-0"
+                              style={{ background: "radial-gradient(circle at center, rgba(52,211,153,0.15) 0%, transparent 70%)" }}
+                              initial={false}
+                              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            />
+                          )}
+                          <div className="relative flex items-center gap-2 w-full">
+                            <div className="w-3.5 h-3.5 rounded flex items-center justify-center shrink-0"
+                              style={{ background: sel ? "rgba(52,211,153,0.2)" : "rgba(255,255,255,0.03)", border: sel ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(56,189,248,0.12)" }}>
+                              {sel && <Check size={7} className="text-emerald-400" />}
+                            </div>
+                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.04em", color: sel ? "#86efac" : "rgba(148,163,184,0.52)", fontWeight: sel ? 500 : 400 }}>
+                              {region}
+                            </span>
+                          </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                  {editRegions.length > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="mt-3 pt-2.5 border-t flex items-center justify-between"
+                      style={{ borderTopColor: "rgba(52,211,153,0.15)" }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#34d399", boxShadow: "0 0 6px #34d399" }} />
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", color: "rgba(52,211,153,0.7)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                          {editRegions.length} active
+                        </span>
+                      </div>
+                      <motion.button 
+                        type="button" 
+                        onClick={() => setEditRegions([])}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(248,113,113,0.5)", letterSpacing: "0.08em", textTransform: "uppercase" }}
+                      >
+                        Clear all
+                      </motion.button>
+                    </motion.div>
+                  )}
+                </Card>
+              </div>
+
+              {/* Section 3: Alert Configuration */}
+              <div className="space-y-3">
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex items-center gap-3 mb-3 px-2"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ background: "linear-gradient(135deg, rgba(192,132,252,0.15) 0%, rgba(168,85,247,0.1) 100%)", border: "1px solid rgba(192,132,252,0.2)" }}>
+                    <Bell size={14} style={{ color: "#c084fc" }} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.1em", color: "rgba(248,250,252,0.9)", textTransform: "uppercase" }}>
+                      Alert Configuration
+                    </h3>
+                    <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(148,163,184,0.5)", letterSpacing: "0.05em" }}>
+                      Notification contacts & escalation groups
+                    </p>
+                  </div>
+                  <div className="h-px flex-1" style={{ background: "linear-gradient(90deg, rgba(192,132,252,0.2) 0%, transparent 100%)", marginLeft: "16px" }} />
+                </motion.div>
+
+                <Card header={<CardHeader icon={Mail} title="Alert Contacts" accentColor="#c084fc" />} accentColor="#c084fc">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <FieldLabel icon={Mail} text="Contact Emails" />
@@ -693,14 +828,19 @@ export default function EditPage({
                       <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "7px", letterSpacing: "0.12em", color: "rgba(148,163,184,0.5)", textTransform: "uppercase", marginBottom: "8px" }}>
                         Or add manually
                       </div>
-                      <AddRow value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} onAdd={handleAddPhone} placeholder="+91 9876543210" />
+                      <AddRow value={phoneInput} onChange={(e) => {
+                        const value = e.target.value;
+                        // Only allow numbers, +, spaces, hyphens, and parentheses
+                        const validated = value.replace(/[^0-9+\s\-\(\)]/g, '');
+                        setPhoneInput(validated);
+                      }} onAdd={handleAddPhone} placeholder="+91 " />
                       <ChipList items={manualOnlyPhones} onRemove={(p) => setEditPhone((prev) => prev.filter((x) => x !== p))} emptyText="No numbers added" />
                     </div>
                   </div>
                 </div>
               </Card>
 
-              {/* ── ✅ Alert Routing — Escalation Groups (replaces old Alert Groups) ── */}
+              {/* Alert Routing */}
               <div
                 className="rounded-2xl overflow-visible"
                 style={{ background: "rgba(3,7,18,0.68)", border: "1px solid rgba(56,189,248,0.09)", backdropFilter: "blur(20px)" }}
@@ -789,80 +929,62 @@ export default function EditPage({
                   )}
                 </AnimatePresence>
               </div>
+              </div>
 
             </div>
 
-            {/* ── RIGHT (1/3) ── */}
-            <div className="space-y-3">
+            {/* ── RIGHT (4/12) ── */}
+            <div className="lg:col-span-4 space-y-3">
 
-              {/* Regions */}
-              <Card header={<CardHeader icon={MapPin} title="Monitor Regions" />}>
-                <div className="space-y-1.5">
-                  {REGIONS.map((region) => {
-                    const sel = editRegions.includes(region);
-                    return (
-                      <button
-                        key={region} type="button" onClick={() => toggleRegion(region)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-150 text-left"
-                        style={{
-                          background: sel ? "rgba(52,211,153,0.09)" : "rgba(255,255,255,0.018)",
-                          border: sel ? "1px solid rgba(52,211,153,0.24)" : "1px solid rgba(56,189,248,0.08)",
-                        }}
+              {/* Live Summary - Moved to top for better visibility */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Card header={<CardHeader title="Monitor Summary" accentColor="#38bdf8" />} accentColor="#38bdf8">
+                  <div className="space-y-2">
+                    {[
+                      { label: "Domain",   value: editDomain || item.domain || "—", icon: Globe2 },
+                      { label: "Category", value: category || "—", icon: Tag },
+                      { label: "Priority", value: Number(editPriority) === 1 ? "High" : "Normal", accent: Number(editPriority) === 1 ? "#f87171" : null, icon: ShieldAlert },
+                      { label: "Regions",  value: editRegions.length > 0 ? `${editRegions.length} selected` : "None", accent: editRegions.length > 0 ? "#34d399" : null, icon: MapPin },
+                      { label: "Emails",   value: normalizedEmails.length > 0 ? `${normalizedEmails.length} contact${normalizedEmails.length > 1 ? "s" : ""}` : "None", icon: Mail },
+                      { label: "Phones",   value: normalizedPhones.length > 0 ? `${normalizedPhones.length} number${normalizedPhones.length > 1 ? "s" : ""}` : "None", icon: Phone },
+                      {
+                        label: "Routing",
+                        value: totalRoutingAssigned > 0
+                          ? `${totalRoutingAssigned} group${totalRoutingAssigned > 1 ? "s" : ""} assigned`
+                          : "None",
+                        accent: totalRoutingAssigned > 0 ? "#c084fc" : null,
+                        icon: Bell,
+                      },
+                    ].map(({ label, value, accent, icon: Icon }) => (
+                      <motion.div
+                        key={label}
+                        whileHover={{ x: 2 }}
+                        className="flex items-start justify-between gap-3 py-2 px-2 rounded-lg transition-all duration-150"
+                        style={{ borderBottom: "1px solid rgba(56,189,248,0.05)" }}
                       >
-                        <div className="w-3.5 h-3.5 rounded flex items-center justify-center shrink-0"
-                          style={{ background: sel ? "rgba(52,211,153,0.18)" : "rgba(255,255,255,0.03)", border: sel ? "1px solid rgba(52,211,153,0.35)" : "1px solid rgba(56,189,248,0.12)" }}>
-                          {sel && <Check size={8} className="text-emerald-400" />}
+                        <div className="flex items-center gap-2">
+                          {Icon && <Icon size={10} style={{ color: accent || "rgba(148,163,184,0.4)" }} />}
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", color: "rgba(100,116,139,0.55)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                            {label}
+                          </span>
                         </div>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", letterSpacing: "0.04em", color: sel ? "#86efac" : "rgba(148,163,184,0.52)" }}>
-                          {region}
-                        </span>
-                        {sel && <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#34d399", boxShadow: "0 0 4px #34d399" }} />}
-                      </button>
-                    );
-                  })}
-                </div>
-                {editRegions.length > 0 && (
-                  <div className="mt-3 pt-2.5 border-t flex items-center justify-between" style={{ borderTopColor: "rgba(56,189,248,0.07)" }}>
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", color: "rgba(52,211,153,0.55)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                      {editRegions.length} active
-                    </span>
-                    <button type="button" onClick={() => setEditRegions([])}
-                      style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(248,113,113,0.45)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                      Clear all
-                    </button>
+                        <div className="flex items-center gap-2">
+                          {accent && (
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 6px ${accent}40` }} />
+                          )}
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9.5px", color: accent || "rgba(248,250,252,0.6)", letterSpacing: "0.02em", textAlign: "right", wordBreak: "break-all" }}>
+                            {value}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
                   </div>
-                )}
-              </Card>
-
-              {/* Summary */}
-              <Card header={<CardHeader title="Monitor Summary" />}>
-                <div className="space-y-2">
-                  {[
-                    { label: "Domain",   value: editDomain || item.domain || "—" },
-                    { label: "Category", value: category || "—" },
-                    { label: "Priority", value: Number(editPriority) === 1 ? "High" : "Normal", accent: Number(editPriority) === 1 ? "#f87171" : null },
-                    { label: "Regions",  value: editRegions.length > 0 ? `${editRegions.length} selected` : "None", accent: editRegions.length > 0 ? "#34d399" : null },
-                    { label: "Emails",   value: normalizedEmails.length > 0 ? `${normalizedEmails.length} contact${normalizedEmails.length > 1 ? "s" : ""}` : "None" },
-                    { label: "Phones",   value: normalizedPhones.length > 0 ? `${normalizedPhones.length} number${normalizedPhones.length > 1 ? "s" : ""}` : "None" },
-                    {
-                      label: "Routing",
-                      value: totalRoutingAssigned > 0
-                        ? `${totalRoutingAssigned} group${totalRoutingAssigned > 1 ? "s" : ""} assigned`
-                        : "None",
-                      accent: totalRoutingAssigned > 0 ? "#c084fc" : null,
-                    },
-                  ].map(({ label, value, accent }) => (
-                    <div key={label} className="flex items-start justify-between gap-3 py-1.5 border-b last:border-0" style={{ borderBottomColor: "rgba(56,189,248,0.05)" }}>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", color: "rgba(100,116,139,0.55)", letterSpacing: "0.08em", textTransform: "uppercase", flexShrink: 0 }}>
-                        {label}
-                      </span>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9.5px", color: accent || "rgba(248,250,252,0.6)", letterSpacing: "0.02em", textAlign: "right", wordBreak: "break-all" }}>
-                        {value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+                </Card>
+              </motion.div>
 
               {/* Error */}
               <AnimatePresence>
@@ -879,6 +1001,38 @@ export default function EditPage({
                 )}
               </AnimatePresence>
 
+              {/* Quick Actions - Desktop */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="hidden lg:block"
+              >
+                <div className="space-y-2">
+                  <motion.button 
+                    whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(56,189,248,0.15)" }} 
+                    whileTap={{ scale: 0.97 }} 
+                    onClick={() => onSave(category, selectedEmailGroups, selectedPhoneGroups)} 
+                    className="w-full py-3 rounded-xl text-white relative overflow-hidden"
+                    style={{
+                      ...primaryBtnStyle,
+                      background: "linear-gradient(135deg, rgba(14,165,233,0.25) 0%, rgba(59,130,246,0.2) 100%)",
+                    }}
+                  >
+                    <span className="relative z-10">Save Changes</span>
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }} 
+                    whileTap={{ scale: 0.97 }} 
+                    onClick={handleClose} 
+                    className="w-full py-2.5 rounded-xl text-white" 
+                    style={secondaryBtnStyle}
+                  >
+                    Cancel
+                  </motion.button>
+                </div>
+              </motion.div>
+
               {/* Mobile save buttons */}
               <div className="flex flex-col gap-2 lg:hidden">
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => onSave(category, selectedEmailGroups, selectedPhoneGroups)} className="w-full py-2.5 rounded-xl text-white" style={primaryBtnStyle}>
@@ -889,27 +1043,6 @@ export default function EditPage({
                 </motion.button>
               </div>
 
-            </div>
-          </motion.div>
-
-          {/* ── Bottom Save Bar (desktop) ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.18, duration: 0.32 }}
-            className="hidden lg:flex items-center justify-between mt-3 px-4 py-2.5 rounded-2xl"
-            style={{ background: "rgba(3,7,18,0.72)", border: "1px solid rgba(56,189,248,0.08)", backdropFilter: "blur(16px)" }}
-          >
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8.5px", color: "rgba(100,116,139,0.45)", letterSpacing: "0.06em" }}>
-              Editing · <span style={{ color: "rgba(56,189,248,0.45)" }}>{item.domain}</span>
-            </span>
-            <div className="flex items-center gap-2">
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleClose} className="px-4 py-2 rounded-xl text-white" style={secondaryBtnStyle}>
-                Cancel
-              </motion.button>
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => onSave(category, selectedEmailGroups, selectedPhoneGroups)} className="px-5 py-2 rounded-xl text-white" style={primaryBtnStyle}>
-                Save Changes
-              </motion.button>
             </div>
           </motion.div>
 

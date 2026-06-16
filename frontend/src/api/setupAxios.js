@@ -102,7 +102,6 @@ const scheduleProactiveRefresh = (token) => {
       const newToken = await doRefresh();
       localStorage.setItem("loginToken", newToken);
       axios.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
-      console.info("[Auth] Proactive token refresh successful.");
       scheduleProactiveRefresh(newToken); // schedule the next one
     } catch (err) {
       console.error("[Auth] Proactive refresh failed:", err.message);

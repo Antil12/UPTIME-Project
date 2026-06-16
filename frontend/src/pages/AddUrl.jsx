@@ -423,7 +423,7 @@ const AddUrl = ({
   const [emailContacts, setEmailContacts]             = useState([]);
   const [emailInput, setEmailInput]                   = useState("");
   const [phoneContacts, setPhoneContacts]             = useState([]);
-  const [phoneInput, setPhoneInput]                   = useState("");
+  const [phoneInput, setPhoneInput]                   = useState("+91");
   const [priority, setPriority]                       = useState(0);
   const [submitted, setSubmitted]                     = useState(false);
   const [checkFrequency, setCheckFrequency]           = useState(60_000);
@@ -617,7 +617,7 @@ const AddUrl = ({
     setEmailContacts([]);
     setEmailInput("");
     setPhoneContacts([]);
-    setPhoneInput("");
+    setPhoneInput("+91");
     setAlertChannels([]);
     setResponseThresholdMs("15000");
     setCheckFrequency(60_000);
@@ -960,20 +960,25 @@ const AddUrl = ({
                       <div className="flex gap-2 mb-3">
                         <HudInput
                           type="tel"
-                          placeholder="+91 9876543210"
+                          placeholder="+91 "
                           value={phoneInput}
-                          onChange={(e) => setPhoneInput(e.target.value)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Only allow numbers, +, spaces, hyphens, and parentheses
+                            const validated = value.replace(/[^0-9+\s\-\(\)]/g, '');
+                            setPhoneInput(validated);
+                          }}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
                               const v = phoneInput.trim();
-                              if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput(""); }
+                              if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput("+91 "); }
                             }
                           }}
                           label="Phone Number"
                         />
                         <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                          onClick={() => { const v = phoneInput.trim(); if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput(""); } }}
+                          onClick={() => { const v = phoneInput.trim(); if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput("+91"); } }}
                           className="px-3 rounded-xl flex items-center justify-center"
                           style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "44px", height: "44px" }}>
                           <Plus size={14} />

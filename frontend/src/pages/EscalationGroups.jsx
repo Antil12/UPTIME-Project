@@ -576,6 +576,11 @@ const NotificationGroupCard = ({ group, index, onEdit, onDelete, isDeleting }) =
               </div>
               <div style={{ fontFamily: T.font, fontSize: 8, color: T.dim, letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 8 }}>
                 <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
+                {group.owner && (
+            <span style={{ fontFamily: T.font, fontSize: 8, color: T.dim, letterSpacing: "0.08em" }}>
+              By {group.owner.name || group.owner.email} ({group.owner.role})
+            </span>
+          )}
                 {group.description && <span style={{ color: "rgba(129,140,248,0.5)" }}>· {group.description}</span>}
               </div>
             </div>

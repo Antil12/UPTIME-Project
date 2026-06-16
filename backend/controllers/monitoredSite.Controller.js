@@ -51,6 +51,41 @@ const validateAlertGroupEmails = async (alertGroups) => {
   }
 };
 
+const validatePhoneNumbers = async (phoneContact, selectedPhoneNotificationGroups) => {
+  const allPhones = [];
+
+  // Add manual phone contacts
+  if (Array.isArray(phoneContact)) {
+    allPhones.push(...phoneContact.map((phone) => (typeof phone === "string" ? phone.trim() : "")));
+  } else if (typeof phoneContact === "string" && phoneContact) {
+    allPhones.push(phoneContact.trim());
+  }
+
+  // Add phone numbers from notification groups
+  if (Array.isArray(selectedPhoneNotificationGroups) && selectedPhoneNotificationGroups.length > 0) {
+    const groups = await NotificationGroup.find({ _id: { $in: selectedPhoneNotificationGroups } });
+    const groupPhones = groups.flatMap((group) => group.phoneNumbers || []);
+    allPhones.push(...groupPhones.map((phone) => (typeof phone === "string" ? phone.trim() : "")));
+  }
+
+  const validPhones = allPhones.filter(Boolean);
+
+  if (validPhones.length === 0) return;
+
+  // Phone number validation: only allow numbers, +, spaces, hyphens, and parentheses
+  const phoneRegex = /^[0-9+\s\-\(\)]+$/;
+  const invalid = validPhones.filter((phone) => !phoneRegex.test(phone));
+
+  if (invalid.length > 0) {
+    const uniqueInvalid = [...new Set(invalid)];
+    const err = new Error(
+      `Invalid phone number format(s): ${uniqueInvalid.join(", ")}. Only numbers, +, spaces, hyphens, and parentheses are allowed.`
+    );
+    err.status = 400;
+    throw err;
+  }
+};
+
 /* =====================================================================
    GET ALL MONITORED SITES — with server-side pagination
 ===================================================================== */
@@ -373,6 +408,9 @@ export const addSite = async (req, res) => {
 
     await validateAlertGroupEmails(normalizedAlertGroups);
 
+    // Validate phone numbers from manual input and notification groups
+    await validatePhoneNumbers(phoneContact, selectedPhoneNotificationGroups);
+
     const site = await MonitoredSite.create({
       domain,
       url,
@@ -573,6 +611,9 @@ export const updateSite = async (req, res) => {
       await validateAlertGroupEmails(normalizedAlertGroups);
       updatedData.alertGroups = normalizedAlertGroups;
     }
+
+    // Validate phone numbers from manual input and notification groups
+    await validatePhoneNumbers(phoneContact, selectedPhoneNotificationGroups);
 
     // Update notification group references
     if (selectedEmailNotificationGroups !== undefined) {
