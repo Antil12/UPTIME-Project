@@ -604,7 +604,6 @@ const Dashboard = ({
                       whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                       onClick={async () => {
                         if (selectedIds.length === 0) return;
-                        if (!confirm(`Delete ${selectedIds.length} websites?`)) return;
                         try {
                           if (typeof onBulkDelete === "function") {
                             await onBulkDelete(selectedIds);

@@ -60,6 +60,18 @@ const monitoredSiteSchema = new mongoose.Schema({
     default: null,
   },
 
+  // Track active voice alert state for skip logic
+  activeVoiceAlertId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "VoiceAlert",
+    default: null,
+  },
+  activeVoiceAlertStatus: {
+    type: String,
+    enum: ['ringing', 'answered', null],
+    default: null,
+  },
+
   // Priority: 0 = normal, 1 = high (instant voice alert on DOWN)
   priority: {
     type: Number,

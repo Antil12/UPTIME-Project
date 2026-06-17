@@ -45,7 +45,81 @@ export const emailWorker = new Worker(
       }
 
       /* ================================================================
-         4. ESCALATION ALERT
+         4. REGION ALERT
+            job.data shape:
+              { type, siteId, siteName, siteUrl, downRegions, alertEmail, timestamp }
+      ================================================================ */
+      if (job.name === "region-alert") {
+        const { siteId, siteName, siteUrl, downRegions, alertEmail, timestamp } = job.data;
+
+        const site = await MonitoredSite.findById(siteId);
+        if (!site) {
+          console.warn(`[REGION ALERT WORKER] Site not found: ${siteId}`);
+          return;
+        }
+
+        console.log(
+          `[REGION ALERT WORKER] ${siteName || site.domain} → Down in: ${downRegions.join(", ")}`
+        );
+
+        // Import emailService and template utilities
+        const emailService = (await import("../services/emailService.js")).default;
+        const { formatToIST } = await import("../services/emailService.js");
+        const Mustache = (await import("mustache")).default;
+        const fs = (await import("fs")).default;
+        const path = (await import("path")).default;
+        const { fileURLToPath } = await import("url");
+
+        const __dirname = path.dirname(fileURLToPath(import.meta.url));
+        const templatePath = path.resolve(__dirname, "../templates/Regionalert.html");
+
+        const recipients = Array.isArray(alertEmail) ? alertEmail : [alertEmail];
+        const validRecipients = recipients.filter(Boolean);
+
+        if (validRecipients.length === 0) {
+          console.warn(`[REGION ALERT WORKER] No valid email recipients for ${siteName}`);
+          return;
+        }
+
+        // Load and render template
+        const checkedAt = timestamp ? new Date(timestamp) : new Date();
+        let html;
+        try {
+          const template = fs.readFileSync(templatePath, "utf-8");
+          html = Mustache.render(template, {
+            siteName: siteName || site.domain,
+            siteUrl,
+            downRegions,
+            checkedAt: formatToIST(checkedAt),
+            alertIfAllRegionsDown: site.alertIfAllRegionsDown,
+          });
+        } catch (templateErr) {
+          console.error("[REGION ALERT WORKER] Template error:", templateErr.message);
+          // Fallback to simple HTML
+          html = `
+<!doctype html>
+<html><head><meta charset="utf-8"/>
+<style>body{font-family:Arial,sans-serif;padding:24px;}</style>
+</head><body>
+<h1>🌍 Regional Down Alert</h1>
+<p>${siteName || site.domain} is DOWN in: ${downRegions.join(", ")}</p>
+<p>Checked at: ${formatToIST(checkedAt)} (IST)</p>
+${site.alertIfAllRegionsDown ? '<p><strong>⚠️ Alert Condition: All regions are down</strong></p>' : ''}
+</body></html>`;
+        }
+
+        await emailService.sendEmail({
+          to: validRecipients,
+          subject: `🌍 Regional Down Alert — ${siteName || site.domain} is DOWN in ${downRegions.length} region(s)`,
+          html,
+        }).catch((err) => console.error("Failed to send region alert email:", err));
+
+        console.log(`[REGION ALERT WORKER] Email sent to ${validRecipients.join(", ")}`);
+        return;
+      }
+
+      /* ================================================================
+         5. ESCALATION ALERT
             job.data shape:
               { siteId, level, alertLevel, checkedAt? }
 

@@ -589,9 +589,6 @@ const AddUrl = ({
     if (urls.some((u) => normalize(u.domain) === nd)) { setLocalError("Domain name already exists."); return; }
     if (urls.some((u) => normalize(u.url) === nu))    { setLocalError("URL already exists."); return; }
 
-    console.log("AddUrl handleSubmit - selectedEmailGroups:", selectedEmailGroups);
-    console.log("AddUrl handleSubmit - selectedPhoneGroups:", selectedPhoneGroups);
-
     onSave({
       domain: domain.trim(),
       url: url.trim(),

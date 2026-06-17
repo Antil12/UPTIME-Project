@@ -33,13 +33,43 @@ export const voiceAlertWorker = new Worker(
       return { skipped: true, reason: `terminal status: ${alert.status}` };
     }
 
+    // Check if it's time to retry (for scheduled retries)
+    if (alert.nextRetryAt && new Date() < alert.nextRetryAt) {
+      const waitTimeMs = alert.nextRetryAt.getTime() - Date.now();
+      const waitTimeSeconds = Math.round(waitTimeMs / 1000);
+      console.log(
+        `[VoiceWorker] ⏰ Retry not yet due | alertId=${alertId} | ` +
+        `nextRetryAt=${alert.nextRetryAt.toISOString()} | waiting ${waitTimeSeconds}s`
+      );
+
+      // Re-queue with a short delay to check again
+      const { Queue } = await import('bullmq');
+      const connection = (await import('../queue/redisConnection.js')).default;
+      const voiceAlertQueue = new Queue('voice-alerts', { connection });
+
+      await voiceAlertQueue.add(
+        'process-voice-alert',
+        { alertId },
+        {
+          delay: Math.min(waitTimeMs, 60000), // Max 1 minute delay per check
+          attempts: 1,
+        }
+      );
+
+      return { skipped: true, reason: 'retry not yet due', nextRetryAt: alert.nextRetryAt };
+    }
+
     alert.attemptCount += 1;
     alert.status = 'dialing';
+    if (alert.groupId) {
+      alert.groupCallStatus = 'in_progress';
+    }
     await alert.save();
 
+    const phoneNumbers = alert.recipientPhone; // Array of phone numbers
     console.log(
-      `[VoiceWorker] 📞 Initiating call | alertId=${alertId} | ` +
-      `to=${alert.recipientPhone} | attempt=${alert.attemptCount}/${alert.maxRetries}`
+      `[VoiceWorker] 📞 Initiating calls | alertId=${alertId} | ` +
+      `phones=${phoneNumbers.length} | attempt=${alert.attemptCount}/${alert.maxRetries} | groupId=${alert.groupId || 'none'}`
     );
 
     const baseUrl = process.env.API_BASE_URL;
@@ -59,31 +89,45 @@ export const voiceAlertWorker = new Worker(
     console.log(`  hangup : ${hangupUrl}`);
 
     try {
-      const result = await initiateVobizCall({
-        to:               alert.recipientPhone,
-        answerUrl,
-        ringUrl,
-        hangupUrl,
-        machineDetection: 'false',
-        timeLimit:        300,
-        ringTimeout:      45,
+      // Initiate calls for all phone numbers in the group simultaneously using Promise.all
+      console.log(`[VoiceWorker] 📞 Initiating ${phoneNumbers.length} calls simultaneously...`);
+
+      const callPromises = phoneNumbers.map(async (phone) => {
+        console.log(`[VoiceWorker] 📞 Calling ${phone}...`);
+        const result = await initiateVobizCall({
+          to:               phone,
+          answerUrl,
+          ringUrl,
+          hangupUrl,
+          machineDetection: 'false',
+          timeLimit:        300,
+          ringTimeout:      45,
+        });
+        console.log(`[VoiceWorker] ✅ Call initiated to ${phone} | requestUuid=${result.requestUuid}`);
+        return { phone, requestUuid: result.requestUuid, callUuid: result.callUuid || result.requestUuid };
       });
 
-      // requestUuid is always present; callUuid may come later via webhook
-      alert.requestUuid   = result.requestUuid;
-      alert.callUuid      = result.callUuid || result.requestUuid;
-      alert.callStartedAt = new Date();
-      await alert.save();
+      const callResults = await Promise.all(callPromises);
+
+      // Store the first call's UUID (for backward compatibility)
+      if (callResults.length > 0) {
+        alert.requestUuid   = callResults[0].requestUuid;
+        alert.callUuid      = callResults[0].callUuid;
+        alert.callStartedAt = new Date();
+        await alert.save();
+      }
 
       console.log(
-        `[VoiceWorker] ✅ Call initiated | alertId=${alertId} | ` +
-        `requestUuid=${result.requestUuid} | callUuid=${alert.callUuid}`
+        `[VoiceWorker] ✅ All calls initiated simultaneously | alertId=${alertId} | ` +
+        `totalCalls=${callResults.length} | firstCallUuid=${alert.callUuid}`
       );
 
       return {
         success:     true,
         callUuid:    alert.callUuid,
-        requestUuid: result.requestUuid,
+        requestUuid: alert.requestUuid,
+        totalCalls:  callResults.length,
+        callResults: callResults,
       };
 
     } catch (err) {

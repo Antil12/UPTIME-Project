@@ -15,6 +15,7 @@ import Logs from "./pages/Logs";
 import "./api/setupAxios";
 import BulkUpload from "./pages/BulkUpload";
 import EscalationGroups from "./pages/EscalationGroups";
+import DeleteConfirmationModal from "./components/DeleteConfirmationModal";
 
 // setupaxios();
 
@@ -172,6 +173,9 @@ function App() {
 
   const [popupData, setPopupData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   /* ================= HELPERS ================= */
 
@@ -312,10 +316,6 @@ function App() {
       selectedPhoneNotificationGroups,
     } = data;
 
-    console.log("handleAddUrl received data:", data);
-    console.log("selectedEmailNotificationGroups:", selectedEmailNotificationGroups);
-    console.log("selectedPhoneNotificationGroups:", selectedPhoneNotificationGroups);
-
     if (!domain || !url) {
       setUrlError("Domain and URL are required");
       return;
@@ -343,7 +343,7 @@ function App() {
         selectedEmailNotificationGroups: selectedEmailNotificationGroups || [],
         selectedPhoneNotificationGroups: selectedPhoneNotificationGroups || [],
       };
-      console.log("Sending payload to backend:", payload);
+      // console.log("Sending payload to backend:", payload);
       await axios.post(API_BASE, payload);
       setDomain("");
       setUrl("");
@@ -370,20 +370,29 @@ function App() {
   // BULK DELETE SITES
   const handleBulkDelete = async (ids = []) => {
     if (!Array.isArray(ids) || ids.length === 0) return;
-    if (!confirm(`Delete ${ids.length} selected website(s)?`)) return;
+    setBulkDeleteIds(ids);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    setIsDeleting(true);
     try {
       const token = localStorage.getItem("loginToken");
       await Promise.all(
-        ids.map((id) =>
+        bulkDeleteIds.map((id) =>
           axios.delete(`${API_BASE}/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
           })
         )
       );
+      setDeleteModalOpen(false);
+      setBulkDeleteIds([]);
       await loadData(selectedStatus, search, page);
     } catch (err) {
       console.error("Bulk delete failed", err);
       alert("Failed to delete selected sites");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -761,7 +770,18 @@ function App() {
         </Routes>
       </main>
 
-      
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setBulkDeleteIds([]);
+        }}
+        onConfirm={handleConfirmBulkDelete}
+        title="Bulk Delete Websites"
+        message={`Are you sure you want to delete ${bulkDeleteIds.length} selected website(s)? This action cannot be undone.`}
+        loading={isDeleting}
+      />
     </div>
   );
 }

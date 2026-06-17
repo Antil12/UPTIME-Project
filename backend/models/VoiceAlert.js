@@ -7,7 +7,7 @@ const voiceAlertSchema = new mongoose.Schema({
     required: true,
   },
   recipientPhone: {
-    type: String,
+    type: [String], // Changed to array to support group calls
     required: true,
   },
   recipientName: {
@@ -17,6 +17,21 @@ const voiceAlertSchema = new mongoose.Schema({
   recipientEmail: {
     type: String,
     default: "",
+  },
+  // Group call support
+  groupId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "NotificationGroup",
+    default: null,
+  },
+  answeredBy: {
+    type: String, // Which phone number answered the call
+    default: null,
+  },
+  groupCallStatus: {
+    type: String,
+    enum: ['pending', 'in_progress', 'completed', 'failed'],
+    default: 'pending',
   },
   alertType: {
     type: String,
