@@ -2,6 +2,7 @@ import MonitoredSite from "../models/MonitoredSite.js";
 import User from "../models/User.js";
 import EscalationGroup from "../models/EscalationGroup.js";
 import { handleRoutedAlertBatch } from "../services/alertService.js";
+import { triggerVoiceAlertForMonitor } from "../services/voiceAlertService.js";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ESCALATION RULES
@@ -93,6 +94,41 @@ const resolveRecipientsForLevel = async (site, alertLevel) => {
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   resolvePhoneRecipientsForLevel
+   - Fetches escalation group IDs from site.alertRouting[alertLevel]
+   - Queries EscalationGroup collection for those groups
+   - Extracts phone numbers from the groups
+   - Returns all phone numbers (no category filtering for voice alerts)
+───────────────────────────────────────────────────────────────────────────── */
+const resolvePhoneRecipientsForLevel = async (site, alertLevel) => {
+  const groupIds = site.alertRouting?.[alertLevel] || [];
+  if (groupIds.length === 0) return [];
+
+  try {
+    // Fetch all escalation groups for the given IDs
+    const groups = await EscalationGroup.find({
+      _id: { $in: groupIds },
+      isActive: true,
+    }).lean();
+
+    if (groups.length === 0) return [];
+
+    // Collect all unique phone numbers from all groups
+    const rawPhones = [...new Set(
+      groups
+        .flatMap((group) => group.phoneNumbers || [])
+        .map((phone) => (typeof phone === "string" ? phone.trim() : ""))
+        .filter(Boolean)
+    )];
+
+    return rawPhones;
+  } catch (err) {
+    console.error("[resolvePhoneRecipientsForLevel] Error:", err.message);
+    return [];
+  }
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
    startEscalationWorker — runs every 60 s
 ───────────────────────────────────────────────────────────────────────────── */
 export const startEscalationWorker = () => {
@@ -118,18 +154,18 @@ export const startEscalationWorker = () => {
               `— down for ${Math.round(downTime / 60_000)} min`
             );
 
-            // Resolve recipients with alertCategories filtering
-            const recipients = await resolveRecipientsForLevel(site, rule.alertLevel);
+            // Resolve email recipients with alertCategories filtering
+            const emailRecipients = await resolveRecipientsForLevel(site, rule.alertLevel);
 
-            if (recipients.length === 0) {
+            if (emailRecipients.length === 0) {
               console.log(
-                `[ESCALATION] No eligible recipients for "${site.domain}" ` +
+                `[ESCALATION] No eligible email recipients for "${site.domain}" ` +
                 `at level ${rule.level} — skipping email`
               );
             } else {
               // Send one email per recipient
               await Promise.allSettled(
-                recipients.map((email) =>
+                emailRecipients.map((email) =>
                   handleRoutedAlertBatch([site], rule.alertLevel, email, now).catch((err) => {
                     console.error(
                       `[ESCALATION] Send failed to ${email} for ${site.domain}:`,
@@ -138,6 +174,67 @@ export const startEscalationWorker = () => {
                   })
                 )
               );
+            }
+
+            // Resolve phone recipients for voice alerts
+            const phoneRecipients = await resolvePhoneRecipientsForLevel(site, rule.alertLevel);
+
+            if (phoneRecipients.length === 0) {
+              console.log(
+                `[ESCALATION] No phone recipients for "${site.domain}" ` +
+                `at level ${rule.level} — skipping voice call`
+              );
+            } else {
+              // Trigger voice alert for each phone recipient individually
+              try {
+                // Calculate downtime duration
+                const downTimeMs = now - new Date(site.downSince);
+                const downTimeMinutes = Math.floor(downTimeMs / 60_000);
+                const downTimeHours = Math.floor(downTimeMinutes / 60);
+                
+                let downtimeText;
+                if (downTimeHours > 0) {
+                  const remainingMinutes = downTimeMinutes % 60;
+                  downtimeText = remainingMinutes > 0 
+                    ? `${downTimeHours} hour${downTimeHours > 1 ? 's' : ''} and ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}`
+                    : `${downTimeHours} hour${downTimeHours > 1 ? 's' : ''}`;
+                } else {
+                  downtimeText = `${downTimeMinutes} minute${downTimeMinutes > 1 ? 's' : ''}`;
+                }
+
+                const message = `Alert. Your website ${site.domain} is ${rule.alertLevel}. It has been down for ${downtimeText}. This is an automated escalation alert from pulse.`;
+                const alertMessage = `${message} ${message}`;
+                const severity = rule.alertLevel === 'critical' ? 'critical' : rule.alertLevel === 'trouble' ? 'warning' : 'info';
+                
+                for (const phoneNumber of phoneRecipients) {
+                  try {
+                    const alert = await triggerVoiceAlertForMonitor({
+                      monitorId: site._id,
+                      phoneNumber, // Pass single phone number
+                      reason: `escalation-${rule.alertLevel}`,
+                      severity,
+                      alertMessage,
+                      domain: site.domain,
+                    });
+                    if (alert) {
+                      console.log(
+                        `[ESCALATION] Voice alert triggered for "${site.domain}" ` +
+                        `at level ${rule.level} — phone: ${phoneNumber} — downtime: ${downtimeText}`
+                      );
+                    }
+                  } catch (err) {
+                    console.error(
+                      `[ESCALATION] Voice alert failed for ${site.domain} (${phoneNumber}):`,
+                      err.message
+                    );
+                  }
+                }
+              } catch (err) {
+                console.error(
+                  `[ESCALATION] Voice alert batch failed for ${site.domain}:`,
+                  err.message
+                );
+              }
             }
 
             // ── Level 3 reached: reset cycle so escalation restarts from Level 1

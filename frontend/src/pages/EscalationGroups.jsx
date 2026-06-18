@@ -726,9 +726,17 @@ const GroupCard = ({ group, index, onEdit, onDelete, isDeleting }) => {
           <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 7, background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.13)" }}>
             <Users size={9} style={{ color: T.accentDim }} />
             <span style={{ fontFamily: T.font, fontSize: 9, color: T.accentMid, letterSpacing: "0.08em" }}>
-              {group.emails.length} recipient{group.emails.length !== 1 ? "s" : ""}
+              {group.emails.length} email{group.emails.length !== 1 ? "s" : ""}
             </span>
           </div>
+          {group.phoneNumbers && group.phoneNumbers.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 7, background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.13)" }}>
+              <Phone size={9} style={{ color: "rgba(34,197,94,0.7)" }} />
+              <span style={{ fontFamily: T.font, fontSize: 9, color: "rgba(34,197,94,0.8)", letterSpacing: "0.08em" }}>
+                {group.phoneNumbers.length} phone{group.phoneNumbers.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
 
           {group.createdAt && (
             <span style={{ fontFamily: T.font, fontSize: 8, color: T.dim, letterSpacing: "0.08em" }}>
@@ -748,7 +756,7 @@ const GroupCard = ({ group, index, onEdit, onDelete, isDeleting }) => {
             onMouseEnter={(e) => e.currentTarget.style.color = T.accent}
             onMouseLeave={(e) => e.currentTarget.style.color = T.dim}
           >
-            {expanded ? "Hide" : "Show"} emails
+            {expanded ? "Hide" : "Show"} recipients
             <span style={{ transform: expanded ? "rotate(180deg)" : "none", display: "inline-block", transition: "transform 0.2s" }}>▾</span>
           </button>
         </div>
@@ -765,11 +773,39 @@ const GroupCard = ({ group, index, onEdit, onDelete, isDeleting }) => {
               <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 5 }}>
                 <Divider label="Recipients" />
                 <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 5 }}>
-                  {group.emails.map((email, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
-                      <EmailChip email={email} />
-                    </motion.div>
-                  ))}
+                  {group.emails && group.emails.length > 0 && (
+                    <>
+                      <div style={{ fontFamily: T.font, fontSize: 8, color: "rgba(56,189,248,0.7)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                        <Mail size={8} /> Emails
+                      </div>
+                      {group.emails.map((email, i) => (
+                        <motion.div key={`email-${i}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+                          <EmailChip email={email} />
+                        </motion.div>
+                      ))}
+                    </>
+                  )}
+                  {group.phoneNumbers && group.phoneNumbers.length > 0 && (
+                    <>
+                      <div style={{ fontFamily: T.font, fontSize: 8, color: "rgba(34,197,94,0.7)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4, marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                        <Phone size={8} /> Phone Numbers
+                      </div>
+                      {group.phoneNumbers.map((phone, i) => (
+                        <motion.div key={`phone-${i}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: (group.emails?.length || 0) * 0.04 + i * 0.04 }}>
+                          <div style={{
+                            display: "flex", alignItems: "center", gap: 6,
+                            padding: "5px 10px", borderRadius: 7,
+                            background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.12)",
+                          }}>
+                            <Phone size={9} style={{ color: "rgba(34,197,94,0.6)", flexShrink: 0 }} />
+                            <span style={{ fontFamily: T.font, fontSize: 10, color: "rgba(34,197,94,0.85)", letterSpacing: "0.02em", wordBreak: "break-all" }}>
+                              {phone}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -836,7 +872,7 @@ const EscalationGroups = () => {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-  const [formData, setFormData] = useState({ groupName: "", emails: [], description: "" });
+  const [formData, setFormData] = useState({ groupName: "", emails: [], phoneNumbers: [], description: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -894,11 +930,12 @@ const EscalationGroups = () => {
     setError(""); setSuccess("");
     if (!formData.groupName.trim()) { setError("Group name is required"); return; }
     const emailArray = formData.emails.filter(Boolean);
-    if (!emailArray.length) { setError("At least one email is required"); return; }
+    const phoneArray = formData.phoneNumbers.filter(Boolean);
+    if (!emailArray.length && !phoneArray.length) { setError("At least one email or phone number is required"); return; }
 
     try {
       setIsSubmitting(true);
-      const payload = { groupName: formData.groupName.trim(), emails: emailArray, description: formData.description.trim() };
+      const payload = { groupName: formData.groupName.trim(), emails: emailArray, phoneNumbers: phoneArray, description: formData.description.trim() };
       if (editingId) {
         const r = await axios.put(`/escalation-groups/${editingId}`, payload);
         if (r.data.success) { setSuccess("Group updated successfully"); setGroups(groups.map((g) => g._id === editingId ? r.data.data : g)); resetForm(); }
@@ -914,7 +951,7 @@ const EscalationGroups = () => {
   };
 
   const handleEdit = (group) => {
-    setFormData({ groupName: group.groupName, emails: group.emails || [], description: group.description || "" });
+    setFormData({ groupName: group.groupName, emails: group.emails || [], phoneNumbers: group.phoneNumbers || [], description: group.description || "" });
     setEditingId(group._id);
     setFormOpen(true);
     setError(""); setSuccess("");
@@ -958,7 +995,7 @@ const EscalationGroups = () => {
   };
 
   const resetForm = () => {
-    setFormData({ groupName: "", emails: [], description: "" });
+    setFormData({ groupName: "", emails: [], phoneNumbers: [], description: "" });
     setEditingId(null);
     setFormOpen(false);
   };
@@ -1058,6 +1095,7 @@ const EscalationGroups = () => {
   };
 
   const totalEmails = groups.reduce((acc, g) => acc + (g.emails?.length || 0), 0);
+  const totalPhones = groups.reduce((acc, g) => acc + (g.phoneNumbers?.length || 0), 0);
   const totalNotificationEmails = notificationGroups.reduce((acc, g) => acc + (g.emails?.length || 0), 0);
   const totalNotificationPhones = notificationGroups.reduce((acc, g) => acc + (g.phoneNumbers?.length || 0), 0);
 
@@ -1120,7 +1158,7 @@ const EscalationGroups = () => {
               <div style={{ display: "flex", gap: 10 }}>
                 <StatBadge value={activeTab === "escalation" ? groups.length : notificationGroups.length} label="Groups" color={T.accent} />
                 <StatBadge value={activeTab === "escalation" ? totalEmails : totalNotificationEmails} label="Emails" color="rgba(167,139,250,0.9)" />
-                {activeTab === "notification" && <StatBadge value={totalNotificationPhones} label="Phones" color="rgba(34,197,94,0.9)" />}
+                <StatBadge value={activeTab === "escalation" ? totalPhones : totalNotificationPhones} label="Phones" color="rgba(34,197,94,0.9)" />
               </div>
             </div>
           </motion.div>
@@ -1186,7 +1224,7 @@ const EscalationGroups = () => {
                 </div>
                 <div style={{ fontFamily: T.font, fontSize: 9, color: T.dim, marginTop: 3 }}>
                   {activeTab === "escalation"
-                    ? `${groups.length} group${groups.length !== 1 ? "s" : ""} configured · ${totalEmails} total recipients`
+                    ? `${groups.length} group${groups.length !== 1 ? "s" : ""} configured · ${totalEmails} emails · ${totalPhones} phones`
                     : `${notificationGroups.length} group${notificationGroups.length !== 1 ? "s" : ""} configured · ${totalNotificationEmails} emails · ${totalNotificationPhones} phones`
                   }
                 </div>
@@ -1273,10 +1311,18 @@ const EscalationGroups = () => {
                             />
                           </Field>
 
-                          <Field label="Recipient Emails *">
+                          <Field label="Recipient Emails">
                             <EmailListInput
                               emails={formData.emails}
                               onChange={(arr) => setFormData({ ...formData, emails: arr })}
+                              disabled={isSubmitting}
+                            />
+                          </Field>
+
+                          <Field label="Phone Numbers">
+                            <PhoneListInput
+                              phones={formData.phoneNumbers}
+                              onChange={(arr) => setFormData({ ...formData, phoneNumbers: arr })}
                               disabled={isSubmitting}
                             />
                           </Field>

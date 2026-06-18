@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown, Plus, X, Mail, Check,
-  AlertTriangle, Zap, ShieldAlert, RefreshCw, Users,
+  AlertTriangle, Zap, ShieldAlert, RefreshCw, Users, Phone,
 } from "lucide-react";
 import axios from "axios";
 
@@ -286,8 +286,14 @@ const GroupMultiSelect = ({ label, value = [], onChange, groups, color, icon: Ic
                           )}
                           <div style={{ fontSize: 9, color: `${color}55`, marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>
                             <Users size={8} />
-                            {g.emails?.length ?? 0} recipient{g.emails?.length !== 1 ? "s" : ""}
+                            {g.emails?.length ?? 0} email{g.emails?.length !== 1 ? "s" : ""}
                           </div>
+                          {g.phoneNumbers && g.phoneNumbers.length > 0 && (
+                            <div style={{ fontSize: 9, color: `${color}55`, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
+                              <Phone size={8} />
+                              {g.phoneNumbers.length} phone{g.phoneNumbers.length !== 1 ? "s" : ""}
+                            </div>
+                          )}
                           {g.owner && (
                             <div style={{ 
                               fontSize: 9, 

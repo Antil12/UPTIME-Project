@@ -11,6 +11,10 @@ const escalationGroupSchema = new mongoose.Schema({
     required: true,
     default: [],
   },
+  phoneNumbers: {
+    type: [String],
+    default: [],
+  },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
