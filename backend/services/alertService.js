@@ -267,7 +267,7 @@ const buildFallbackHtml = (sites, alertLevel, meta, checkedAt) => {
     return `<tr>
       <td><strong>${site.domain || "—"}</strong></td>
       <td><a href="${site.url || "#"}">${site.url || "—"}</a></td>
-      <td>${site.category || "Uncategorized"}</td>
+      <td>${site.category || "Others"}</td>
       <td>${site.responseThresholdMs || 15_000}&nbsp;ms</td>
       <td>${durationStr}</td>
       <td><span style="background:#fde8e8;color:#c0392b;border-radius:4px;

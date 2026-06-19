@@ -87,12 +87,12 @@ const SuperAdmin = () => {
 
       setAvailableSites(sites);
 
-      // Derive unique categories from sites (exclude null/undefined/ALL/UNCATEGORIZED)
+      // Derive unique categories from sites (exclude null/undefined/ALL)
       const cats = [
         ...new Set(
           sites
             .map((s) => s.category)
-            .filter((c) => c && c !== "ALL" && c !== "UNCATEGORIZED")
+            .filter((c) => c && c !== "ALL")
         ),
       ].sort();
       setAvailableCategories(cats);
@@ -127,7 +127,7 @@ const SuperAdmin = () => {
           availableSites
             .filter((s) => siteIds.includes(s._id.toString()) && s.category)
             .map((s) => s.category)
-            .filter((c) => c && c !== "ALL" && c !== "UNCATEGORIZED")
+            .filter((c) => c && c !== "ALL")
         ),
       ];
       cats = derived;

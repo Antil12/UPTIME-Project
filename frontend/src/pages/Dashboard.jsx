@@ -285,7 +285,7 @@ const Dashboard = ({
     tableRows = urls.filter((u) => {
       const categoryMatch =
         selectedCategories.includes("ALL") ||
-        selectedCategories.includes(u.category || "UNCATEGORIZED");
+        selectedCategories.includes(u.category || "Others");
       const statusMatch = selectedStatus === "ALL" || u.status === selectedStatus;
       const sslMatch = selectedSslStatus === "ALL" || u.sslStatus === selectedSslStatus;
       return categoryMatch && statusMatch && sslMatch;

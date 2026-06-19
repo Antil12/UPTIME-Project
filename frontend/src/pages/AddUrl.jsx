@@ -418,7 +418,7 @@ const AddUrl = ({
   const [alertChannels, setAlertChannels]             = useState([]);
   const [regions, setRegions]                         = useState([]);
   const [alertIfAllRegionsDown, setAlertIfAllRegionsDown] = useState(false);
-  const [category, setCategory]                       = useState("");
+  const [category, setCategory]                       = useState("Others");
   const [localError, setLocalError]                   = useState("");
   const [emailContacts, setEmailContacts]             = useState([]);
   const [emailInput, setEmailInput]                   = useState("");
@@ -592,7 +592,7 @@ const AddUrl = ({
     onSave({
       domain: domain.trim(),
       url: url.trim(),
-      category: category.trim() || null,
+      category: category.trim() || "Others",
       responseThresholdMs,
       alertChannels,
       regions,
@@ -610,7 +610,7 @@ const AddUrl = ({
 
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 2000);
-    setCategory("");
+    setCategory("Others");
     setEmailContacts([]);
     setEmailInput("");
     setPhoneContacts([]);
@@ -890,7 +890,7 @@ const AddUrl = ({
                     {/* Manual Email Entry */}
                     <div style={{ marginTop: "12px" }}>
                       <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "7px", letterSpacing: "0.12em", color: "rgba(148,163,184,0.5)", textTransform: "uppercase", marginBottom: "8px" }}>
-                        Or add manually
+                        Or add email  manually
                       </div>
                       <div className="flex gap-2 mb-3">
                         <HudInput
@@ -952,7 +952,7 @@ const AddUrl = ({
                     {/* Manual Phone Entry */}
                     <div style={{ marginTop: "12px" }}>
                       <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "7px", letterSpacing: "0.12em", color: "rgba(148,163,184,0.5)", textTransform: "uppercase", marginBottom: "8px" }}>
-                        Or add manually
+                        Or add phone number manually
                       </div>
                       <div className="flex gap-2 mb-3">
                         <HudInput
@@ -972,8 +972,7 @@ const AddUrl = ({
                               if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput("+91 "); }
                             }
                           }}
-                          label="Phone Number"
-                        />
+                         />
                         <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                           onClick={() => { const v = phoneInput.trim(); if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput("+91"); } }}
                           className="px-3 rounded-xl flex items-center justify-center"

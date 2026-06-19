@@ -234,7 +234,7 @@ const StatCard = ({ icon: Icon, label, value, accent = "#38bdf8", delay = 0 }) =
 
 // ─── Category Assign List ─────────────────────────────────────────────────────
 const CategoryAssignList = ({ availableCategories, selectedCategories, setSelectedCategories, availableSites, setSelectedSites }) => {
-  const filtered = availableCategories.filter(c => c && c !== "ALL" && c !== "UNCATEGORIZED");
+  const filtered = availableCategories.filter(c => c && c !== "ALL");
   const toggle = (category, checked) => {
     const updated = checked ? [...selectedCategories, category] : selectedCategories.filter(c => c !== category);
     setSelectedCategories(updated);

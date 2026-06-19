@@ -368,8 +368,8 @@ export default function EditPage({
     critical: Array.isArray(editAlertRouting?.critical) ? editAlertRouting.critical : [],
   };
 
-  useEffect(() => { if (item?.category !== undefined) setCategory(item.category || ""); }, [item]);
-  useEffect(() => { if (initialCategory !== undefined) setCategory(initialCategory || ""); }, [initialCategory]);
+  useEffect(() => { if (item?.category !== undefined) setCategory(item.category || "Others"); }, [item]);
+  useEffect(() => { if (initialCategory !== undefined) setCategory(initialCategory || "Others"); }, [initialCategory]);
   useEffect(() => { if (!item) navigate("/dashboard", { replace: true }); }, [item, navigate]);
 
   // Fetch notification groups on mount

@@ -1035,7 +1035,7 @@ const BulkUpload = () => {
                     <li className="leading-relaxed">
                    • <span className="text-white font-medium">Category</span>
                      <span className="text-gray-400"> (default: </span>
-                     <span className="text-sky-300 font-semibold">UNCATEGORIZED</span>
+                     <span className="text-sky-300 font-semibold">Others</span>
                      <span className="text-gray-400">)</span>
                      <br />
                      <span className="text-gray-400">Allowed values:</span>

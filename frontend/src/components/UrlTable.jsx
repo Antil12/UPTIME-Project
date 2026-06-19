@@ -480,8 +480,8 @@ const UrlTable = forwardRef(({
 
   const filteredData = urls.filter((u) => {
     const categoryMatch = selectedCategories.includes("ALL") || selectedCategories.some(cat => {
-      if (cat === "UNCATEGORIZED") {
-        return !u.category;
+      if (cat === "Others") {
+        return !u.category || u.category === "Others";
       }
       return u.category === cat;
     });

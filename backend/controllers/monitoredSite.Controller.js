@@ -1070,7 +1070,7 @@ async function checkDirectForSite(site, now) {
 export const getCategories = async (req, res) => {
   try {
     const categories = await MonitoredSite.distinct("category", { isActive: 1 });
-    const allCategories = ["ALL", ...categories.map((c) => c || "UNCATEGORIZED")];
+    const allCategories = ["ALL", ...categories.map((c) => c || "Others")];
     return res.json({ success: true, data: allCategories });
   } catch (error) {
     console.error("❌ getCategories error:", error);
@@ -1305,7 +1305,7 @@ export const bulkImportSites = async (req, res) => {
           rows.push({
             domain:       row.domain?.trim() || "",
             url,
-            category:     row.category || "UNCATEGORIZED",
+            category:     row.category || "Others",
             owner:        req.user._id,
             priority:     Number(row.priority ?? 0),
             emailContact: emailList.length > 0 ? emailList : [],
