@@ -288,6 +288,7 @@ export default function EditPage({
   const [loadingNotificationGroups, setLoadingNotificationGroups] = useState(false);
   const [selectedEmailGroups, setSelectedEmailGroups] = useState([]);
   const [selectedPhoneGroups, setSelectedPhoneGroups] = useState([]);
+  const [groupWarning, setGroupWarning] = useState(null);
 
   // Custom handler for email group selection - adds/removes contacts when groups are selected/deselected
   const handleSetSelectedEmailGroups = (newGroups) => {
@@ -334,6 +335,27 @@ export default function EditPage({
     const currentPhones = Array.isArray(editPhone) ? editPhone : [];
     let updatedPhones = [...currentPhones];
 
+    // Check for duplicates when adding groups
+    if (addedGroups.length > 0) {
+      const duplicateWarnings = [];
+      addedGroups.forEach(groupId => {
+        const group = notificationGroups.find(g => g._id === groupId);
+        if (group && group.phoneNumbers) {
+          group.phoneNumbers.forEach(groupPhone => {
+            if (currentPhones.includes(groupPhone)) {
+              duplicateWarnings.push(`${groupPhone} already exists in group "${group.groupName}"`);
+            }
+          });
+        }
+      });
+
+      if (duplicateWarnings.length > 0) {
+        setGroupWarning(duplicateWarnings.join(', '));
+        // Auto-clear warning after 5 seconds
+        setTimeout(() => setGroupWarning(null), 5000);
+      }
+    }
+
     // Remove phones from deselected groups
     if (removedGroups.length > 0) {
       const phonesToRemove = removedGroups
@@ -345,7 +367,7 @@ export default function EditPage({
       updatedPhones = updatedPhones.filter(phone => !phonesToRemove.includes(phone));
     }
 
-    // Add phones from newly selected groups
+    // Add phones from newly selected groups (excluding duplicates from manual entry)
     if (addedGroups.length > 0) {
       const phonesToAdd = addedGroups
         .map(groupId => {
@@ -402,33 +424,13 @@ export default function EditPage({
           if (response.data.success) {
             const freshItem = response.data.data;
             // Extract IDs from populated notification group objects
+            // Only use explicitly selected notification groups, no auto-selection based on matching contacts
             let emailGroupIds = Array.isArray(freshItem.selectedEmailNotificationGroups)
               ? freshItem.selectedEmailNotificationGroups.map(g => g._id || g)
               : [];
             let phoneGroupIds = Array.isArray(freshItem.selectedPhoneNotificationGroups)
               ? freshItem.selectedPhoneNotificationGroups.map(g => g._id || g)
               : [];
-
-            // Fallback: if no notification group IDs are saved, try to auto-select based on matching emails/phone numbers
-            if (emailGroupIds.length === 0 && notificationGroups.length > 0) {
-              const siteEmails = Array.isArray(freshItem.emailContact) ? freshItem.emailContact : [];
-              emailGroupIds = notificationGroups
-                .filter(group => {
-                  const groupEmails = Array.isArray(group.emails) ? group.emails : [];
-                  return groupEmails.some(email => siteEmails.includes(email));
-                })
-                .map(group => group._id);
-            }
-
-            if (phoneGroupIds.length === 0 && notificationGroups.length > 0) {
-              const sitePhones = Array.isArray(freshItem.phoneContact) ? freshItem.phoneContact : [];
-              phoneGroupIds = notificationGroups
-                .filter(group => {
-                  const groupPhones = Array.isArray(group.phoneNumbers) ? group.phoneNumbers : [];
-                  return groupPhones.some(phone => sitePhones.includes(phone));
-                })
-                .map(group => group._id);
-            }
 
             handleSetSelectedEmailGroups(emailGroupIds);
             handleSetSelectedPhoneGroups(phoneGroupIds);
@@ -511,8 +513,30 @@ export default function EditPage({
   const handleAddPhone = () => {
     const v = phoneInput.trim();
     if (!v) return;
-    if (!normalizedPhones.includes(v)) setEditPhone([...normalizedPhones, v]);
-    setPhoneInput("+91");
+    if (!normalizedPhones.includes(v)) {
+      // Check if phone exists in selected groups
+      const duplicateInGroups = selectedPhoneGroups
+        .map(groupId => {
+          const group = notificationGroups.find(g => g._id === groupId);
+          return group ? (group.phoneNumbers || []) : [];
+        })
+        .flat()
+        .includes(v);
+
+      if (duplicateInGroups) {
+        const groupName = notificationGroups.find(g =>
+          g._id === selectedPhoneGroups.find(groupId => {
+            const group = notificationGroups.find(grp => grp._id === groupId);
+            return group && group.phoneNumbers && group.phoneNumbers.includes(v);
+          })
+        )?.groupName || 'selected group';
+        setGroupWarning(`${v} already exists in group "${groupName}"`);
+        setTimeout(() => setGroupWarning(null), 5000);
+      } else {
+        setEditPhone([...normalizedPhones, v]);
+        setPhoneInput("+91");
+      }
+    }
   };
 
   const handleClose = () => {
@@ -835,6 +859,32 @@ export default function EditPage({
                         setPhoneInput(validated);
                       }} onAdd={handleAddPhone} placeholder="+91 " />
                       <ChipList items={manualOnlyPhones} onRemove={(p) => setEditPhone((prev) => prev.filter((x) => x !== p))} emptyText="No numbers added" />
+
+                      {/* Warning message for duplicate contacts */}
+                      {groupWarning && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-3 rounded-xl px-3 py-2"
+                          style={{
+                            background: "rgba(239,68,68,0.1)",
+                            border: "1px solid rgba(239,68,68,0.3)",
+                            backdropFilter: "blur(14px)",
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <ShieldAlert size={14} style={{ color: "#ef4444" }} />
+                            <span style={{
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: "9px",
+                              color: "#fca5a5",
+                              letterSpacing: "0.02em",
+                            }}>
+                              {groupWarning}
+                            </span>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
                   </div>
                 </div>

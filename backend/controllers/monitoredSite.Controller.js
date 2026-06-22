@@ -5,6 +5,7 @@ import SiteCurrentStatus from "../models/SiteCurrentStatus.js";
 import RegionAssignment from "../models/RegionAssignment.js";
 import RegionCurrentStatus from "../models/RegionCurrentStatus.js";
 import NotificationGroup from "../models/NotificationGroup.js";
+import VoiceAlert from "../models/VoiceAlert.js";
 import { getSlowBatch, clearSlowBatch } from "../services/slowBatchStore.js";
 import User from "../models/User.js";
 import { emailQueue } from "../queue/emailQueue.js";
@@ -52,29 +53,31 @@ const validateAlertGroupEmails = async (alertGroups) => {
 };
 
 const validatePhoneNumbers = async (phoneContact, selectedPhoneNotificationGroups) => {
-  const allPhones = [];
+  const manualPhones = [];
+  const groupPhones = [];
 
-  // Add manual phone contacts
+  // Validate manual phone contacts separately
   if (Array.isArray(phoneContact)) {
-    allPhones.push(...phoneContact.map((phone) => (typeof phone === "string" ? phone.trim() : "")));
+    manualPhones.push(...phoneContact.map((phone) => (typeof phone === "string" ? phone.trim() : "")));
   } else if (typeof phoneContact === "string" && phoneContact) {
-    allPhones.push(phoneContact.trim());
+    manualPhones.push(phoneContact.trim());
   }
 
-  // Add phone numbers from notification groups
+  // Validate phone numbers from notification groups separately
   if (Array.isArray(selectedPhoneNotificationGroups) && selectedPhoneNotificationGroups.length > 0) {
     const groups = await NotificationGroup.find({ _id: { $in: selectedPhoneNotificationGroups } });
-    const groupPhones = groups.flatMap((group) => group.phoneNumbers || []);
-    allPhones.push(...groupPhones.map((phone) => (typeof phone === "string" ? phone.trim() : "")));
+    groupPhones.push(...groups.flatMap((group) => group.phoneNumbers || []).map((phone) => (typeof phone === "string" ? phone.trim() : "")));
   }
 
-  const validPhones = allPhones.filter(Boolean);
+  const validManualPhones = manualPhones.filter(Boolean);
+  const validGroupPhones = groupPhones.filter(Boolean);
 
-  if (validPhones.length === 0) return;
+  if (validManualPhones.length === 0 && validGroupPhones.length === 0) return;
 
   // Phone number validation: only allow numbers, +, spaces, hyphens, and parentheses
   const phoneRegex = /^[0-9+\s\-\(\)]+$/;
-  const invalid = validPhones.filter((phone) => !phoneRegex.test(phone));
+  const allPhones = [...validManualPhones, ...validGroupPhones];
+  const invalid = allPhones.filter((phone) => !phoneRegex.test(phone));
 
   if (invalid.length > 0) {
     const uniqueInvalid = [...new Set(invalid)];
@@ -509,6 +512,8 @@ export const updateSite = async (req, res) => {
     }
 
     // ── Handle notification group changes ─────────────────────────────────────
+    // Manual phone contacts and group phone contacts are kept separate
+    // Manual phones stay in phoneContact array, group phones are fetched from selectedPhoneNotificationGroups
     const oldEmailGroups = Array.isArray(site.selectedEmailNotificationGroups)
       ? site.selectedEmailNotificationGroups.map(g => g.toString ? g.toString() : g.toString())
       : [];
@@ -547,14 +552,6 @@ export const updateSite = async (req, res) => {
       emailsToAdd = addedGroupsData.flatMap(g => g.emails || []);
     }
 
-    // Find newly added phone groups and get their phone numbers
-    const addedPhoneGroups = newPhoneGroups.filter(g => !oldPhoneGroups.includes(g));
-    let phonesToAdd = [];
-    if (addedPhoneGroups.length > 0) {
-      const addedGroupsData = await NotificationGroup.find({ _id: { $in: addedPhoneGroups } });
-      phonesToAdd = addedGroupsData.flatMap(g => g.phoneNumbers || []);
-    }
-
     // ── Build the update object (existing fields) ────────────────────────────
     const incomingEmailContact = emailContact
       ? Array.isArray(emailContact) ? emailContact : [emailContact]
@@ -574,16 +571,12 @@ export const updateSite = async (req, res) => {
       filteredEmailContact = [...filteredEmailContact, ...uniqueEmailsToAdd];
     }
 
-    // Filter out phones from removed groups
+    // Manual phone contacts are kept separate from group phone contacts
+    // Do NOT merge group phones into phoneContact array
+    // Group phones will be fetched from selectedPhoneNotificationGroups when needed
     let filteredPhoneContact = phonesToRemove.length > 0
       ? incomingPhoneContact.filter(phone => !phonesToRemove.includes(phone))
       : incomingPhoneContact;
-
-    // Add phones from newly added groups
-    if (phonesToAdd.length > 0) {
-      const uniquePhonesToAdd = phonesToAdd.filter(phone => !filteredPhoneContact.includes(phone));
-      filteredPhoneContact = [...filteredPhoneContact, ...uniquePhonesToAdd];
-    }
 
     const updatedData = {
       domain,
@@ -702,6 +695,21 @@ export const deleteSite = async (req, res) => {
     if (req.user.role !== "SUPERADMIN") {
       return res.status(403).json({ success: false, message: "Only SuperAdmin can delete sites" });
     }
+    
+    // Cancel all pending/queued voice alerts for this monitor to prevent retry calls
+    const cancelledAlerts = await VoiceAlert.updateMany(
+      { 
+        monitorId: site._id, 
+        status: { $in: ['queued', 'dialing', 'ringing'] } 
+      },
+      { 
+        status: 'cancelled',
+        hangupReason: 'Monitor deleted'
+      }
+    );
+    
+    console.log(`[DeleteSite] Cancelled ${cancelledAlerts.modifiedCount} voice alerts for monitor ${site._id}`);
+    
     site.isActive  = 0;
     site.deletedBy = req.user._id;
     site.deletedAt = new Date();

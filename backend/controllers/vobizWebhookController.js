@@ -70,12 +70,13 @@ export async function handleAnswerCallback(req, res) {
       alert.callStartedAt = new Date();
       await alert.save();
 
-      // Clear monitor's active call state
+      // Clear monitor's active call state and set lastVoiceAlertAt for cooldown
       await MonitoredSite.findByIdAndUpdate(
         alert.monitorId,
         {
           activeVoiceAlertId: null,
           activeVoiceAlertStatus: null,
+          lastVoiceAlertAt: new Date(), // Update cooldown timestamp when group call is answered
         }
       );
 
@@ -87,12 +88,13 @@ export async function handleAnswerCallback(req, res) {
       alert.callStartedAt = new Date();
       await alert.save();
 
-      // Update monitor's active call state
+      // Update monitor's active call state and set lastVoiceAlertAt for cooldown
       await MonitoredSite.findByIdAndUpdate(
         alert.monitorId,
         {
           activeVoiceAlertId: alert._id,
           activeVoiceAlertStatus: 'answered',
+          lastVoiceAlertAt: new Date(), // Update cooldown timestamp when call is answered
         }
       );
     }
@@ -185,6 +187,19 @@ export async function handleHangupCallback(req, res) {
     if (!alert) {
       console.warn(`[Vobiz] ⚠️ Alert not found for hangup: ${alertId}`);
       return res.status(404).json({ error: 'Alert not found' });
+    }
+
+    // Check if monitor still exists and is active (not deleted) before scheduling retries
+    const monitor = await MonitoredSite.findById(alert.monitorId).select('isActive domain');
+    if (!monitor || monitor.isActive !== 1) {
+      console.log(
+        `[Vobiz] ⏭️ Skipping retry for alert ${alertId} — monitor deleted or inactive (monitorId=${alert.monitorId})`
+      );
+      alert.status = 'cancelled';
+      alert.hangupReason = 'Monitor deleted or inactive';
+      alert.callEndedAt = new Date();
+      await alert.save();
+      return res.json({ success: true, skipped: true, reason: 'monitor deleted or inactive' });
     }
 
     // Update call details

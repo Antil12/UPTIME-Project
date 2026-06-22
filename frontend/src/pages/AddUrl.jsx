@@ -440,6 +440,7 @@ const AddUrl = ({
   const [loadingNotificationGroups, setLoadingNotificationGroups] = useState(false);
   const [selectedEmailGroups, setSelectedEmailGroups] = useState([]);
   const [selectedPhoneGroups, setSelectedPhoneGroups] = useState([]);
+  const [groupWarning, setGroupWarning] = useState(null);
 
   // Custom handler for email group selection - adds/removes contacts when groups are selected/deselected
   const handleSetSelectedEmailGroups = (newGroups) => {
@@ -486,6 +487,27 @@ const AddUrl = ({
     const currentPhones = Array.isArray(phoneContacts) ? phoneContacts : [];
     let updatedPhones = [...currentPhones];
 
+    // Check for duplicates when adding groups
+    if (addedGroups.length > 0) {
+      const duplicateWarnings = [];
+      addedGroups.forEach(groupId => {
+        const group = notificationGroups.find(g => g._id === groupId);
+        if (group && group.phoneNumbers) {
+          group.phoneNumbers.forEach(groupPhone => {
+            if (currentPhones.includes(groupPhone)) {
+              duplicateWarnings.push(`${groupPhone} already exists in group "${group.groupName}"`);
+            }
+          });
+        }
+      });
+
+      if (duplicateWarnings.length > 0) {
+        setGroupWarning(duplicateWarnings.join(', '));
+        // Auto-clear warning after 5 seconds
+        setTimeout(() => setGroupWarning(null), 5000);
+      }
+    }
+
     // Remove phones from deselected groups
     if (removedGroups.length > 0) {
       const phonesToRemove = removedGroups
@@ -497,7 +519,7 @@ const AddUrl = ({
       updatedPhones = updatedPhones.filter(phone => !phonesToRemove.includes(phone));
     }
 
-    // Add phones from newly selected groups
+    // Add phones from newly selected groups (excluding duplicates from manual entry)
     if (addedGroups.length > 0) {
       const phonesToAdd = addedGroups
         .map(groupId => {
@@ -969,12 +991,61 @@ const AddUrl = ({
                             if (e.key === "Enter") {
                               e.preventDefault();
                               const v = phoneInput.trim();
-                              if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput("+91 "); }
+                              if (v && !phoneContacts.includes(v)) {
+                                // Check if phone exists in selected groups
+                                const duplicateInGroups = selectedPhoneGroups
+                                  .map(groupId => {
+                                    const group = notificationGroups.find(g => g._id === groupId);
+                                    return group ? (group.phoneNumbers || []) : [];
+                                  })
+                                  .flat()
+                                  .includes(v);
+
+                                if (duplicateInGroups) {
+                                  const groupName = notificationGroups.find(g =>
+                                    g._id === selectedPhoneGroups.find(groupId => {
+                                      const group = notificationGroups.find(grp => grp._id === groupId);
+                                      return group && group.phoneNumbers && group.phoneNumbers.includes(v);
+                                    })
+                                  )?.groupName || 'selected group';
+                                  setGroupWarning(`${v} already exists in group "${groupName}"`);
+                                  setTimeout(() => setGroupWarning(null), 5000);
+                                } else {
+                                  setPhoneContacts((p) => [...p, v]);
+                                  setPhoneInput("+91 ");
+                                }
+                              }
                             }
                           }}
                          />
                         <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                          onClick={() => { const v = phoneInput.trim(); if (v && !phoneContacts.includes(v)) { setPhoneContacts((p) => [...p, v]); setPhoneInput("+91"); } }}
+                          onClick={() => {
+                            const v = phoneInput.trim();
+                            if (v && !phoneContacts.includes(v)) {
+                              // Check if phone exists in selected groups
+                              const duplicateInGroups = selectedPhoneGroups
+                                .map(groupId => {
+                                  const group = notificationGroups.find(g => g._id === groupId);
+                                  return group ? (group.phoneNumbers || []) : [];
+                                })
+                                .flat()
+                                .includes(v);
+
+                              if (duplicateInGroups) {
+                                const groupName = notificationGroups.find(g =>
+                                  g._id === selectedPhoneGroups.find(groupId => {
+                                    const group = notificationGroups.find(grp => grp._id === groupId);
+                                    return group && group.phoneNumbers && group.phoneNumbers.includes(v);
+                                  })
+                                )?.groupName || 'selected group';
+                                setGroupWarning(`${v} already exists in group "${groupName}"`);
+                                setTimeout(() => setGroupWarning(null), 5000);
+                              } else {
+                                setPhoneContacts((p) => [...p, v]);
+                                setPhoneInput("+91");
+                              }
+                            }
+                          }}
                           className="px-3 rounded-xl flex items-center justify-center"
                           style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "44px", height: "44px" }}>
                           <Plus size={14} />
@@ -996,6 +1067,32 @@ const AddUrl = ({
                           <span className="text-slate-500 text-sm font-mono">No phone numbers added yet</span>
                         )}
                       </div>
+
+                      {/* Warning message for duplicate contacts */}
+                      {groupWarning && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-3 rounded-xl px-3 py-2"
+                          style={{
+                            background: "rgba(239,68,68,0.1)",
+                            border: "1px solid rgba(239,68,68,0.3)",
+                            backdropFilter: "blur(14px)",
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <ShieldAlert size={14} style={{ color: "#ef4444" }} />
+                            <span style={{
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: "9px",
+                              color: "#fca5a5",
+                              letterSpacing: "0.02em",
+                            }}>
+                              {groupWarning}
+                            </span>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
                   </motion.div>
                 )}

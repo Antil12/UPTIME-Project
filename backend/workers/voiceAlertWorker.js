@@ -2,6 +2,7 @@
 import { Worker } from "bullmq";
 import connection from "../queue/redisConnection.js";
 import VoiceAlert from "../models/VoiceAlert.js";
+import MonitoredSite from "../models/MonitoredSite.js";
 import { initiateVobizCall } from "../services/vobizService.js";
 
 export const voiceWorkerStatus = {
@@ -31,6 +32,18 @@ export const voiceAlertWorker = new Worker(
         `[VoiceWorker] ⏭️ Skipping alert ${alertId} — already in terminal status: ${alert.status}`
       );
       return { skipped: true, reason: `terminal status: ${alert.status}` };
+    }
+
+    // Check if monitor still exists and is active (not deleted)
+    const monitor = await MonitoredSite.findById(alert.monitorId).select('isActive domain');
+    if (!monitor || monitor.isActive !== 1) {
+      console.log(
+        `[VoiceWorker] ⏭️ Skipping alert ${alertId} — monitor deleted or inactive (monitorId=${alert.monitorId})`
+      );
+      alert.status = 'cancelled';
+      alert.hangupReason = 'Monitor deleted or inactive';
+      await alert.save();
+      return { skipped: true, reason: 'monitor deleted or inactive' };
     }
 
     // Check if it's time to retry (for scheduled retries)

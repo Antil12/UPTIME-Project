@@ -20,7 +20,7 @@ import { triggerVoiceAlertForMonitor } from "../services/voiceAlertService.js";
 ───────────────────────────────────────────────────────────────────────────── */
 const ESCALATION_RULES = [
   { level: 1, delay:  2 * 60 * 1000,     alertLevel: "down"     }, // 30 min → Group 1
-  { level: 2, delay:  4 * 60 * 1000,     alertLevel: "trouble"  }, // 1 hr   → Group 2
+  { level: 2, delay:  10 * 60 * 1000,     alertLevel: "trouble"  }, // 1 hr   → Group 2
   { level: 3, delay:   3 * 60 * 60 * 1000, alertLevel: "critical" }, // 3 hrs  → Group 3
 ];
 
@@ -210,11 +210,12 @@ export const startEscalationWorker = () => {
                   try {
                     const alert = await triggerVoiceAlertForMonitor({
                       monitorId: site._id,
-                      phoneNumber, // Pass single phone number
+                      phoneNumbers: [phoneNumber], // Pass as array
                       reason: `escalation-${rule.alertLevel}`,
                       severity,
                       alertMessage,
                       domain: site.domain,
+                      bypassCooldown: true, // Bypass cooldown for escalation alerts
                     });
                     if (alert) {
                       console.log(

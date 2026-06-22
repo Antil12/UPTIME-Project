@@ -11,17 +11,28 @@ const VOICE_COOLDOWN_MINUTES = 5; // Minimum 5 minutes between voice alerts for 
 
 export async function triggerVoiceAlertForMonitor({
   monitorId,
-  phoneNumber,
+  phoneNumbers,
   groupId,
   reason = 'downtime',
   severity = 'critical',
   alertMessage,
   domain,
+  bypassCooldown = false,
 }) {
-  let phoneNumbers = [];
+  let finalPhoneNumbers = [];
 
-  // Handle group-based alerts
-  if (groupId) {
+  // Handle array of phone numbers directly (manual + group combined)
+  if (phoneNumbers && Array.isArray(phoneNumbers) && phoneNumbers.length > 0) {
+    // Validate each phone number
+    for (const phone of phoneNumbers) {
+      if (!/^\+\d{10,15}$/.test(phone)) {
+        throw new Error(`Invalid phone number format: ${phone}`);
+      }
+    }
+    finalPhoneNumbers = phoneNumbers;
+    console.log(`[VOICE] 📋 Direct phone array alert | phoneCount=${finalPhoneNumbers.length} | phoneNumbers=${JSON.stringify(finalPhoneNumbers)}`);
+  } else if (groupId) {
+    // Handle group-based alerts (legacy support)
     const group = await NotificationGroup.findById(groupId);
     if (!group) {
       throw new Error(`NotificationGroup ${groupId} not found`);
@@ -33,16 +44,10 @@ export async function triggerVoiceAlertForMonitor({
     }
 
     // Create a proper copy of the array to ensure all numbers are included
-    phoneNumbers = [...group.phoneNumbers];
-    console.log(`[VOICE] 📋 Group alert | groupId=${groupId} | groupName=${group.groupName} | phoneCount=${phoneNumbers.length} | phoneNumbers=${JSON.stringify(phoneNumbers)}`);
-  } else if (phoneNumber) {
-    // Single phone number alert
-    if (!/^\+\d{10,15}$/.test(phoneNumber)) {
-      throw new Error(`Invalid phone number format: ${phoneNumber}`);
-    }
-    phoneNumbers = [phoneNumber];
+    finalPhoneNumbers = [...group.phoneNumbers];
+    console.log(`[VOICE] 📋 Group alert | groupId=${groupId} | groupName=${group.groupName} | phoneCount=${finalPhoneNumbers.length} | phoneNumbers=${JSON.stringify(finalPhoneNumbers)}`);
   } else {
-    throw new Error(`Either phoneNumber or groupId must be provided`);
+    throw new Error(`Either phoneNumbers array or groupId must be provided`);
   }
 
   const monitor = await MonitoredSite.findById(monitorId).select(
@@ -53,14 +58,15 @@ export async function triggerVoiceAlertForMonitor({
   // Check if there's an active call in progress for this monitor
   // This prevents duplicate calls when user is already on a call
   // Using monitor's activeVoiceAlertStatus field for faster lookup (production-level optimization)
-  if (monitor.activeVoiceAlertStatus && ['ringing', 'answered'].includes(monitor.activeVoiceAlertStatus)) {
+  // Bypassed for escalation alerts to ensure they are always delivered
+  if (!bypassCooldown && monitor.activeVoiceAlertStatus && ['ringing', 'answered'].includes(monitor.activeVoiceAlertStatus)) {
     logger.info({ monitorId, activeAlertId: monitor.activeVoiceAlertId, status: monitor.activeVoiceAlertStatus }, '[VoiceAlert] Skipped — active call in progress');
     console.log(`[VOICE] ⏭️ Skipped for ${monitor.domain} | Active call in progress (alertId=${monitor.activeVoiceAlertId}, status=${monitor.activeVoiceAlertStatus})`);
     return null;
   }
 
-  // Check cooldown to avoid alert spam
-  if (monitor.lastVoiceAlertAt) {
+  // Check cooldown to avoid alert spam (bypassed for escalation alerts)
+  if (!bypassCooldown && monitor.lastVoiceAlertAt) {
     const minutesSince = (Date.now() - monitor.lastVoiceAlertAt.getTime()) / 60_000;
     if (minutesSince < VOICE_COOLDOWN_MINUTES) {
       logger.info({ monitorId, minutesSince: minutesSince.toFixed(1) }, '[VoiceAlert] Skipped — cooldown active');
@@ -75,12 +81,14 @@ export async function triggerVoiceAlertForMonitor({
   const message = alertMessage || defaultMessage;
 
   // Create voice alert record
+  // Only set groupId if it was explicitly provided (legacy group-based alerts)
+  // For combined manual+group alerts, groupId remains null to avoid mapping
   const alert = new VoiceAlert({
     monitorId,
-    recipientPhone: phoneNumbers, // Array of phone numbers
+    recipientPhone: finalPhoneNumbers, // Array of phone numbers
     recipientName: domain || monitor.domain,
-    groupId: groupId || null,
-    groupCallStatus: groupId ? 'pending' : null,
+    groupId: (groupId && !phoneNumbers) ? groupId : null, // Only set groupId if using legacy group path
+    groupCallStatus: (groupId && !phoneNumbers) ? 'pending' : null,
     alertMessage: message,  // ← Store the actual message that will be spoken
     severity,
     alertType: 'downtime',
@@ -132,43 +140,36 @@ export async function checkPriority1Alert(monitorId, currentStatus) {
     if (!monitor.voiceAlertsEnabled)   return null;
     if (currentStatus !== 'DOWN')      return null;
 
-    // Check if phone notification groups are configured
-    const phoneGroups = monitor.selectedPhoneNotificationGroups || [];
+    // Get manual phone contacts
     const phoneContacts = monitor.phoneContact || [];
-
-    console.log(`[VOICE] 🔍 Priority-1 check | phoneGroups=${JSON.stringify(phoneGroups)} | phoneContacts=${JSON.stringify(phoneContacts)}`);
-
+    
+    // Get phone numbers from notification groups
+    const phoneGroups = monitor.selectedPhoneNotificationGroups || [];
+    let groupPhones = [];
     if (phoneGroups.length > 0) {
-      // Use the first phone notification group for group-based alert
-      const groupId = phoneGroups[0];
-      console.log(`[VOICE] 🚨 Priority-1 triggered with group | domain=${monitor.domain} | groupId=${groupId}`);
-      const alert = await triggerVoiceAlertForMonitor({
-        monitorId,
-        groupId,
-        reason: 'priority-1',
-        severity: 'critical',
-        domain: monitor.domain,
-      });
-      return alert;
-    } else if (phoneContacts.length > 0) {
-      // Fall back to individual phone numbers
-      console.log(`[VOICE] 🚨 Priority-1 triggered | domain=${monitor.domain} | phones=${phoneContacts.length}`);
-      const alerts = [];
-      for (const phone of phoneContacts) {
-        const alert = await triggerVoiceAlertForMonitor({
-          monitorId,
-          phoneNumber: phone,
-          reason: 'priority-1',
-          severity: 'critical',
-          domain: monitor.domain,
-        });
-        if (alert) alerts.push(alert);
-      }
-      return alerts.length > 0 ? alerts[0] : null;
-    } else {
+      const groups = await NotificationGroup.find({ _id: { $in: phoneGroups } });
+      groupPhones = groups.flatMap((group) => group.phoneNumbers || []);
+    }
+
+    console.log(`[VOICE] 🔍 Priority-1 check | phoneContacts=${JSON.stringify(phoneContacts)} | groupPhones=${JSON.stringify(groupPhones)}`);
+
+    // Combine manual and group phone numbers with deduplication to prevent duplicate calls
+    const allPhoneNumbers = [...new Set([...phoneContacts, ...groupPhones])];
+
+    if (allPhoneNumbers.length === 0) {
       console.warn(`[VOICE] ⚠️ Priority-1 skipped for ${monitor.domain} — no phoneContact or phoneGroups configured`);
       return null;
     }
+
+    console.log(`[VOICE] 🚨 Priority-1 triggered | domain=${monitor.domain} | totalPhones=${allPhoneNumbers.length} | manual=${phoneContacts.length} | fromGroups=${groupPhones.length}`);
+    const alert = await triggerVoiceAlertForMonitor({
+      monitorId,
+      phoneNumbers: allPhoneNumbers,
+      reason: 'priority-1',
+      severity: 'critical',
+      domain: monitor.domain,
+    });
+    return alert;
   } catch (err) {
     logger.error({ err: err.message, monitorId }, '[VoiceAlert] Priority-1 check failed');
     console.error(`[VOICE] ❌ Priority-1 error for ${monitorId}:`, err.message);
@@ -197,43 +198,36 @@ export async function checkConsecutiveFailures(monitorId, currentStatus) {
       return null;
     }
 
-    // Check if phone notification groups are configured
-    const phoneGroups = monitor.selectedPhoneNotificationGroups || [];
+    // Get manual phone contacts
     const phoneContacts = monitor.phoneContact || [];
-
-    console.log(`[VOICE] 🔍 3-strike check | phoneGroups=${JSON.stringify(phoneGroups)} | phoneContacts=${JSON.stringify(phoneContacts)}`);
-
+    
+    // Get phone numbers from notification groups
+    const phoneGroups = monitor.selectedPhoneNotificationGroups || [];
+    let groupPhones = [];
     if (phoneGroups.length > 0) {
-      // Use the first phone notification group for group-based alert
-      const groupId = phoneGroups[0];
-      console.log(`[VOICE] 🔔 3 consecutive failures with group | domain=${monitor.domain} | groupId=${groupId}`);
-      const alert = await triggerVoiceAlertForMonitor({
-        monitorId,
-        groupId,
-        reason: 'consecutive-failures',
-        severity: 'critical',
-        domain: monitor.domain,
-      });
-      return alert;
-    } else if (phoneContacts.length > 0) {
-      // Fall back to individual phone numbers
-      console.log(`[VOICE] 🔔 3 consecutive failures | domain=${monitor.domain} | phones=${phoneContacts.length}`);
-      const alerts = [];
-      for (const phone of phoneContacts) {
-        const alert = await triggerVoiceAlertForMonitor({
-          monitorId,
-          phoneNumber: phone,
-          reason: 'consecutive-failures',
-          severity: 'critical',
-          domain: monitor.domain,
-        });
-        if (alert) alerts.push(alert);
-      }
-      return alerts.length > 0 ? alerts[0] : null;
-    } else {
+      const groups = await NotificationGroup.find({ _id: { $in: phoneGroups } });
+      groupPhones = groups.flatMap((group) => group.phoneNumbers || []);
+    }
+
+    console.log(`[VOICE] 🔍 3-strike check | phoneContacts=${JSON.stringify(phoneContacts)} | groupPhones=${JSON.stringify(groupPhones)}`);
+
+    // Combine manual and group phone numbers with deduplication to prevent duplicate calls
+    const allPhoneNumbers = [...new Set([...phoneContacts, ...groupPhones])];
+
+    if (allPhoneNumbers.length === 0) {
       console.warn(`[VOICE] ⚠️ 3-strike skipped for ${monitor.domain} — no phoneContact or phoneGroups configured`);
       return null;
     }
+
+    console.log(`[VOICE] 🔔 3 consecutive failures triggered | domain=${monitor.domain} | totalPhones=${allPhoneNumbers.length} | manual=${phoneContacts.length} | fromGroups=${groupPhones.length}`);
+    const alert = await triggerVoiceAlertForMonitor({
+      monitorId,
+      phoneNumbers: allPhoneNumbers,
+      reason: 'consecutive-failures',
+      severity: 'critical',
+      domain: monitor.domain,
+    });
+    return alert;
   } catch (err) {
     logger.error({ err: err.message, monitorId }, '[VoiceAlert] Consecutive failure check failed');
     console.error(`[VOICE] ❌ 3-strike error for ${monitorId}:`, err.message);
