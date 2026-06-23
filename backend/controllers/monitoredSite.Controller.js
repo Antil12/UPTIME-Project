@@ -18,6 +18,10 @@ const MIN_FREQUENCY_MS = 10_000;       // 10 seconds
 const MAX_FREQUENCY_MS = 86_400_000;   // 1 day
 const DEFAULT_FREQUENCY_MS = 60_000;   // 1 minute
 
+// ── Allowed response-threshold range ───────────────────────────────────────────
+const MIN_RESPONSE_THRESHOLD_MS = 5_000;   // 5 seconds
+const MAX_RESPONSE_THRESHOLD_MS = 60_000;  // 60 seconds
+
 const extractAlertEmails = (value) => {
   if (Array.isArray(value)) return value.flat();
   if (typeof value === "string") return value.split(/[;,]+/);
@@ -401,6 +405,17 @@ export const addSite = async (req, res) => {
       resolvedFrequency = freq;
     }
 
+    // ── Validate responseThresholdMs ───────────────────────────────────────────
+    if (responseThresholdMs !== undefined && responseThresholdMs !== null && responseThresholdMs !== "") {
+      const threshold = Number(responseThresholdMs);
+      if (isNaN(threshold) || threshold < MIN_RESPONSE_THRESHOLD_MS || threshold > MAX_RESPONSE_THRESHOLD_MS) {
+        return res.status(400).json({
+          success: false,
+          message: `responseThresholdMs must be between ${MIN_RESPONSE_THRESHOLD_MS} ms (5 sec) and ${MAX_RESPONSE_THRESHOLD_MS} ms (60 sec)`,
+        });
+      }
+    }
+
     const now = Date.now();
 
     const normalizedAlertGroups = {
@@ -634,6 +649,18 @@ export const updateSite = async (req, res) => {
       // Reset both schedules to now so new frequency takes effect immediately
       updatedData.nextCheckAt = new Date(Date.now());
       updatedData.nextRegionalCheckAt = new Date(Date.now());
+    }
+
+    // ── Handle responseThresholdMs update ─────────────────────────────────────
+    if (responseThresholdMs !== undefined && responseThresholdMs !== null && responseThresholdMs !== "") {
+      const threshold = Number(responseThresholdMs);
+      if (isNaN(threshold) || threshold < MIN_RESPONSE_THRESHOLD_MS || threshold > MAX_RESPONSE_THRESHOLD_MS) {
+        return res.status(400).json({
+          success: false,
+          message: `responseThresholdMs must be between ${MIN_RESPONSE_THRESHOLD_MS} ms (5 sec) and ${MAX_RESPONSE_THRESHOLD_MS} ms (60 sec)`,
+        });
+      }
+      updatedData.responseThresholdMs = threshold;
     }
 
     const hasChanges = Object.keys(updatedData).some(

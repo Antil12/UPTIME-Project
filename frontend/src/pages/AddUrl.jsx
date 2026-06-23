@@ -419,6 +419,8 @@ const AddUrl = ({
   const [regions, setRegions]                         = useState([]);
   const [alertIfAllRegionsDown, setAlertIfAllRegionsDown] = useState(false);
   const [category, setCategory]                       = useState("Others");
+  const [manualCategory, setManualCategory]           = useState("");
+  const [useManualCategory, setUseManualCategory]     = useState(false);
   const [localError, setLocalError]                   = useState("");
   const [emailContacts, setEmailContacts]             = useState([]);
   const [emailInput, setEmailInput]                   = useState("");
@@ -441,6 +443,7 @@ const AddUrl = ({
   const [selectedEmailGroups, setSelectedEmailGroups] = useState([]);
   const [selectedPhoneGroups, setSelectedPhoneGroups] = useState([]);
   const [groupWarning, setGroupWarning] = useState(null);
+  const [responseThresholdError, setResponseThresholdError] = useState("");
 
   // Custom handler for email group selection - adds/removes contacts when groups are selected/deselected
   const handleSetSelectedEmailGroups = (newGroups) => {
@@ -614,7 +617,7 @@ const AddUrl = ({
     onSave({
       domain: domain.trim(),
       url: url.trim(),
-      category: category.trim() || "Others",
+      category: useManualCategory ? manualCategory.trim() : (category.trim() || "Others"),
       responseThresholdMs,
       alertChannels,
       regions,
@@ -633,6 +636,8 @@ const AddUrl = ({
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 2000);
     setCategory("Others");
+    setManualCategory("");
+    setUseManualCategory(false);
     setEmailContacts([]);
     setEmailInput("");
     setPhoneContacts([]);
@@ -775,13 +780,34 @@ const AddUrl = ({
                 </div>
 
                 <div className="mt-4">
-                  <PortalDropdown
-                    value={category}
-                    onChange={setCategory}
-                    options={CATEGORY_OPTIONS}
-                    placeholder="Select Category (optional)"
-                    label="Category"
-                  />
+                  <label className="block text-xs font-medium mb-2" style={{ 
+                    fontFamily: "'JetBrains Mono', monospace",
+                    letterSpacing: "0.1em",
+                    color: "rgba(56,189,248,0.88)", 
+                    textTransform: "uppercase"
+                  }}>
+                    Category
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <PortalDropdown
+                      value={useManualCategory ? "" : category}
+                      onChange={(val) => {
+                        setCategory(val);
+                        setUseManualCategory(false);
+                        setManualCategory("");
+                      }}
+                      options={CATEGORY_OPTIONS}
+                      placeholder="Select Category"
+                    />
+                    <HudInput
+                      placeholder="Or enter manually"
+                      value={useManualCategory ? manualCategory : ""}
+                      onChange={(e) => {
+                        setManualCategory(e.target.value);
+                        setUseManualCategory(true);
+                      }}
+                    />
+                  </div>
                 </div>
               </motion.div>
 
@@ -830,11 +856,31 @@ const AddUrl = ({
                       type="number"
                       placeholder="Max Response Time (ms)"
                       value={responseThresholdMs}
-                      onChange={(e) => setResponseThresholdMs(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setResponseThresholdMs(value);
+                        const numValue = Number(value);
+                        if (value && (isNaN(numValue) || numValue < 5000 || numValue > 60000)) {
+                          setResponseThresholdError("Response threshold must be between 5 sec (5000ms) and 60 sec (60000ms)");
+                        } else {
+                          setResponseThresholdError("");
+                        }
+                      }}
                       required
-                      min="1"
+                      min="5000"
+                      max="60000"
                       label="Response Threshold"
                     />
+                    {responseThresholdError && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-2"
+                        style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "#f87171", letterSpacing: "0.05em" }}
+                      >
+                        {responseThresholdError}
+                      </motion.div>
+                    )}
                     <div className="mt-2 flex items-center gap-2">
                       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(56,189,248,0.35)", letterSpacing: "0.08em" }}>
                         Default: 15s

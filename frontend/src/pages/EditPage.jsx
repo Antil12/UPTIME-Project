@@ -279,6 +279,8 @@ export default function EditPage({
 }) {
   const navigate = useNavigate();
   const [category,          setCategory]          = useState(item?.category || "");
+  const [manualCategory, setManualCategory]       = useState("");
+  const [useManualCategory, setUseManualCategory] = useState(false);
   const [emailInput,        setEmailInput]        = useState("");
   const [phoneInput,        setPhoneInput]        = useState("+91");
   const [showRoutingPanel,  setShowRoutingPanel]  = useState(false);
@@ -289,6 +291,7 @@ export default function EditPage({
   const [selectedEmailGroups, setSelectedEmailGroups] = useState([]);
   const [selectedPhoneGroups, setSelectedPhoneGroups] = useState([]);
   const [groupWarning, setGroupWarning] = useState(null);
+  const [responseThresholdError, setResponseThresholdError] = useState("");
 
   // Custom handler for email group selection - adds/removes contacts when groups are selected/deselected
   const handleSetSelectedEmailGroups = (newGroups) => {
@@ -390,8 +393,34 @@ export default function EditPage({
     critical: Array.isArray(editAlertRouting?.critical) ? editAlertRouting.critical : [],
   };
 
-  useEffect(() => { if (item?.category !== undefined) setCategory(item.category || "Others"); }, [item]);
-  useEffect(() => { if (initialCategory !== undefined) setCategory(initialCategory || "Others"); }, [initialCategory]);
+  useEffect(() => { 
+    if (item?.category !== undefined) {
+      const categoryValue = item.category || "Others";
+      if (CATEGORY_OPTIONS.includes(categoryValue)) {
+        setCategory(categoryValue);
+        setUseManualCategory(false);
+        setManualCategory("");
+      } else {
+        setCategory("");
+        setUseManualCategory(true);
+        setManualCategory(categoryValue);
+      }
+    }
+  }, [item]);
+  useEffect(() => { 
+    if (initialCategory !== undefined) {
+      const categoryValue = initialCategory || "Others";
+      if (CATEGORY_OPTIONS.includes(categoryValue)) {
+        setCategory(categoryValue);
+        setUseManualCategory(false);
+        setManualCategory("");
+      } else {
+        setCategory("");
+        setUseManualCategory(true);
+        setManualCategory(categoryValue);
+      }
+    }
+  }, [initialCategory]);
   useEffect(() => { if (!item) navigate("/dashboard", { replace: true }); }, [item, navigate]);
 
   // Fetch notification groups on mount
@@ -647,7 +676,24 @@ export default function EditPage({
                     </div>
                     <div>
                       <FieldLabel icon={Tag} text="Category" />
-                      <CategorySelect value={category} onChange={setCategory} />
+                      <div className="grid grid-cols-2 gap-2">
+                        <CategorySelect 
+                          value={useManualCategory ? "" : category} 
+                          onChange={(val) => {
+                            setCategory(val);
+                            setUseManualCategory(false);
+                            setManualCategory("");
+                          }} 
+                        />
+                        <Input 
+                          placeholder="Or enter manually"
+                          value={useManualCategory ? manualCategory : ""}
+                          onChange={(e) => {
+                            setManualCategory(e.target.value);
+                            setUseManualCategory(true);
+                          }}
+                        />
+                      </div>
                     </div>
                     <div className="sm:col-span-2">
                       <FieldLabel icon={Link2} text="Website URL" />
@@ -690,7 +736,31 @@ export default function EditPage({
                     </div>
                     <div>
                       <FieldLabel icon={TimerReset} text="Max Response (ms)" />
-                      <Input type="number" value={editResponseThresholdMs} onChange={(e) => setEditResponseThresholdMs(e.target.value)} placeholder="2000" />
+                      <Input 
+                        type="number" 
+                        value={editResponseThresholdMs} 
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setEditResponseThresholdMs(value);
+                          const numValue = Number(value);
+                          if (value && (isNaN(numValue) || numValue < 5000 || numValue > 60000)) {
+                            setResponseThresholdError("Response threshold must be between 5 sec (5000ms) and 60 sec (60000ms)");
+                          } else {
+                            setResponseThresholdError("");
+                          }
+                        }} 
+                        placeholder="2000" 
+                      />
+                      {responseThresholdError && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-1"
+                          style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "#f87171", letterSpacing: "0.05em" }}
+                        >
+                          {responseThresholdError}
+                        </motion.div>
+                      )}
                     </div>
                     <div>
                       <FieldLabel icon={ShieldAlert} text="Priority" />
@@ -996,7 +1066,7 @@ export default function EditPage({
                   <div className="space-y-2">
                     {[
                       { label: "Domain",   value: editDomain || item.domain || "—", icon: Globe2 },
-                      { label: "Category", value: category || "—", icon: Tag },
+                      { label: "Category", value: useManualCategory ? manualCategory : category, icon: Tag },
                       { label: "Priority", value: Number(editPriority) === 1 ? "High" : "Normal", accent: Number(editPriority) === 1 ? "#f87171" : null, icon: ShieldAlert },
                       { label: "Regions",  value: editRegions.length > 0 ? `${editRegions.length} selected` : "None", accent: editRegions.length > 0 ? "#34d399" : null, icon: MapPin },
                       { label: "Emails",   value: normalizedEmails.length > 0 ? `${normalizedEmails.length} contact${normalizedEmails.length > 1 ? "s" : ""}` : "None", icon: Mail },
@@ -1062,7 +1132,7 @@ export default function EditPage({
                   <motion.button 
                     whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(56,189,248,0.15)" }} 
                     whileTap={{ scale: 0.97 }} 
-                    onClick={() => onSave(category, selectedEmailGroups, selectedPhoneGroups)} 
+                    onClick={() => onSave(useManualCategory ? manualCategory : category, selectedEmailGroups, selectedPhoneGroups)} 
                     className="w-full py-3 rounded-xl text-white relative overflow-hidden"
                     style={{
                       ...primaryBtnStyle,
@@ -1085,7 +1155,7 @@ export default function EditPage({
 
               {/* Mobile save buttons */}
               <div className="flex flex-col gap-2 lg:hidden">
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => onSave(category, selectedEmailGroups, selectedPhoneGroups)} className="w-full py-2.5 rounded-xl text-white" style={primaryBtnStyle}>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => onSave(useManualCategory ? manualCategory : category, selectedEmailGroups, selectedPhoneGroups)} className="w-full py-2.5 rounded-xl text-white" style={primaryBtnStyle}>
                   Save Changes
                 </motion.button>
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleClose} className="w-full py-2.5 rounded-xl text-white" style={secondaryBtnStyle}>
