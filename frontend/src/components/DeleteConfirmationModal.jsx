@@ -2,8 +2,25 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import { AlertTriangle, Trash2, X, Globe } from "lucide-react";
+import { useTheme } from "../contexts/ThemeContext";
 
 const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete Item", message = "Are you sure you want to delete this item? This action cannot be undone.", itemName = "", loading = false }) => {
+  const { currentTheme } = useTheme();
+  const theme = currentTheme || {
+    bg: "rgba(0, 0, 0, 0.75)",
+    bgCard: "rgba(3, 7, 18, 0.97)",
+    bgInput: "rgba(255, 255, 255, 0.04)",
+    borderAccent: "rgba(248, 113, 113, 0.18)",
+    borderLight: "rgba(255, 255, 255, 0.08)",
+    text: "white",
+    textMuted: "rgba(148, 163, 184, 0.75)",
+    textDim: "rgba(148, 163, 184, 0.5)",
+    error: "#f87171",
+    errorBg: "rgba(248, 113, 113, 0.06)",
+    accent: "#38bdf8",
+    accentGlow: "rgba(56, 189, 248, 0.06)",
+    shadow: "0 20px 60px rgba(0, 0, 0, 0.55), 0 0 32px rgba(248, 113, 113, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.03)",
+  };
   if (!isOpen) return null;
 
   return createPortal(
@@ -20,8 +37,9 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
           left: 0,
           right: 0,
           bottom: 0,
-          background: "rgba(0, 0, 0, 0.65)",
-          backdropFilter: "blur(6px)",
+          background: "rgba(0, 0, 0, 0.75)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
           zIndex: 9999,
           display: "flex",
           alignItems: "center",
@@ -38,11 +56,11 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
           style={{
             width: "90%",
             maxWidth: "420px",
-            background: "rgba(3, 7, 18, 0.97)",
-            border: "1px solid rgba(248, 113, 113, 0.18)",
+            background: theme.bgCard,
+            border: `1px solid ${theme.borderAccent}`,
             borderRadius: "16px",
             backdropFilter: "blur(24px)",
-            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.55), 0 0 32px rgba(248, 113, 113, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.03)",
+            boxShadow: theme.shadow,
             overflow: "hidden",
           }}
         >
@@ -54,7 +72,7 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
               left: 0,
               right: 0,
               height: "2px",
-              background: "linear-gradient(90deg, transparent 0%, rgba(248, 113, 113, 0.5) 20%, rgba(248, 113, 113, 0.3) 80%, transparent 100%)",
+              background: `linear-gradient(90deg, transparent 0%, ${theme.error}80 20%, ${theme.error}4d 80%, transparent 100%)`,
             }}
           />
 
@@ -71,16 +89,16 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                       width: "44px",
                       height: "44px",
                       borderRadius: "12px",
-                      background: "linear-gradient(135deg, rgba(248, 113, 113, 0.15) 0%, rgba(248, 113, 113, 0.08) 100%)",
-                      border: "1px solid rgba(248, 113, 113, 0.25)",
+                      background: `linear-gradient(135deg, ${theme.error}26 0%, ${theme.error}14 100%)`,
+                      border: `1px solid ${theme.error}40`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       flexShrink: 0,
-                      boxShadow: "0 4px 12px rgba(248, 113, 113, 0.15)",
+                      boxShadow: `0 4px 12px ${theme.error}26`,
                     }}
                   >
-                    <AlertTriangle size={22} style={{ color: "#f87171" }} />
+                    <AlertTriangle size={22} style={{ color: theme.error }} />
                   </motion.div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <h2
@@ -88,7 +106,7 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                         fontFamily: "'JetBrains Mono', monospace",
                         fontSize: "15px",
                         fontWeight: 600,
-                        color: "white",
+                        color: theme.text,
                         marginBottom: "4px",
                         letterSpacing: "0.02em",
                       }}
@@ -103,26 +121,26 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                   onClick={onClose}
                   disabled={loading}
                   style={{
-                    background: "rgba(255, 255, 255, 0.03)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    background: theme.bgInput,
+                    border: `1px solid ${theme.borderLight}`,
                     borderRadius: "10px",
                     padding: "8px",
-                    color: "rgba(148, 163, 184, 0.5)",
+                    color: theme.textDim,
                     cursor: loading ? "not-allowed" : "pointer",
                     transition: "all 0.2s",
                     flexShrink: 0,
                   }}
                   onMouseEnter={(e) => {
                     if (!loading) {
-                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
-                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
-                      e.currentTarget.style.color = "rgba(148, 163, 184, 0.8)";
+                      e.currentTarget.style.background = theme.bgInput;
+                      e.currentTarget.style.borderColor = theme.borderAccent;
+                      e.currentTarget.style.color = theme.textMuted;
                     }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
-                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
-                    e.currentTarget.style.color = "rgba(148, 163, 184, 0.5)";
+                    e.currentTarget.style.background = theme.bgInput;
+                    e.currentTarget.style.borderColor = theme.borderLight;
+                    e.currentTarget.style.color = theme.textDim;
                   }}
                 >
                   <X size={18} />
@@ -138,18 +156,19 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                   style={{
                     padding: "12px 14px",
                     borderRadius: "10px",
-                    background: "rgba(56, 189, 248, 0.06)",
-                    border: "1px solid rgba(56, 189, 248, 0.15)",
+                    background: theme.accentGlow,
+                    border: `1px solid ${theme.accent}26`,
                     marginBottom: "18px",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <Globe size={16} style={{ color: "rgba(56, 189, 248, 0.6)", flexShrink: 0 }} />
+                    <Globe size={16} style={{ color: theme.accent, opacity: 0.6, flexShrink: 0 }} />
                     <p
                       style={{
                         fontFamily: "'JetBrains Mono', monospace",
                         fontSize: "12px",
-                        color: "rgba(56, 189, 248, 0.8)",
+                        color: theme.accent,
+                        opacity: 0.8,
                         letterSpacing: "0.01em",
                         fontWeight: 500,
                         whiteSpace: "nowrap",
@@ -168,7 +187,7 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                 style={{
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: "11px",
-                  color: "rgba(148, 163, 184, 0.65)",
+                  color: theme.textMuted,
                   lineHeight: 1.6,
                   marginBottom: "22px",
                   letterSpacing: "0.01em",
@@ -182,8 +201,8 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                 style={{
                   padding: "10px 12px",
                   borderRadius: "8px",
-                  background: "rgba(248, 113, 113, 0.06)",
-                  border: "1px solid rgba(248, 113, 113, 0.12)",
+                  background: theme.errorBg,
+                  border: `1px solid ${theme.error}1e`,
                   marginBottom: "20px",
                 }}
               >
@@ -195,8 +214,8 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                       width: "6px",
                       height: "6px",
                       borderRadius: "50%",
-                      background: "#f87171",
-                      boxShadow: "0 0 8px rgba(248, 113, 113, 0.5)",
+                      background: theme.error,
+                      boxShadow: `0 0 8px ${theme.error}80`,
                       flexShrink: 0,
                     }}
                   />
@@ -204,7 +223,8 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "9px",
-                      color: "rgba(248, 113, 113, 0.75)",
+                      color: theme.error,
+                      opacity: 0.75,
                       letterSpacing: "0.08em",
                       textTransform: "uppercase",
                       fontWeight: 600,
@@ -226,9 +246,9 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                     flex: 1,
                     padding: "11px 18px",
                     borderRadius: "10px",
-                    background: "rgba(255, 255, 255, 0.04)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    color: "rgba(148, 163, 184, 0.75)",
+                    background: theme.bgInput,
+                    border: `1px solid ${theme.borderLight}`,
+                    color: theme.textMuted,
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: "10px",
                     fontWeight: 500,
@@ -238,13 +258,13 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                   }}
                   onMouseEnter={(e) => {
                     if (!loading) {
-                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
-                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+                      e.currentTarget.style.background = theme.bgInput;
+                      e.currentTarget.style.borderColor = theme.borderAccent;
                     }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
-                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.1)";
+                    e.currentTarget.style.background = theme.bgInput;
+                    e.currentTarget.style.borderColor = theme.borderLight;
                   }}
                 >
                   Cancel
@@ -258,9 +278,9 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                     flex: 1,
                     padding: "11px 18px",
                     borderRadius: "10px",
-                    background: loading ? "rgba(248, 113, 113, 0.18)" : "linear-gradient(135deg, rgba(248, 113, 113, 0.15) 0%, rgba(248, 113, 113, 0.1) 100%)",
-                    border: loading ? "1px solid rgba(248, 113, 113, 0.25)" : "1px solid rgba(248, 113, 113, 0.3)",
-                    color: loading ? "rgba(248, 113, 113, 0.5)" : "#f87171",
+                    background: loading ? `${theme.error}2e` : `linear-gradient(135deg, ${theme.error}26 0%, ${theme.error}1a 100%)`,
+                    border: loading ? `1px solid ${theme.error}40` : `1px solid ${theme.error}4d`,
+                    color: loading ? `${theme.error}80` : theme.error,
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: "10px",
                     fontWeight: 500,
@@ -271,19 +291,19 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "6px",
-                    boxShadow: "0 2px 8px rgba(248, 113, 113, 0.1)",
+                    boxShadow: `0 2px 8px ${theme.error}1a`,
                   }}
                   onMouseEnter={(e) => {
                     if (!loading) {
-                      e.currentTarget.style.background = "linear-gradient(135deg, rgba(248, 113, 113, 0.22) 0%, rgba(248, 113, 113, 0.15) 100%)";
-                      e.currentTarget.style.borderColor = "rgba(248, 113, 113, 0.4)";
-                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(248, 113, 113, 0.2)";
+                      e.currentTarget.style.background = `linear-gradient(135deg, ${theme.error}38 0%, ${theme.error}26 100%)`;
+                      e.currentTarget.style.borderColor = `${theme.error}66`;
+                      e.currentTarget.style.boxShadow = `0 4px 12px ${theme.error}33`;
                     }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "linear-gradient(135deg, rgba(248, 113, 113, 0.15) 0%, rgba(248, 113, 113, 0.1) 100%)";
-                    e.currentTarget.style.borderColor = "rgba(248, 113, 113, 0.3)";
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(248, 113, 113, 0.1)";
+                    e.currentTarget.style.background = `linear-gradient(135deg, ${theme.error}26 0%, ${theme.error}1a 100%)`;
+                    e.currentTarget.style.borderColor = `${theme.error}4d`;
+                    e.currentTarget.style.boxShadow = `0 2px 8px ${theme.error}1a`;
                   }}
                 >
                   {loading ? (
@@ -311,7 +331,7 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, title = "Delete I
               left: 0,
               right: 0,
               height: "1px",
-              background: "linear-gradient(90deg, transparent, rgba(248, 113, 113, 0.2), transparent)",
+              background: `linear-gradient(90deg, transparent, ${theme.error}33, transparent)`,
             }}
           />
           </motion.div>

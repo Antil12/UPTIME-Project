@@ -62,12 +62,8 @@ export const getUserNotificationGroups = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    // Superadmins can see all groups, regular users only see their own
-    const query = req.user.role === "SUPERADMIN" 
-      ? { isActive: true }
-      : { owner: userId, isActive: true };
-
-    const groups = await NotificationGroup.find(query)
+    // Always return only the user's own groups for my-groups endpoint
+    const groups = await NotificationGroup.find({ owner: userId, isActive: true })
       .populate("owner", "name email role")
       .sort({ createdAt: -1 });
 
@@ -81,12 +77,33 @@ export const getUserNotificationGroups = async (req, res) => {
 export const getAllNotificationGroups = async (req, res) => {
   try {
     const groups = await NotificationGroup.find({ isActive: true })
-      .populate("owner", "name email")
+      .populate("owner", "name email role")
       .sort({ createdAt: -1 });
 
     res.json({ success: true, data: groups });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ─── Get notification groups created by other users (SuperAdmin only) ───────────
+export const getOthersNotificationGroups = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    if (req.user.role !== "SUPERADMIN") {
+      const err = new Error("Unauthorized");
+      err.status = 403;
+      throw err;
+    }
+
+    const groups = await NotificationGroup.find({ owner: { $ne: userId }, isActive: true })
+      .populate("owner", "name email role")
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, data: groups });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.message });
   }
 };
 

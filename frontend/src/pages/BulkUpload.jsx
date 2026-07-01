@@ -15,6 +15,7 @@ import {
   ScanLine,
 } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
+import { useTheme } from "../contexts/ThemeContext";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FONT LOADER
@@ -72,20 +73,19 @@ const CursorGlow = () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // BACKGROUND
 // ─────────────────────────────────────────────────────────────────────────────
-const Background = () => (
+const Background = ({ currentTheme }) => (
   <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
     <div
       className="absolute inset-0"
       style={{
-        background: "#030712",
+        background: currentTheme.bg,
       }}
     />
 
     <div
       className="absolute inset-0"
       style={{
-        background:
-          "radial-gradient(ellipse 60% 40% at 50% 20%, rgba(56,189,248,0.045) 0%, transparent 100%)",
+        background: `radial-gradient(ellipse 60% 40% at 50% 20%, ${currentTheme.accent}0e 0%, transparent 100%)`,
       }}
     />
 
@@ -96,8 +96,7 @@ const Background = () => (
         left: "16%",
         width: 320,
         height: 320,
-        background:
-          "radial-gradient(circle, rgba(129,140,248,0.035) 0%, transparent 68%)",
+        background: `radial-gradient(circle, ${currentTheme.accentSecondary}08 0%, transparent 68%)`,
         filter: "blur(90px)",
       }}
     />
@@ -109,8 +108,7 @@ const Background = () => (
         right: "12%",
         width: 260,
         height: 260,
-        background:
-          "radial-gradient(circle, rgba(16,185,129,0.025) 0%, transparent 68%)",
+        background: `radial-gradient(circle, ${currentTheme.success}07 0%, transparent 68%)`,
         filter: "blur(80px)",
       }}
     />
@@ -118,8 +116,7 @@ const Background = () => (
     <div
       className="absolute inset-0"
       style={{
-        backgroundImage:
-          "linear-gradient(rgba(148,163,184,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.025) 1px, transparent 1px)",
+        backgroundImage: `linear-gradient(${currentTheme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${currentTheme.gridColor} 1px, transparent 1px)`,
         backgroundSize: "42px 42px",
       }}
     />
@@ -127,8 +124,7 @@ const Background = () => (
     <motion.div
       className="absolute inset-0"
       style={{
-        background:
-          "linear-gradient(to bottom, transparent 48%, rgba(56,189,248,0.012) 50%, transparent 52%)",
+        background: `linear-gradient(to bottom, transparent 48%, ${currentTheme.accent}08 50%, transparent 52%)`,
       }}
       animate={{ y: ["-100%", "100%"] }}
       transition={{
@@ -144,7 +140,7 @@ const Background = () => (
 // ─────────────────────────────────────────────────────────────────────────────
 // HUD CORNERS
 // ─────────────────────────────────────────────────────────────────────────────
-const HUDCorner = ({ pos, delay = 0 }) => {
+const HUDCorner = ({ pos, delay = 0, currentTheme }) => {
   const cls = {
     tl: "top-4 left-4",
     tr: "top-4 right-4",
@@ -168,13 +164,15 @@ const HUDCorner = ({ pos, delay = 0 }) => {
       transition={{ delay, duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}
     >
       <motion.div
-        className="absolute top-0 left-0 h-[1.5px] bg-sky-400/80"
+        className="absolute top-0 left-0 h-[1.5px]"
+        style={{ background: currentTheme.accent, opacity: 0.8 }}
         initial={{ width: 0 }}
         animate={{ width: "100%" }}
         transition={{ delay: delay + 0.15, duration: 0.35 }}
       />
       <motion.div
-        className="absolute top-0 left-0 w-[1.5px] bg-sky-400/80"
+        className="absolute top-0 left-0 w-[1.5px]"
+        style={{ background: currentTheme.accent, opacity: 0.8 }}
         initial={{ height: 0 }}
         animate={{ height: "100%" }}
         transition={{ delay: delay + 0.15, duration: 0.35 }}
@@ -234,7 +232,7 @@ const OrbitRing = ({ radius, duration, dotCount, color, delay = 0, tilt = 70 }) 
 // ─────────────────────────────────────────────────────────────────────────────
 // STATUS DOT
 // ─────────────────────────────────────────────────────────────────────────────
-const StatusDot = ({ color = "#34d399", label }) => (
+const StatusDot = ({ color = "#34d399", label, currentTheme }) => (
   <div className="flex items-center gap-2">
     <div className="relative w-2 h-2">
       <motion.div
@@ -251,7 +249,7 @@ const StatusDot = ({ color = "#34d399", label }) => (
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: "9px",
           letterSpacing: "0.16em",
-          color: `${color}88`,
+          color: currentTheme ? `${color}88` : `${color}88`,
           textTransform: "uppercase",
         }}
       >
@@ -264,38 +262,38 @@ const StatusDot = ({ color = "#34d399", label }) => (
 // ─────────────────────────────────────────────────────────────────────────────
 // MINI STAT CARD
 // ─────────────────────────────────────────────────────────────────────────────
-const StatCard = ({ icon: Icon, label, value, sub }) => (
+const StatCard = ({ icon: Icon, label, value, sub, currentTheme }) => (
   <motion.div
     initial={{ opacity: 0, y: 12 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.4 }}
     className="rounded-2xl p-4"
     style={{
-      background: "rgba(3,7,18,0.68)",
-      border: "1px solid rgba(56,189,248,0.08)",
+      background: currentTheme.bgCard,
+      border: `1px solid ${currentTheme.borderAccent}`,
       backdropFilter: "blur(16px)",
-      boxShadow: "0 0 18px rgba(56,189,248,0.025)",
+      boxShadow: currentTheme.shadow,
     }}
   >
     <div className="flex items-center justify-between mb-3">
       <div
         className="w-10 h-10 rounded-2xl flex items-center justify-center border"
         style={{
-          borderColor: "rgba(56,189,248,0.1)",
-          background: "rgba(255,255,255,0.02)",
+          borderColor: currentTheme.borderAccent,
+          background: currentTheme.bgInput,
         }}
       >
-        <Icon size={16} className="text-sky-400" />
+        <Icon size={16} style={{ color: currentTheme.accent }} />
       </div>
 
-      <StatusDot color="#34d399" />
+      <StatusDot color={currentTheme.success} currentTheme={currentTheme} />
     </div>
 
     <div
       style={{
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: "10px",
-        color: "rgba(148,163,184,0.52)",
+        color: currentTheme.textMuted,
         letterSpacing: "0.08em",
         textTransform: "uppercase",
       }}
@@ -304,11 +302,12 @@ const StatCard = ({ icon: Icon, label, value, sub }) => (
     </div>
 
     <div
-      className="mt-2 text-white text-lg sm:text-xl break-words"
+      className="mt-2 text-lg sm:text-xl break-words"
       style={{
         fontFamily: "'Orbitron', sans-serif",
         fontWeight: 700,
         letterSpacing: "0.04em",
+        color: currentTheme.text,
       }}
     >
       {value}
@@ -320,7 +319,7 @@ const StatCard = ({ icon: Icon, label, value, sub }) => (
         style={{
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: "10px",
-          color: "rgba(148,163,184,0.5)",
+          color: currentTheme.textMuted,
         }}
       >
         {sub}
@@ -333,6 +332,7 @@ const StatCard = ({ icon: Icon, label, value, sub }) => (
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 const BulkUpload = () => {
+  const { currentTheme } = useTheme();
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -403,17 +403,17 @@ const BulkUpload = () => {
       <FontLoader />
 
       <div
-        className="relative min-h-screen w-full overflow-hidden px-4 sm:px-6 lg:px-8 py-6 text-white"
-        style={{ background: "transparent" }}
+        className="relative min-h-screen w-full overflow-hidden px-4 sm:px-6 lg:px-8 py-6"
+        style={{ background: "transparent", color: currentTheme.text }}
       >
-        <Background />
+        <Background currentTheme={currentTheme} />
         <CursorGlow />
 
-        <OrbitRing radius={220} duration={20} dotCount={8} color="#38bdf8" tilt={72} />
-        <OrbitRing radius={290} duration={30} dotCount={10} color="#818cf8" tilt={68} delay={1} />
+        <OrbitRing radius={220} duration={20} dotCount={8} color={currentTheme.accent} tilt={72} />
+        <OrbitRing radius={290} duration={30} dotCount={10} color={currentTheme.accentSecondary} tilt={68} delay={1} />
 
         {["tl", "tr", "bl", "br"].map((p, i) => (
-          <HUDCorner key={p} pos={p} delay={0.1 + i * 0.05} />
+          <HUDCorner key={p} pos={p} delay={0.1 + i * 0.05} currentTheme={currentTheme} />
         ))}
 
         <div className="relative z-10 w-full max-w-7xl mx-auto">
@@ -426,19 +426,20 @@ const BulkUpload = () => {
           >
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <div className="h-[1px] w-8 bg-sky-400/20" />
+                <div className="h-[1px] w-8" style={{ background: currentTheme.accent, opacity: 0.2 }} />
                 <span
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: "9px",
                     letterSpacing: "0.28em",
-                    color: "rgba(56,189,248,0.42)",
+                    color: currentTheme.accent,
+                    opacity: 0.7,
                     textTransform: "uppercase",
                   }}
                 >
                   Import Pipeline
                 </span>
-                <div className="h-[1px] w-16 sm:w-24 bg-sky-400/10" />
+                <div className="h-[1px] w-16 sm:w-24" style={{ background: currentTheme.accent, opacity: 0.1 }} />
               </div>
 
               <h1
@@ -447,7 +448,8 @@ const BulkUpload = () => {
                   fontFamily: "'Orbitron', sans-serif",
                   fontWeight: 800,
                   letterSpacing: "0.05em",
-                  textShadow: "0 0 24px rgba(56,189,248,0.08)",
+                  color: currentTheme.text,
+                  textShadow: `0 0 24px ${currentTheme.accent}15`,
                 }}
               >
                 BULK SITE UPLOAD
@@ -458,7 +460,7 @@ const BulkUpload = () => {
                 style={{
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: "11px",
-                  color: "rgba(148,163,184,0.52)",
+                  color: currentTheme.textMuted,
                   letterSpacing: "0.03em",
                 }}
               >
@@ -468,8 +470,9 @@ const BulkUpload = () => {
             </div>
 
             <StatusDot
-              color={loading ? "#f59e0b" : "#34d399"}
+              color={loading ? currentTheme.warning : currentTheme.success}
               label={loading ? "Upload Running" : "Import Ready"}
+              currentTheme={currentTheme}
             />
           </motion.div>
 
@@ -486,31 +489,30 @@ const BulkUpload = () => {
               transition={{ delay: 0.1 }}
               className="relative overflow-hidden rounded-3xl p-5 sm:p-6"
               style={{
-                background: "rgba(3,7,18,0.72)",
-                border: "1px solid rgba(56,189,248,0.09)",
+                background: currentTheme.bgCard,
+                border: `1px solid ${currentTheme.borderAccent}`,
                 backdropFilter: "blur(18px)",
-                boxShadow:
-                  "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                boxShadow: currentTheme.shadow,
               }}
             >
               <div
                 className="absolute top-0 left-0 right-0 h-[1px]"
                 style={{
-                  background:
-                    "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.32) 30%, rgba(129,140,248,0.28) 70%, transparent 100%)",
+                  background: currentTheme.gradientCard,
                 }}
               />
 
               {/* SECTION HEAD */}
               <div className="mb-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-[1px] w-8 bg-sky-400/20" />
+                  <div className="h-[1px] w-8" style={{ background: currentTheme.accent, opacity: 0.2 }} />
                   <span
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "9px",
                       letterSpacing: "0.24em",
-                      color: "rgba(56,189,248,0.46)",
+                      color: currentTheme.accent,
+                      opacity: 0.7,
                       textTransform: "uppercase",
                     }}
                   >
@@ -519,11 +521,12 @@ const BulkUpload = () => {
                 </div>
 
                 <h2
-                  className="text-white text-xl sm:text-2xl"
+                  className="text-xl sm:text-2xl"
                   style={{
                     fontFamily: "'Orbitron', sans-serif",
                     fontWeight: 700,
                     letterSpacing: "0.04em",
+                    color: currentTheme.text,
                   }}
                 >
                   IMPORT CSV FILE
@@ -534,7 +537,7 @@ const BulkUpload = () => {
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: "11px",
-                    color: "rgba(148,163,184,0.56)",
+                    color: currentTheme.textMuted,
                   }}
                 >
                   Select a valid CSV file and upload your monitored site entries securely.
@@ -547,16 +550,15 @@ const BulkUpload = () => {
                 whileTap={{ scale: 0.998 }}
                 className="group relative flex flex-col items-center justify-center rounded-3xl p-8 sm:p-10 cursor-pointer overflow-hidden min-h-[280px]"
                 style={{
-                  background: "rgba(255,255,255,0.02)",
-                  border: "1px dashed rgba(56,189,248,0.18)",
+                  background: currentTheme.bgInput,
+                  border: `1px dashed ${currentTheme.borderAccent}`,
                   backdropFilter: "blur(12px)",
                 }}
               >
                 <div
                   className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500"
                   style={{
-                    background:
-                      "radial-gradient(circle at center, rgba(56,189,248,0.05), transparent 60%)",
+                    background: `radial-gradient(circle at center, ${currentTheme.accent}08, transparent 60%)`,
                   }}
                 />
 
@@ -568,23 +570,23 @@ const BulkUpload = () => {
                   <div
                     className="w-20 h-20 rounded-3xl flex items-center justify-center"
                     style={{
-                      background:
-                        "linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(129,140,248,0.08) 100%)",
-                      border: "1px solid rgba(56,189,248,0.14)",
-                      boxShadow: "0 0 24px rgba(56,189,248,0.06)",
+                      background: currentTheme.gradientPrimary,
+                      border: `1px solid ${currentTheme.borderAccent}`,
+                      boxShadow: currentTheme.shadowGlow,
                     }}
                   >
-                    <UploadCloud size={34} className="text-sky-300" />
+                    <UploadCloud size={34} style={{ color: currentTheme.accent }} />
                   </div>
                 </motion.div>
 
                 <div className="relative z-10 text-center">
                   <h3
-                    className="text-white text-lg sm:text-xl"
+                    className="text-lg sm:text-xl"
                     style={{
                       fontFamily: "'Orbitron', sans-serif",
                       fontWeight: 700,
                       letterSpacing: "0.04em",
+                      color: currentTheme.text,
                     }}
                   >
                     SELECT CSV FILE
@@ -595,7 +597,7 @@ const BulkUpload = () => {
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "11px",
-                      color: "rgba(148,163,184,0.6)",
+                      color: currentTheme.textMuted,
                     }}
                   >
                     Click here to browse and attach your import file
@@ -605,15 +607,15 @@ const BulkUpload = () => {
                     <div
                       className="px-3 py-1.5 rounded-full"
                       style={{
-                        background: "rgba(56,189,248,0.08)",
-                        border: "1px solid rgba(56,189,248,0.12)",
+                        background: currentTheme.accentGlow,
+                        border: `1px solid ${currentTheme.borderAccent}`,
                       }}
                     >
                       <span
                         style={{
                           fontFamily: "'JetBrains Mono', monospace",
                           fontSize: "10px",
-                          color: "rgba(56,189,248,0.82)",
+                          color: currentTheme.accent,
                           letterSpacing: "0.08em",
                         }}
                       >
@@ -624,15 +626,15 @@ const BulkUpload = () => {
                     <div
                       className="px-3 py-1.5 rounded-full"
                       style={{
-                        background: "rgba(129,140,248,0.08)",
-                        border: "1px solid rgba(129,140,248,0.12)",
+                        background: `${currentTheme.accentSecondary}0e`,
+                        border: `1px solid ${currentTheme.accentSecondary}20`,
                       }}
                     >
                       <span
                         style={{
                           fontFamily: "'JetBrains Mono', monospace",
                           fontSize: "10px",
-                          color: "rgba(165,180,252,0.82)",
+                          color: currentTheme.accentSecondary,
                           letterSpacing: "0.08em",
                         }}
                       >
@@ -660,29 +662,30 @@ const BulkUpload = () => {
                     exit={{ opacity: 0, y: 14 }}
                     className="mt-5 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     style={{
-                      background: "rgba(255,255,255,0.025)",
-                      border: "1px solid rgba(56,189,248,0.08)",
+                      background: currentTheme.bgInput,
+                      border: `1px solid ${currentTheme.borderAccent}`,
                     }}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div
                         className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
                         style={{
-                          background: "rgba(56,189,248,0.08)",
-                          border: "1px solid rgba(56,189,248,0.12)",
+                          background: currentTheme.accentGlow,
+                          border: `1px solid ${currentTheme.borderAccent}`,
                         }}
                       >
-                        <FileText size={18} className="text-sky-300" />
+                        <FileText size={18} style={{ color: currentTheme.accent }} />
                       </div>
 
                       <div className="min-w-0">
                         <p
-                          className="text-white truncate"
+                          className="truncate"
                           style={{
                             fontFamily: "'Orbitron', sans-serif",
                             fontWeight: 700,
                             letterSpacing: "0.03em",
                             fontSize: "14px",
+                            color: currentTheme.text,
                           }}
                         >
                           {file.name}
@@ -692,7 +695,7 @@ const BulkUpload = () => {
                           style={{
                             fontFamily: "'JetBrains Mono', monospace",
                             fontSize: "10px",
-                            color: "rgba(148,163,184,0.6)",
+                            color: currentTheme.textMuted,
                           }}
                         >
                           {(file.size / 1024).toFixed(1)} KB • ready for import
@@ -707,9 +710,9 @@ const BulkUpload = () => {
                       }}
                       className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm self-start sm:self-auto"
                       style={{
-                        background: "rgba(239,68,68,0.08)",
-                        border: "1px solid rgba(239,68,68,0.18)",
-                        color: "#fca5a5",
+                        background: currentTheme.errorBg,
+                        border: `1px solid ${currentTheme.error}30`,
+                        color: currentTheme.error,
                         fontFamily: "'JetBrains Mono', monospace",
                       }}
                     >
@@ -731,31 +734,30 @@ const BulkUpload = () => {
                     style={{
                       background:
                         message.type === "error"
-                          ? "rgba(239,68,68,0.08)"
-                          : "rgba(34,197,94,0.08)",
+                          ? currentTheme.errorBg
+                          : currentTheme.successBg,
                       border:
                         message.type === "error"
-                          ? "1px solid rgba(239,68,68,0.16)"
-                          : "1px solid rgba(34,197,94,0.16)",
+                          ? `1px solid ${currentTheme.error}30`
+                          : `1px solid ${currentTheme.success}30`,
                     }}
                   >
                     <div className="mt-0.5">
                       {message.type === "error" ? (
-                        <AlertCircle size={18} className="text-red-300" />
+                        <AlertCircle size={18} style={{ color: currentTheme.error }} />
                       ) : (
-                        <CheckCircle2 size={18} className="text-emerald-300" />
+                        <CheckCircle2 size={18} style={{ color: currentTheme.success }} />
                       )}
                     </div>
 
                     <div>
                       <p
-                        className={`font-semibold ${
-                          message.type === "error" ? "text-red-300" : "text-emerald-300"
-                        }`}
+                        className="font-semibold"
                         style={{
                           fontFamily: "'Orbitron', sans-serif",
                           letterSpacing: "0.03em",
                           fontSize: "13px",
+                          color: message.type === "error" ? currentTheme.error : currentTheme.success,
                         }}
                       >
                         {message.type === "error" ? "IMPORT ERROR" : "IMPORT SUCCESS"}
@@ -766,10 +768,8 @@ const BulkUpload = () => {
                         style={{
                           fontFamily: "'JetBrains Mono', monospace",
                           fontSize: "11px",
-                          color:
-                            message.type === "error"
-                              ? "rgba(252,165,165,0.82)"
-                              : "rgba(134,239,172,0.82)",
+                          color: message.type === "error" ? currentTheme.error : currentTheme.success,
+                          opacity: 0.85,
                         }}
                       >
                         {message.text}
@@ -787,13 +787,12 @@ const BulkUpload = () => {
                 disabled={loading}
                 className="mt-6 w-full flex items-center justify-center gap-3 rounded-2xl px-5 py-4 disabled:opacity-60"
                 style={{
-                  background:
-                    "linear-gradient(135deg, rgba(56,189,248,0.9) 0%, rgba(129,140,248,0.9) 100%)",
-                  boxShadow: "0 0 26px rgba(56,189,248,0.16)",
+                  background: currentTheme.gradientPrimary,
+                  boxShadow: currentTheme.shadowGlow,
                   fontFamily: "'Orbitron', sans-serif",
                   fontWeight: 700,
                   letterSpacing: "0.05em",
-                  color: "white",
+                  color: currentTheme.text,
                 }}
               >
                 {loading ? (
@@ -817,30 +816,29 @@ const BulkUpload = () => {
               transition={{ delay: 0.14 }}
               className="relative overflow-hidden rounded-3xl p-5 sm:p-6 h-fit xl:sticky xl:top-6"
               style={{
-                background: "rgba(3,7,18,0.72)",
-                border: "1px solid rgba(56,189,248,0.09)",
+                background: currentTheme.bgCard,
+                border: `1px solid ${currentTheme.borderAccent}`,
                 backdropFilter: "blur(18px)",
-                boxShadow:
-                  "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                boxShadow: currentTheme.shadow,
               }}
             >
               <div
                 className="absolute top-0 left-0 right-0 h-[1px]"
                 style={{
-                  background:
-                    "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.32) 30%, rgba(129,140,248,0.28) 70%, transparent 100%)",
+                  background: currentTheme.gradientCard,
                 }}
               />
 
               <div className="mb-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-[1px] w-8 bg-sky-400/20" />
+                  <div className="h-[1px] w-8" style={{ background: currentTheme.accent, opacity: 0.2 }} />
                   <span
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "9px",
                       letterSpacing: "0.24em",
-                      color: "rgba(56,189,248,0.46)",
+                      color: currentTheme.accent,
+                      opacity: 0.7,
                       textTransform: "uppercase",
                     }}
                   >
@@ -849,11 +847,12 @@ const BulkUpload = () => {
                 </div>
 
                 <h2
-                  className="text-white text-xl sm:text-2xl"
+                  className="text-xl sm:text-2xl"
                   style={{
                     fontFamily: "'Orbitron', sans-serif",
                     fontWeight: 700,
                     letterSpacing: "0.04em",
+                    color: currentTheme.text,
                   }}
                 >
                   CSV SPECIFICATION
@@ -864,7 +863,7 @@ const BulkUpload = () => {
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: "11px",
-                    color: "rgba(148,163,184,0.56)",
+                    color: currentTheme.textMuted,
                   }}
                 >
                   Follow the correct structure to ensure a clean and successful import.
@@ -876,19 +875,19 @@ const BulkUpload = () => {
                 <div
                   className="rounded-2xl p-4"
                   style={{
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.04)",
+                    background: currentTheme.bgInput,
+                    border: `1px solid ${currentTheme.borderLight}`,
                   }}
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <Sparkles size={15} className="text-sky-300" />
+                    <Sparkles size={15} style={{ color: currentTheme.accent }} />
                     <p
-                      className="text-white"
                       style={{
                         fontFamily: "'Orbitron', sans-serif",
                         fontWeight: 700,
                         letterSpacing: "0.03em",
                         fontSize: "14px",
+                        color: currentTheme.text,
                       }}
                     >
                       Required CSV Headers
@@ -898,56 +897,61 @@ const BulkUpload = () => {
                   <div
                     className="rounded-xl px-4 py-3 break-all"
                     style={{
-                      background: "rgba(2,6,23,0.65)",
-                      border: "1px solid rgba(56,189,248,0.08)",
+                      background: currentTheme.bgPanel,
+                      border: `1px solid ${currentTheme.borderAccent}`,
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "12px",
-                      color: "rgba(125,211,252,0.9)",
+                      color: currentTheme.accent,
                     }}
                   >
                     domain, url, category, priority
                   </div>
                   <p
-                    className="mt-2 text-amber-300"
+                    className="mt-2"
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "10px",
+                      color: currentTheme.warning,
                     }}
                   >
-                    ✓ Tip: You can also add optional <span className="text-sky-300">email</span> and <span className="text-sky-300">region</span> columns
+                    ✓ Tip: You can also add optional <span style={{ color: currentTheme.accent }}>email</span> and <span style={{ color: currentTheme.accent }}>region</span> columns
                   </p>
                   <p
-                    className="mt-1 text-amber-300"
+                    className="mt-1"
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "10px",
+                      color: currentTheme.warning,
                     }}
                   >
                     ✓ Multiple emails can be separated by commas (creates separate entries)
                   </p>
                   <p
-                    className="mt-1 text-amber-300"
+                    className="mt-1"
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "10px",
+                      color: currentTheme.warning,
                     }}
                   >
                     ✓ Multiple regions can be separated by commas (e.g., "Asia, Europe")
                   </p>
                   <p
-                    className="mt-1 text-amber-300"
+                    className="mt-1"
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "10px",
+                      color: currentTheme.warning,
                     }}
                   >
                     ✓ Valid regions: Asia, South America, North America, Europe, Africa, Australia
                   </p>
                   <p
-                    className="mt-1 text-amber-300"
+                    className="mt-1"
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "10px",
+                      color: currentTheme.warning,
                     }}
                   >
                     ✓ Region names are case-insensitive (e.g., "asia", "ASIA", "Asia" all work)
@@ -958,7 +962,7 @@ const BulkUpload = () => {
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "10px",
-                      color: "rgba(148,163,184,0.56)",
+                      color: currentTheme.textMuted,
                     }}
                   >
                     Header names must match exactly in the first row.
@@ -969,19 +973,19 @@ const BulkUpload = () => {
                 <div
                   className="rounded-2xl p-4"
                   style={{
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.04)",
+                    background: currentTheme.bgInput,
+                    border: `1px solid ${currentTheme.borderLight}`,
                   }}
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <ShieldCheck size={15} className="text-emerald-300" />
+                    <ShieldCheck size={15} style={{ color: currentTheme.success }} />
                     <p
-                      className="text-white"
                       style={{
                         fontFamily: "'Orbitron', sans-serif",
                         fontWeight: 700,
                         letterSpacing: "0.03em",
                         fontSize: "14px",
+                        color: currentTheme.text,
                       }}
                     >
                       Required Fields
@@ -993,11 +997,11 @@ const BulkUpload = () => {
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "11px",
-                      color: "rgba(148,163,184,0.74)",
+                      color: currentTheme.textMuted,
                     }}
                   >
-                    <li>• <span className="text-white">domain</span></li>
-                    <li>• <span className="text-white">url</span> → must start with <span className="text-sky-300">http://</span> or <span className="text-sky-300">https://</span></li>
+                    <li>• <span style={{ color: currentTheme.text }}>domain</span></li>
+                    <li>• <span style={{ color: currentTheme.text }}>url</span> → must start with <span style={{ color: currentTheme.accent }}>http://</span> or <span style={{ color: currentTheme.accent }}>https://</span></li>
                   </ul>
                 </div>
 
@@ -1005,19 +1009,19 @@ const BulkUpload = () => {
                 <div
                   className="rounded-2xl p-4"
                   style={{
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.04)",
+                    background: currentTheme.bgInput,
+                    border: `1px solid ${currentTheme.borderLight}`,
                   }}
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <Database size={15} className="text-indigo-300" />
+                    <Database size={15} style={{ color: currentTheme.accentSecondary }} />
                     <p
-                      className="text-white"
                       style={{
                         fontFamily: "'Orbitron', sans-serif",
                         fontWeight: 700,
                         letterSpacing: "0.03em",
                         fontSize: "14px",
+                        color: currentTheme.text,
                       }}
                     >
                       Optional Fields
@@ -1029,24 +1033,24 @@ const BulkUpload = () => {
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "11px",
-                      color: "rgba(148,163,184,0.74)",
+                      color: currentTheme.textMuted,
                     }}
                   >
                     <li className="leading-relaxed">
-                   • <span className="text-white font-medium">Category</span>
-                     <span className="text-gray-400"> (default: </span>
-                     <span className="text-sky-300 font-semibold">Others</span>
-                     <span className="text-gray-400">)</span>
+                   • <span style={{ color: currentTheme.text, fontWeight: 500 }}>Category</span>
+                     <span style={{ color: currentTheme.textDim }}> (default: </span>
+                     <span style={{ color: currentTheme.accent, fontWeight: 600 }}>Others</span>
+                     <span style={{ color: currentTheme.textDim }}>)</span>
                      <br />
-                     <span className="text-gray-400">Allowed values:</span>
-                     <span className="text-sky-300 font-medium">
+                     <span style={{ color: currentTheme.textDim }}>Allowed values:</span>
+                     <span style={{ color: currentTheme.accent, fontWeight: 500 }}>
                        {" "}
                     JOURNALS, E-JAYPEE, JPMEDPUB, JP-DIGITAL, DIGINERVE
                     </span>
                     </li>
-                    <li>• <span className="text-white">priority</span> → default: <span className="text-sky-300">0</span></li>
-                    <li>• <span className="text-white">email</span> → contact email(s), comma-separated for multiple</li>
-                    <li>• <span className="text-white">region</span> → regions(s), comma-separated for multiple</li>
+                    <li>• <span style={{ color: currentTheme.text }}>priority</span> → default: <span style={{ color: currentTheme.accent }}>0</span></li>
+                    <li>• <span style={{ color: currentTheme.text }}>email</span> → contact email(s), comma-separated for multiple</li>
+                    <li>• <span style={{ color: currentTheme.text }}>region</span> → regions(s), comma-separated for multiple</li>
                   </ul>
                 </div>
 
@@ -1054,19 +1058,19 @@ const BulkUpload = () => {
                 <div
                   className="rounded-2xl p-4"
                   style={{
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.04)",
+                    background: currentTheme.bgInput,
+                    border: `1px solid ${currentTheme.borderLight}`,
                   }}
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <Info size={15} className="text-amber-300" />
+                    <Info size={15} style={{ color: currentTheme.warning }} />
                     <p
-                      className="text-white"
                       style={{
                         fontFamily: "'Orbitron', sans-serif",
                         fontWeight: 700,
                         letterSpacing: "0.03em",
                         fontSize: "14px",
+                        color: currentTheme.text,
                       }}
                     >
                       Import Notes
@@ -1078,7 +1082,7 @@ const BulkUpload = () => {
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "11px",
-                      color: "rgba(148,163,184,0.74)",
+                      color: currentTheme.textMuted,
                     }}
                   >
                     <li>• Invalid URLs may be skipped</li>

@@ -268,6 +268,92 @@ export const updateHiddenColumns = async (req, res) => {
   }
 };
 
+// ================= GET THEME =================
+const ALLOWED_THEMES = ["dark", "light"];
+
+export const getTheme = async (req, res) => {
+  try {
+
+    const userId = req.user.id || req.user._id;
+
+    const user = await User.findById(userId).select("theme");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      theme: user.theme || "dark"
+    });
+
+  } catch (error) {
+
+    console.error("Get theme error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch theme"
+    });
+
+  }
+};
+
+// ================= UPDATE THEME =================
+export const updateTheme = async (req, res) => {
+  try {
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated"
+      });
+    }
+
+    const { theme } = req.body;
+
+    if (!theme || !ALLOWED_THEMES.includes(theme)) {
+      return res.status(400).json({
+        success: false,
+        message: `theme must be one of: ${ALLOWED_THEMES.join(", ")}`
+      });
+    }
+
+    const userId = req.user._id;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { theme },
+      { new: true }
+    ).select("theme");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      theme: user.theme
+    });
+
+  } catch (error) {
+
+    console.error("Update theme error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
+  }
+};
+
 // ================= GET PINNED SITES =================
 export const getPinnedSites = async (req, res) => {
   try {

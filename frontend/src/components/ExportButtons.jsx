@@ -5,6 +5,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "../contexts/ThemeContext";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -19,6 +20,7 @@ const ExportButtons = ({
   customFrom,
   customTo,
 }) => {
+  const { currentTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const wrapperRef = useRef(null);
@@ -317,9 +319,9 @@ const exportPDF = async () => {
           ...mono,
           fontSize: "11px",
           textTransform: "uppercase",
-          color: "#38bdf8",
-          background: "rgba(56,189,248,0.08)",
-          border: "1px solid rgba(56,189,248,0.2)",
+          color: currentTheme.accent,
+          background: currentTheme.accentGlow,
+          border: `1px solid ${currentTheme.accent}`,
           backdropFilter: "blur(10px)",
         }}
       >
@@ -336,15 +338,15 @@ const exportPDF = async () => {
             exit={{ opacity: 0, y: 6, scale: 0.96 }}
             className="absolute right-0 mt-2 w-52 rounded-xl overflow-hidden z-50"
             style={{
-              background: "rgba(3,7,18,0.95)",
-              border: "1px solid rgba(56,189,248,0.12)",
+              background: currentTheme.bgCard,
+              border: `1px solid ${currentTheme.borderAccent}`,
               backdropFilter: "blur(20px)",
-              boxShadow: "0 10px 40px rgba(0,0,0,0.6)",
+              boxShadow: currentTheme.shadow,
             }}
           >
             {/* Top glow line */}
             <div className="h-[1px]" style={{
-              background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.4), transparent)"
+              background: `linear-gradient(90deg, transparent, ${currentTheme.accent}60, transparent)`
             }} />
 
             {[
@@ -355,22 +357,22 @@ const exportPDF = async () => {
               <motion.button
                 key={item.label}
                 onClick={item.action}
-                whileHover={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+                whileHover={{ backgroundColor: currentTheme.bgInput }}
                 className="flex items-center justify-between w-full px-4 py-2.5"
                 style={{
                   ...mono,
                   fontSize: "10px",
-                  color: "rgba(226,232,240,0.8)",
+                  color: currentTheme.textSecondary,
                   borderBottom:
-                    i !== 2 ? "1px solid rgba(56,189,248,0.05)" : "none",
+                    i !== 2 ? `1px solid ${currentTheme.borderAccent}` : "none",
                 }}
               >
                 <span className="flex items-center gap-2">
-                  <item.icon size={13} className="text-sky-400" />
+                  <item.icon size={13} style={{ color: currentTheme.accent }} />
                   {item.label}
                 </span>
 
-                <span style={{ fontSize: "9px", color: "rgba(148,163,184,0.4)" }}>
+                <span style={{ fontSize: "9px", color: currentTheme.textDim }}>
                   →
                 </span>
               </motion.button>

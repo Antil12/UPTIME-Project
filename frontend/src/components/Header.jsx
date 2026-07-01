@@ -599,8 +599,8 @@ const Header = ({ handleRefresh, isRefreshing, handleLogout, currentUser }) => {
         className="sticky top-0 z-50 border-b shadow-sm"
         style={{
           backgroundColor: "#060e1c",
-          borderBottomColor: "rgba(26, 86, 255, 0.18)",
-          boxShadow: "0 1px 24px rgba(26,86,255,0.08)",
+          borderBottomColor: "rgba(56,189,248,0.12)",
+          boxShadow: "0 0 18px rgba(56,189,248,0.04)",
         }}
       >
         {/*

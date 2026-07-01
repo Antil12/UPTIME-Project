@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import SiteReport from "./SiteReport";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
+import { useTheme } from "../contexts/ThemeContext";
 
 const API_BASE     = import.meta.env.VITE_API_URL;
 const LOG_API_BASE = `${API_BASE}/uptime-logs`;
@@ -75,35 +76,35 @@ const PortalDropdown = ({ anchorRef, open, children, align = "left" }) => {
 };
 
 // ─── HUD Filter Dropdown (SSL / Status / Role) ────────────────────────────────
-const FilterDropdown = ({ anchorRef, open, options, value, onSelect, onClear }) => (
+const FilterDropdown = ({ anchorRef, open, options, value, onSelect, onClear, currentTheme }) => (
   <PortalDropdown anchorRef={anchorRef} open={open}>
     <motion.div
       initial={{ opacity: 0, y: 6, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 4, scale: 0.97 }}
       transition={{ duration: 0.18 }}
-      style={{ width: "192px", background: "rgba(3,7,18,0.97)", border: "1px solid rgba(56,189,248,0.14)", backdropFilter: "blur(28px)", boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 24px rgba(56,189,248,0.05)", borderRadius: "16px", overflow: "hidden" }}
+      style={{ width: "192px", background: currentTheme.bgPanel, border: `1px solid ${currentTheme.borderAccent}`, backdropFilter: "blur(28px)", boxShadow: currentTheme.shadow, borderRadius: "16px", overflow: "hidden" }}
     >
       {options.map((opt) => (
         <button
           key={opt}
           onClick={() => onSelect(opt)}
           className="flex items-center justify-between w-full px-4 py-2.5 transition-all duration-200"
-          style={{ ...monoLabel, fontSize: "10px", color: value === opt ? "#38bdf8" : "rgba(148,163,184,0.7)", background: value === opt ? "rgba(56,189,248,0.07)" : "transparent", borderLeft: value === opt ? "2px solid rgba(56,189,248,0.45)" : "2px solid transparent" }}
-          onMouseEnter={(e) => { if (value !== opt) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
+          style={{ ...monoLabel, fontSize: "10px", color: value === opt ? currentTheme.accent : currentTheme.text, fontWeight: value === opt ? 700 : 500, background: value === opt ? currentTheme.accentGlow : "transparent", borderLeft: value === opt ? `2px solid ${currentTheme.accent}` : "2px solid transparent" }}
+          onMouseEnter={(e) => { if (value !== opt) e.currentTarget.style.background = currentTheme.bgInput; }}
           onMouseLeave={(e) => { if (value !== opt) e.currentTarget.style.background = "transparent"; }}
         >
           <span>{opt}</span>
-          {value === opt && <span style={{ color: "#38bdf8", fontSize: "8px" }}>✓</span>}
+          {value === opt && <span style={{ color: currentTheme.accent, fontSize: "8px" }}>✓</span>}
         </button>
       ))}
-      <div style={{ borderTop: "1px solid rgba(56,189,248,0.07)", margin: "4px 0" }} />
+      <div style={{ borderTop: `1px solid ${currentTheme.borderAccent}`, margin: "4px 0" }} />
       <button
         onClick={onClear}
         className="w-full px-4 py-2.5 text-left transition-all duration-200"
-        style={{ ...monoLabel, fontSize: "10px", color: "rgba(248,113,113,0.6)" }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
-        onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(248,113,113,0.6)")}
+        style={{ ...monoLabel, fontSize: "10px", color: currentTheme.error, fontWeight: 600 }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = currentTheme.errorBg)}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
       >
         Clear Filter
       </button>
@@ -119,6 +120,7 @@ const DomainFilterDropdown = ({
   sortOrder, setSortOrder,
   chipStyle,
   dropdownRef,
+  currentTheme,
 }) => {
   const [draftCategories, setDraftCategories] = useState(selectedCategories);
   const [draftSortOrder,  setDraftSortOrder]  = useState(sortOrder);
@@ -168,18 +170,18 @@ const DomainFilterDropdown = ({
         exit={{ opacity: 0, y: 4, scale: 0.97 }}
         transition={{ duration: 0.18 }}
         onMouseDown={(e) => e.stopPropagation()}
-        style={{ width: "288px", background: "rgba(3,7,18,0.98)", border: "1px solid rgba(56,189,248,0.14)", backdropFilter: "blur(28px)", boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 0 24px rgba(56,189,248,0.05)", borderRadius: "16px", overflow: "hidden" }}
+        style={{ width: "288px", background: currentTheme.bgPanel, border: `1px solid ${currentTheme.borderAccent}`, backdropFilter: "blur(28px)", boxShadow: currentTheme.shadow, borderRadius: "16px", overflow: "hidden" }}
       >
         <div className="h-[1px]" style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.4) 40%, transparent)", borderRadius: "16px 16px 0 0" }} />
-        <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(56,189,248,0.07)" }}>
-          <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "10px", fontWeight: 700, color: "white", letterSpacing: "0.06em" }}>
+        <div className="px-4 py-3" style={{ borderBottom: `1px solid ${currentTheme.borderAccent}` }}>
+          <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "10px", fontWeight: 700, color: currentTheme.text, letterSpacing: "0.06em" }}>
             FILTER DOMAIN
           </span>
         </div>
 
         <div className="p-4 space-y-4">
           <div>
-            <p style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)", marginBottom: "10px" }}>Sort Order</p>
+            <p style={{ ...monoLabel, fontSize: "9px", color: currentTheme.accent, marginBottom: "10px" }}>Sort Order</p>
             <div className="flex gap-2">
               {["ASC", "DESC"].map((order) => (
                 <button
@@ -188,9 +190,10 @@ const DomainFilterDropdown = ({
                   className="flex-1 py-2 rounded-xl transition-all duration-200"
                   style={{
                     ...monoLabel, fontSize: "10px",
-                    background: draftSortOrder === order ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.03)",
-                    border: draftSortOrder === order ? "1px solid rgba(56,189,248,0.32)" : "1px solid rgba(255,255,255,0.06)",
-                    color: draftSortOrder === order ? "#38bdf8" : "rgba(148,163,184,0.6)",
+                    background: draftSortOrder === order ? currentTheme.accentGlow : currentTheme.bgInput,
+                    border: draftSortOrder === order ? `1px solid ${currentTheme.accent}` : `1px solid ${currentTheme.borderLight}`,
+                    color: draftSortOrder === order ? currentTheme.accent : currentTheme.text,
+                    fontWeight: draftSortOrder === order ? 700 : 500,
                   }}
                 >
                   {order === "ASC" ? "A → Z" : "Z → A"}
@@ -200,7 +203,7 @@ const DomainFilterDropdown = ({
           </div>
 
           <div>
-            <p style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)", marginBottom: "10px" }}>Category</p>
+            <p style={{ ...monoLabel, fontSize: "9px", color: currentTheme.accent, marginBottom: "10px" }}>Category</p>
 
             {!draftCategories.includes("ALL") && draftCategories.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "10px" }}>
@@ -216,26 +219,26 @@ const DomainFilterDropdown = ({
               </div>
             )}
 
-            <div style={{ background: "rgba(3,7,18,0.6)", border: "1px solid rgba(56,189,248,0.1)", borderRadius: "12px", overflow: "hidden", maxHeight: "220px", overflowY: "auto" }}>
+            <div style={{ background: currentTheme.bgPanel, border: `1px solid ${currentTheme.borderAccent}`, borderRadius: "12px", overflow: "hidden", maxHeight: "220px", overflowY: "auto" }}>
               {categories.map((cat, idx) => (
                 <label
                   key={cat}
                   className="flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all duration-200"
-                  style={{ borderTop: idx === 0 ? "none" : "1px solid rgba(56,189,248,0.04)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(56,189,248,0.06)")}
+                  style={{ borderTop: idx === 0 ? "none" : `1px solid ${currentTheme.borderAccent}` }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = currentTheme.accentGlow)}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <div
                     className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all duration-200"
                     style={{
-                      border: draftCategories.includes(cat) ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.1)",
-                      background: draftCategories.includes(cat) ? "rgba(56,189,248,0.15)" : "transparent",
+                      border: draftCategories.includes(cat) ? `1px solid ${currentTheme.accent}` : `1px solid ${currentTheme.borderLight}`,
+                      background: draftCategories.includes(cat) ? currentTheme.accentGlow : "transparent",
                     }}
                     onClick={() => toggleDraftCategory(cat)}
                   >
-                    {draftCategories.includes(cat) && <span style={{ color: "#38bdf8", fontSize: "8px" }}>✓</span>}
+                    {draftCategories.includes(cat) && <span style={{ color: currentTheme.accent, fontSize: "8px" }}>✓</span>}
                   </div>
-                  <span style={{ ...monoLabel, fontSize: "10px", color: draftCategories.includes(cat) ? "#38bdf8" : "rgba(148,163,184,0.7)" }}>
+                  <span style={{ ...monoLabel, fontSize: "10px", color: draftCategories.includes(cat) ? currentTheme.accent : currentTheme.text, fontWeight: draftCategories.includes(cat) ? 700 : 500 }}>
                     {cat}
                   </span>
                 </label>
@@ -244,22 +247,22 @@ const DomainFilterDropdown = ({
           </div>
         </div>
 
-        <div className="flex gap-2 px-4 py-3" style={{ borderTop: "1px solid rgba(56,189,248,0.07)" }}>
+        <div className="flex gap-2 px-4 py-3" style={{ borderTop: `1px solid ${currentTheme.borderAccent}` }}>
           <button
             onClick={handleReset}
             className="flex-1 py-2 rounded-xl transition-all duration-200"
-            style={{ ...monoLabel, fontSize: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(248,250,252,0.88)" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(148,163,184,0.9)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.color = "rgba(148,163,184,0.6)"; }}
+            style={{ ...monoLabel, fontSize: "10px", background: currentTheme.bgInput, border: `1px solid ${currentTheme.borderLight}`, color: currentTheme.textSecondary, fontWeight: 600 }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = currentTheme.bgInput; e.currentTarget.style.color = currentTheme.text; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = currentTheme.bgInput; e.currentTarget.style.color = currentTheme.textSecondary; }}
           >
             Reset
           </button>
           <button
             onClick={handleApply}
             className="flex-1 py-2 rounded-xl transition-all duration-200"
-            style={{ ...monoLabel, fontSize: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.28)", color: "#38bdf8" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(56,189,248,0.18)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(56,189,248,0.1)"; }}
+            style={{ ...monoLabel, fontSize: "10px", background: currentTheme.accentGlow, border: `1px solid ${currentTheme.accent}`, color: currentTheme.accent, fontWeight: 700 }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = currentTheme.accentGlow; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = currentTheme.accentGlow; }}
           >
             Apply
           </button>
@@ -270,7 +273,7 @@ const DomainFilterDropdown = ({
 };
 
 // ─── HUD Column Settings ──────────────────────────────────────────────────────
-const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleColumn, searchColumn, setSearchColumn, DEFAULT_COLUMNS, menuRef, visibleColumnsForRole }) => (
+const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleColumn, searchColumn, setSearchColumn, DEFAULT_COLUMNS, menuRef, visibleColumnsForRole, currentTheme }) => (
   <PortalDropdown anchorRef={anchorRef} open={open} align="right">
     <motion.div
       ref={menuRef}
@@ -278,22 +281,22 @@ const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleCol
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 4, scale: 0.97 }}
       transition={{ duration: 0.18 }}
-      style={{ width: "256px", background: "rgba(3,7,18,0.97)", border: "1px solid rgba(56,189,248,0.14)", backdropFilter: "blur(28px)", boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 24px rgba(56,189,248,0.04)", borderRadius: "16px", overflow: "hidden", transform: "translateX(-100%)" }}
+      style={{ width: "256px", background: currentTheme.bgPanel, border: `1px solid ${currentTheme.borderAccent}`, backdropFilter: "blur(28px)", boxShadow: currentTheme.shadow, borderRadius: "16px", overflow: "hidden", transform: "translateX(-100%)" }}
     >
       <div className="h-[1px]" style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.4) 40%, rgba(129,140,248,0.3) 70%, transparent)" }} />
-      <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(56,189,248,0.07)" }}>
-        <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", color: "white" }}>MANAGE COLUMNS</span>
+      <div className="px-4 py-3" style={{ borderBottom: `1px solid ${currentTheme.borderAccent}` }}>
+        <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", color: currentTheme.text }}>MANAGE COLUMNS</span>
       </div>
-      <div className="p-3" style={{ borderBottom: "1px solid rgba(56,189,248,0.07)" }}>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(56,189,248,0.09)" }}>
-          <Search size={12} style={{ color: "rgba(56,189,248,0.75)" }} />
+      <div className="p-3" style={{ borderBottom: `1px solid ${currentTheme.borderAccent}` }}>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: currentTheme.bgInput, border: `1px solid ${currentTheme.borderLight}` }}>
+          <Search size={12} style={{ color: currentTheme.accent }} />
           <input
             type="text"
             placeholder="Search column..."
             value={searchColumn}
             onChange={(e) => setSearchColumn(e.target.value)}
             className="bg-transparent outline-none w-full"
-            style={{ ...monoLabel, fontSize: "10px", color: "rgba(248,250,252,0.9)" }}
+            style={{ ...monoLabel, fontSize: "10px", color: currentTheme.text }}
           />
         </div>
       </div>
@@ -303,27 +306,27 @@ const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleCol
             key={col}
             className="flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all duration-200"
             style={{ marginBottom: "2px" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(56,189,248,0.05)")}
+            onMouseEnter={(e) => (e.currentTarget.style.background = currentTheme.accentGlow)}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
-            <span style={{ ...monoLabel, fontSize: "10px", color: hiddenColumns.includes(col) ? "rgba(148,163,184,0.3)" : "rgba(148,163,184,0.8)" }}>
+            <span style={{ ...monoLabel, fontSize: "10px", color: hiddenColumns.includes(col) ? currentTheme.textSecondary : currentTheme.text, fontWeight: hiddenColumns.includes(col) ? 500 : 600 }}>
               {col}
             </span>
             <div
               onClick={() => toggleColumn(col)}
               className="relative w-8 h-4 rounded-full cursor-pointer transition-all duration-300"
-              style={{ background: !hiddenColumns.includes(col) ? "rgba(56,189,248,0.28)" : "rgba(255,255,255,0.06)", border: !hiddenColumns.includes(col) ? "1px solid rgba(56,189,248,0.45)" : "1px solid rgba(255,255,255,0.08)" }}
+              style={{ background: !hiddenColumns.includes(col) ? currentTheme.accentGlow : currentTheme.bgInput, border: !hiddenColumns.includes(col) ? `1px solid ${currentTheme.accent}` : `1px solid ${currentTheme.borderLight}` }}
             >
               <div
                 className="absolute top-0.5 w-3 h-3 rounded-full transition-all duration-300"
-                style={{ left: !hiddenColumns.includes(col) ? "17px" : "2px", background: !hiddenColumns.includes(col) ? "#38bdf8" : "rgba(148,163,184,0.3)", boxShadow: !hiddenColumns.includes(col) ? "0 0 8px rgba(56,189,248,0.6)" : "none" }}
+                style={{ left: !hiddenColumns.includes(col) ? "17px" : "2px", background: !hiddenColumns.includes(col) ? currentTheme.accent : currentTheme.textSecondary, boxShadow: !hiddenColumns.includes(col) ? `0 0 8px ${currentTheme.accent}` : "none" }}
               />
             </div>
           </label>
         ))}
       </div>
-      <div className="px-4 py-2.5" style={{ borderTop: "1px solid rgba(56,189,248,0.07)" }}>
-        <span style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.75)" }}>
+      <div className="px-4 py-2.5" style={{ borderTop: `1px solid ${currentTheme.borderAccent}` }}>
+        <span style={{ ...monoLabel, fontSize: "9px", color: currentTheme.accent, fontWeight: 700 }}>
           {visibleColumnsForRole.filter((col) => !hiddenColumns.includes(col)).length} columns visible
         </span>
       </div>
@@ -331,43 +334,73 @@ const ColumnMenu = ({ anchorRef, open, filteredColumns, hiddenColumns, toggleCol
   </PortalDropdown>
 );
 
-const Th = ({ children, className = "", style = {}, ...rest }) => (
+const Th = ({ children, className = "", style = {}, currentTheme, ...rest }) => {
+  const theme = currentTheme || {
+    accent: "#38bdf8",
+    bgCard: "rgba(3,7,18,0.72)",
+    borderAccent: "rgba(56,189,248,0.15)",
+  };
+  return (
   <th className={`px-4 py-3 text-left whitespace-nowrap ${className}`}
-    style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.85)", position: "sticky", top: 0, zIndex: 40, background: "rgba(3,7,18,0.97)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(56,189,248,0.13)", fontWeight: 400, ...style }}
+    style={{ ...monoLabel, fontSize: "9px", color: theme.accent, position: "sticky", top: 0, zIndex: 40, background: theme.bgCard, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: `1px solid ${theme.borderAccent}`, fontWeight: 700, ...style }}
     {...rest}
   >
     {children}
   </th>
-);
+  );
+};
 
-const FilterBtn = ({ active, onClick, btnRef }) => (
+const FilterBtn = ({ active, onClick, btnRef, currentTheme }) => {
+  const theme = currentTheme || {
+    accentGlow: "rgba(56,189,248,0.15)",
+    accent: "#38bdf8",
+    textSecondary: "rgba(148,163,184,0.86)",
+  };
+  return (
   <button
     ref={btnRef}
     onClick={onClick}
     className="inline-flex items-center justify-center w-5 h-5 rounded-md transition-all duration-200"
-    style={{ background: active ? "rgba(56,189,248,0.15)" : "transparent", color: active ? "#38bdf8" : "rgba(148,163,184,0.65)", border: active ? "1px solid rgba(56,189,248,0.28)" : "1px solid transparent" }}
+    style={{ background: active ? theme.accentGlow : "transparent", color: active ? theme.accent : theme.textSecondary, border: active ? `1px solid ${theme.accent}` : "1px solid transparent" }}
   >
     <Filter size={10} />
   </button>
-);
+  );
+};
 
-const StatusBadge = ({ status }) => {
-  const map = {
-    UP:   { color: "#34d399", bg: "rgba(52,211,153,0.08)",  border: "rgba(52,211,153,0.22)"  },
-    SLOW: { color: "#fbbf24", bg: "rgba(251,191,36,0.08)",  border: "rgba(251,191,36,0.22)"  },
-    DOWN: { color: "#f87171", bg: "rgba(248,113,113,0.08)", border: "rgba(248,113,113,0.22)" },
+const StatusBadge = ({ status, currentTheme }) => {
+  const theme = currentTheme || {
+    success: "#34d399",
+    successBg: "rgba(52,211,153,0.12)",
+    warning: "#fbbf24",
+    error: "#f87171",
+    errorBg: "rgba(248,113,113,0.12)",
+    textSecondary: "rgba(148,163,184,0.86)",
+    bgInput: "rgba(255,255,255,0.04)",
+    borderLight: "rgba(255,255,255,0.08)",
   };
-  const s = map[status] || { color: "rgba(148,163,184,0.5)", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)" };
+  const map = {
+    UP:   { color: theme.success, bg: theme.successBg,  border: `${theme.success}35`  },
+    SLOW: { color: theme.warning, bg: `${theme.warning}12`,  border: `${theme.warning}35`  },
+    DOWN: { color: theme.error,   bg: theme.errorBg,   border: `${theme.error}35` },
+  };
+  const s = map[status] || { color: theme.textSecondary, bg: theme.bgInput, border: theme.borderLight };
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
       <motion.span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color, boxShadow: `0 0 5px ${s.color}` }}
         animate={status === "DOWN" ? { opacity: [1, 0.3, 1] } : {}} transition={{ duration: 0.9, repeat: Infinity }} />
-      <span style={{ ...monoLabel, fontSize: "9px", color: s.color }}>{status || "CHECKING"}</span>
+      <span style={{ ...monoLabel, fontSize: "9px", color: s.color, fontWeight: 700 }}>{status || "CHECKING"}</span>
     </span>
   );
 };
 
-const SslBadge = ({ item }) => {
+const SslBadge = ({ item, currentTheme }) => {
+  const theme = currentTheme || {
+    success: "#34d399",
+    warning: "#fbbf24",
+    error: "#f87171",
+    textSecondary: "rgba(148,163,184,0.86)",
+  };
   const getText = () => {
     if (!item.sslStatus) return "Checking";
     if (item.sslStatus === "VALID")    return "Secure";
@@ -375,30 +408,42 @@ const SslBadge = ({ item }) => {
     if (item.sslStatus === "ERROR")    return "Error";
     return item.sslStatus;
   };
-  const colorMap = { VALID: "#34d399", EXPIRING: "#fbbf24", EXPIRED: "#f87171", ERROR: "#f87171" };
-  const color    = colorMap[item.sslStatus] || "rgba(148,163,184,0.5)";
-  return <span style={{ ...monoLabel, fontSize: "10px", color }}>{getText()}</span>;
+  const colorMap = { VALID: theme.success, EXPIRING: theme.warning, EXPIRED: theme.error, ERROR: theme.error };
+  const color    = colorMap[item.sslStatus] || theme.textSecondary;
+  return <span style={{ ...monoLabel, fontSize: "10px", color, fontWeight: 600 }}>{getText()}</span>;
 };
 
 // ─── ActionBtn — stops propagation so row-click selection isn't triggered ─────
-const ActionBtn = ({ onClick, title, children, danger = false }) => (
+const ActionBtn = ({ onClick, title, children, danger = false, currentTheme }) => {
+  const theme = currentTheme || {
+    errorBg: "rgba(248,113,113,0.12)",
+    accentGlow: "rgba(56,189,248,0.15)",
+    error: "#f87171",
+    accent: "#38bdf8",
+    borderAccent: "rgba(56,189,248,0.15)",
+  };
+  return (
   <motion.button
     whileHover={{ scale: 1.14, y: -1 }} whileTap={{ scale: 0.88 }}
     onClick={(e) => { e.stopPropagation(); onClick?.(e); }}
     title={title}
     className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200"
-    style={{ background: danger ? "rgba(248,113,113,0.07)" : "rgba(56,189,248,0.07)", border: danger ? "1px solid rgba(248,113,113,0.14)" : "1px solid rgba(56,189,248,0.12)", color: danger ? "rgba(248,113,113,0.7)" : "rgba(56,189,248,0.65)" }}
+    style={{ background: danger ? theme.errorBg : theme.accentGlow, border: danger ? `1px solid ${theme.error}30` : `1px solid ${theme.borderAccent}`, color: danger ? theme.error : theme.accent }}
   >
     {children}
   </motion.button>
-);
+  );
+};
 
-const ExpandChevron = ({ expanded }) => (
+const ExpandChevron = ({ expanded, currentTheme }) => {
+  const theme = currentTheme || { accent: "#38bdf8" };
+  return (
   <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.22 }}
-    style={{ display: "inline-block", color: "rgba(56,189,248,0.45)", fontSize: "10px" }}>
+    style={{ display: "inline-block", color: theme.accent, opacity: 0.85, fontSize: "10px" }}>
     ▼
   </motion.span>
-);
+  );
+};
 
 // ─── Main UrlTable ─────────────────────────────────────────────────────────────
 const UrlTable = forwardRef(({
@@ -410,6 +455,7 @@ const UrlTable = forwardRef(({
   selectedCategories, setSelectedCategories,
   selectedStatus, setSelectedStatus,
 }, ref) => {
+  const { currentTheme } = useTheme();
   const isViewer    = currentUser?.role?.toUpperCase() === "VIEWER";
   const isSuperAdmin = currentUser?.role?.toUpperCase() === "SUPERADMIN";
 
@@ -546,19 +592,19 @@ const UrlTable = forwardRef(({
     if (next && !siteLogs[item._id]) {
       try {
         const token = localStorage.getItem("loginToken");
-        
+
         // Fetch logs
-        const logsRes = await axios.get(`${LOG_API_BASE}/${item._id}`, { 
-          headers: token ? { Authorization: `Bearer ${token}` } : {} 
+        const logsRes = await axios.get(`${LOG_API_BASE}/${item._id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         setSiteLogs((prev) => ({ ...prev, [item._id]: logsRes.data?.data || [] }));
-        
+
         // Fetch stats (7 days by default)
         const statsRes = await axios.get(`${LOG_API_BASE}/report-data`, {
           params: { siteIds: item._id, range: "7d" },
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
-        
+
         if (statsRes.data?.data?.statsMap?.[item._id]) {
           setSiteStats((prev) => ({ ...prev, [item._id]: statsRes.data.data.statsMap[item._id] }));
         }
@@ -635,8 +681,8 @@ const UrlTable = forwardRef(({
   const chipStyle = {
     display: "inline-flex", alignItems: "center", gap: "4px",
     padding: "3px 8px", borderRadius: "999px",
-    background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.3)",
-    ...monoLabel, fontSize: "9px", color: "#38bdf8", whiteSpace: "nowrap",
+    background: currentTheme.accentGlow, border: `1px solid ${currentTheme.accent}`,
+    ...monoLabel, fontSize: "9px", color: currentTheme.accent, fontWeight: 700, whiteSpace: "nowrap",
   };
 
   // ─── Row click handler for selection mode ─────────────────────────────────
@@ -662,34 +708,34 @@ const UrlTable = forwardRef(({
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              style={{ background: "rgba(3,7,18,0.95)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: "20px", backdropFilter: "blur(20px)", boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(56,189,248,0.1)", padding: "32px", maxWidth: "600px", width: "90%", maxHeight: "80vh", overflowY: "auto" }}
+              style={{ background: currentTheme.bgPanel, border: `1px solid ${currentTheme.borderAccent}`, borderRadius: "20px", backdropFilter: "blur(20px)", boxShadow: currentTheme.shadow, padding: "32px", maxWidth: "600px", width: "90%", maxHeight: "80vh", overflowY: "auto" }}
             >
               <div className="flex items-center justify-between mb-6 gap-4">
                 <div>
-                  <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "4px" }}>🌍 Global Status Check</h2>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>{globalCheckModalData.domain}</p>
+                  <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "20px", fontWeight: 700, color: currentTheme.text, marginBottom: "4px" }}>🌍 Global Status Check</h2>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: currentTheme.textSecondary }}>{globalCheckModalData.domain}</p>
                 </div>
                 <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setGlobalCheckModalData(null)}
-                  style={{ background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: "8px", padding: "8px 12px", color: "#38bdf8", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontSize: "18px", flexShrink: 0 }}>
+                  style={{ background: currentTheme.accentGlow, border: `1px solid ${currentTheme.accent}`, borderRadius: "8px", padding: "8px 12px", color: currentTheme.accent, cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontSize: "18px", flexShrink: 0 }}>
                   ✕
                 </motion.button>
               </div>
 
-              <div className="mb-6 p-4 rounded-xl" style={{ background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.15)" }}>
-                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(56,189,248,0.5)", marginBottom: "8px", letterSpacing: "0.06em" }}>GLOBAL STATUS</p>
+              <div className="mb-6 p-4 rounded-xl" style={{ background: currentTheme.accentGlow, border: `1px solid ${currentTheme.accent}` }}>
+                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: currentTheme.accent, marginBottom: "8px", letterSpacing: "0.06em", fontWeight: 700 }}>GLOBAL STATUS</p>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <StatusBadge status={globalCheckModalData.globalStatus} />
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>
+                  <StatusBadge status={globalCheckModalData.globalStatus} currentTheme={currentTheme} />
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: currentTheme.textSecondary }}>
                     {new Date(globalCheckModalData.checkTimestamp).toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(56,189,248,0.5)", marginBottom: "12px", letterSpacing: "0.06em" }}>REGIONAL BREAKDOWN</p>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: currentTheme.accent, marginBottom: "12px", letterSpacing: "0.06em", fontWeight: 700 }}>REGIONAL BREAKDOWN</p>
               <div className="space-y-2">
                 {globalCheckModalData.regionalBreakdown.map((region, idx) => {
-                  const statusColors = { UP: "#34d399", DOWN: "#f87171", SLOW: "#fbbf24", UNKNOWN: "#94a3b8" };
-                  const color        = statusColors[region.status] || "#94a3b8";
+                  const statusColors = { UP: currentTheme.success, DOWN: currentTheme.error, SLOW: currentTheme.warning, UNKNOWN: currentTheme.textSecondary };
+                  const color        = statusColors[region.status] || currentTheme.textSecondary;
                   return (
                     <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
                       className="p-3 rounded-lg"
@@ -699,19 +745,19 @@ const UrlTable = forwardRef(({
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: color, boxShadow: `0 0 8px ${color}`, flexShrink: 0 }} />
                           <div className="flex-1 min-w-0">
-                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", fontWeight: 600, color }}>{region.region}</p>
-                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", fontWeight: 600, color: currentTheme.text }}>{region.region}</p>
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: currentTheme.textSecondary }}>
                               {region.lastCheckedAt ? new Date(region.lastCheckedAt).toLocaleTimeString() : "Never"}
                             </p>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color, fontWeight: 600 }}>{region.status}</p>
+                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color, fontWeight: 700 }}>{region.status}</p>
                           {region.responseTimeMs != null && (
-                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>{region.responseTimeMs}ms</p>
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: currentTheme.textSecondary }}>{region.responseTimeMs}ms</p>
                           )}
                           {region.statusCode != null && (
-                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.5)" }}>HTTP {region.statusCode}</p>
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: currentTheme.textSecondary }}>HTTP {region.statusCode}</p>
                           )}
                         </div>
                       </div>
@@ -721,7 +767,7 @@ const UrlTable = forwardRef(({
               </div>
 
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setGlobalCheckModalData(null)}
-                style={{ width: "100%", marginTop: "24px", padding: "12px", borderRadius: "12px", background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", fontWeight: 600, cursor: "pointer", letterSpacing: "0.06em" }}>
+                style={{ width: "100%", marginTop: "24px", padding: "12px", borderRadius: "12px", background: currentTheme.accentGlow, border: `1px solid ${currentTheme.accent}`, color: currentTheme.accent, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", fontWeight: 700, cursor: "pointer", letterSpacing: "0.06em" }}>
                 Close
               </motion.button>
             </motion.div>
@@ -738,29 +784,31 @@ const UrlTable = forwardRef(({
             toggleColumn={toggleColumn} searchColumn={searchColumn}
             setSearchColumn={setSearchColumn} DEFAULT_COLUMNS={DEFAULT_COLUMNS}
             visibleColumnsForRole={visibleColumnsForRole}
+            currentTheme={currentTheme}
           />
         )}
       </AnimatePresence>
 
       {/* ─── Desktop Table ─── */}
       <div className="hidden lg:block">
-        <div className="rounded-2xl" style={{ background: "rgba(3,7,18,0.75)", border: "1px solid rgba(56,189,248,0.1)", backdropFilter: "blur(22px)", boxShadow: "0 0 28px rgba(56,189,248,0.04), inset 0 1px 0 rgba(56,189,248,0.05)" }}>
+        <div className="rounded-2xl" style={{ background: currentTheme.bgCard, border: `1px solid ${currentTheme.borderAccent}`, backdropFilter: "blur(22px)", boxShadow: currentTheme.shadow }}>
           <div className="h-[1px]" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.4) 30%, rgba(129,140,248,0.32) 70%, transparent 100%)", flexShrink: 0 }} />
 
           <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: "calc(100vh - 220px)", borderRadius: "0 0 16px 16px", position: "relative", paddingBottom: "8px" }}>
             <table className="w-full text-sm" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
               <thead style={{ position: "relative", zIndex: 40 }}>
                 <tr>
-                  {selectionMode && <Th style={{ width: "40px" }} />}
-                  {!hiddenColumns.includes("sno") && <Th style={{ width: "50px" }}>S.No</Th>}
+                  {selectionMode && <Th currentTheme={currentTheme} style={{ width: "40px" }} />}
+                  {!hiddenColumns.includes("sno") && <Th currentTheme={currentTheme} style={{ width: "50px" }}>S.No</Th>}
 
                   {!hiddenColumns.includes("domain") && (
-                    <Th>
+                    <Th currentTheme={currentTheme}>
                       <div className="flex items-center gap-2">
                         <span>Domain</span>
                         <FilterBtn
                           btnRef={domainBtnRef}
                           active={!selectedCategories.includes("ALL") || sortOrder !== "ASC"}
+                          currentTheme={currentTheme}
                           onClick={() => {
                             closeNonDomainFilters();
                             setShowColumnMenu(false);
@@ -773,6 +821,7 @@ const UrlTable = forwardRef(({
                               anchorRef={domainBtnRef}
                               dropdownRef={domainDropdownRef}
                               open={showDomainFilter}
+                              currentTheme={currentTheme}
                               onClose={() => setShowDomainFilter(false)}
                               categories={categories}
                               selectedCategories={selectedCategories}
@@ -787,15 +836,16 @@ const UrlTable = forwardRef(({
                     </Th>
                   )}
 
-                  {!hiddenColumns.includes("url") && <Th>URL</Th>}
+                  {!hiddenColumns.includes("url") && <Th currentTheme={currentTheme}>URL</Th>}
 
                   {!hiddenColumns.includes("ssl") && (
-                    <Th>
+                    <Th currentTheme={currentTheme}>
                       <div className="flex items-center gap-2">
                         <span>SSL</span>
                         <FilterBtn
                           btnRef={sslBtnRef}
                           active={selectedSslStatus !== "ALL"}
+                          currentTheme={currentTheme}
                           onClick={() => { const next = !showSslFilter; closeAllFilters(); if (next) setShowSslFilter(true); }}
                         />
                         <AnimatePresence>
@@ -803,6 +853,7 @@ const UrlTable = forwardRef(({
                             <FilterDropdown anchorRef={sslBtnRef} open={showSslFilter} options={sslOptions} value={selectedSslStatus}
                               onSelect={(v) => { setSelectedSslStatus(v); setShowSslFilter(false); }}
                               onClear={() => { setSelectedSslStatus("ALL"); setShowSslFilter(false); }}
+                              currentTheme={currentTheme}
                             />
                           )}
                         </AnimatePresence>
@@ -811,12 +862,13 @@ const UrlTable = forwardRef(({
                   )}
 
                   {!hiddenColumns.includes("status") && (
-                    <Th>
+                    <Th currentTheme={currentTheme}>
                       <div className="flex items-center gap-2">
                         <span>Status</span>
                         <FilterBtn
                           btnRef={statusBtnRef}
                           active={selectedStatus !== "ALL"}
+                          currentTheme={currentTheme}
                           onClick={() => { const next = !showStatusFilter; closeAllFilters(); if (next) setShowStatusFilter(true); }}
                         />
                         <AnimatePresence>
@@ -824,6 +876,7 @@ const UrlTable = forwardRef(({
                             <FilterDropdown anchorRef={statusBtnRef} open={showStatusFilter} options={statusOptions} value={selectedStatus}
                               onSelect={(v) => { setSelectedStatus(v); setShowStatusFilter(false); }}
                               onClear={() => { setSelectedStatus("ALL"); setShowStatusFilter(false); }}
+                              currentTheme={currentTheme}
                             />
                           )}
                         </AnimatePresence>
@@ -831,18 +884,19 @@ const UrlTable = forwardRef(({
                     </Th>
                   )}
 
-                  {!hiddenColumns.includes("globalStatus") && <Th><span>Global Status</span></Th>}
+                  {!hiddenColumns.includes("globalStatus") && <Th currentTheme={currentTheme}><span>Global Status</span></Th>}
 
                   {isSuperAdmin && (
                     <>
-                      {!hiddenColumns.includes("userEmail") && <Th>User Email</Th>}
+                      {!hiddenColumns.includes("userEmail") && <Th currentTheme={currentTheme}>User Email</Th>}
                       {!hiddenColumns.includes("userRole") && (
-                        <Th>
+                        <Th currentTheme={currentTheme}>
                           <div className="flex items-center gap-2">
                             <span>User Role</span>
                             <FilterBtn
                               btnRef={roleBtnRef}
                               active={selectedRole !== "ALL"}
+                              currentTheme={currentTheme}
                               onClick={() => { const next = !showRoleFilter; closeAllFilters(); if (next) setShowRoleFilter(true); }}
                             />
                             <AnimatePresence>
@@ -850,6 +904,7 @@ const UrlTable = forwardRef(({
                                 <FilterDropdown anchorRef={roleBtnRef} open={showRoleFilter} options={roleOptions} value={selectedRole}
                                   onSelect={(v) => { setSelectedRole(v); setShowRoleFilter(false); }}
                                   onClear={() => { setSelectedRole("ALL"); setShowRoleFilter(false); }}
+                                  currentTheme={currentTheme}
                                 />
                               )}
                             </AnimatePresence>
@@ -859,9 +914,9 @@ const UrlTable = forwardRef(({
                     </>
                   )}
 
-                  {!hiddenColumns.includes("statusCode")    && <Th style={{ textAlign: "center" }}>Status Code</Th>}
-                  {!hiddenColumns.includes("lastCheckedAt") && <Th>Last Check</Th>}
-                  {!isViewer && !hiddenColumns.includes("actions") && <Th style={{ textAlign: "center" }}>Actions</Th>}
+                  {!hiddenColumns.includes("statusCode")    && <Th currentTheme={currentTheme} style={{ textAlign: "center" }}>Status Code</Th>}
+                  {!hiddenColumns.includes("lastCheckedAt") && <Th currentTheme={currentTheme}>Last Check</Th>}
+                  {!isViewer && !hiddenColumns.includes("actions") && <Th currentTheme={currentTheme} style={{ textAlign: "center" }}>Actions</Th>}
                 </tr>
               </thead>
 
@@ -877,6 +932,7 @@ const UrlTable = forwardRef(({
                     siteLogs={siteLogs} siteStats={siteStats} theme={theme} colSpan={visibleColsCount}
                     handleGlobalCheck={handleGlobalCheck} globalCheckLoading={globalCheckLoading}
                     onRowClick={handleRowClick}
+                    currentTheme={currentTheme}
                   />
                 ))}
               </tbody>
@@ -892,9 +948,13 @@ const UrlTable = forwardRef(({
           value={selectedCategories[0] || "ALL"}
           onChange={(e) => { const v = e.target.value; setSelectedCategories(v === "ALL" ? ["ALL"] : [v]); }}
           className="flex-1 px-3 py-2.5 rounded-2xl outline-none"
-          style={{ background: "rgba(3,7,18,0.75)", border: "1px solid rgba(56,189,248,0.1)", color: "rgba(148,163,184,0.8)", ...monoLabel, fontSize: "10px", backdropFilter: "blur(12px)" }}
+          style={{ background: currentTheme.bgCard, border: `1px solid ${currentTheme.borderAccent}`, color: currentTheme.text, ...monoLabel, fontSize: "10px", fontWeight: 600, backdropFilter: "blur(12px)" }}
         >
-          {categories.map((cat) => <option key={cat} value={cat} style={{ background: "#030712" }}>{cat}</option>)}
+          {categories.map((cat) => (
+            <option key={cat} value={cat} style={{ background: currentTheme.bgPanel, color: currentTheme.text }}>
+              {cat}
+            </option>
+          ))}
         </select>
 
         <select
@@ -902,9 +962,13 @@ const UrlTable = forwardRef(({
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
           className="flex-1 px-3 py-2.5 rounded-2xl outline-none"
-          style={{ background: "rgba(3,7,18,0.75)", border: "1px solid rgba(56,189,248,0.1)", color: "rgba(148,163,184,0.8)", ...monoLabel, fontSize: "10px", backdropFilter: "blur(12px)" }}
+          style={{ background: currentTheme.bgCard, border: `1px solid ${currentTheme.borderAccent}`, color: currentTheme.text, ...monoLabel, fontSize: "10px", fontWeight: 600, backdropFilter: "blur(12px)" }}
         >
-          {statusOptions.map((status) => <option key={status} value={status} style={{ background: "#030712" }}>{status}</option>)}
+          {statusOptions.map((status) => (
+            <option key={status} value={status} style={{ background: currentTheme.bgPanel, color: currentTheme.text }}>
+              {status}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -913,8 +977,8 @@ const UrlTable = forwardRef(({
         {sortedData.map((item, idx) => {
           const isExpanded     = expandedSite === item._id;
           const isSelected     = selectedIds.includes(item._id);
-          const statusColorMap = { UP: "#34d399", SLOW: "#fbbf24", DOWN: "#f87171" };
-          const accentColor    = statusColorMap[item.status] || "rgba(148,163,184,0.3)";
+          const statusColorMap = { UP: currentTheme.success, SLOW: currentTheme.warning, DOWN: currentTheme.error };
+          const accentColor    = statusColorMap[item.status] || currentTheme.textSecondary;
 
           return (
             <motion.div
@@ -926,15 +990,15 @@ const UrlTable = forwardRef(({
               <div
                 className="relative rounded-2xl overflow-hidden transition-all duration-200"
                 style={{
-                  background: isSelected && selectionMode ? "rgba(56,189,248,0.06)" : "rgba(3,7,18,0.75)",
-                  border: isSelected && selectionMode ? "1px solid rgba(56,189,248,0.35)" : "1px solid rgba(56,189,248,0.1)",
+                  background: isSelected && selectionMode ? currentTheme.accentGlow : currentTheme.bgCard,
+                  border: isSelected && selectionMode ? `1px solid ${currentTheme.accent}` : `1px solid ${currentTheme.borderAccent}`,
                   backdropFilter: "blur(20px)",
-                  boxShadow: "0 0 24px rgba(56,189,248,0.03)",
+                  boxShadow: currentTheme.shadow,
                   cursor: selectionMode ? "pointer" : "default",
                 }}
               >
-                <div className="h-[1px]" style={{ background: `linear-gradient(90deg, transparent 0%, ${accentColor}55 40%, transparent 100%)` }} />
-                <div className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: `linear-gradient(to bottom, ${accentColor}70, transparent)` }} />
+                <div className="h-[1px]" style={{ background: `linear-gradient(90deg, transparent 0%, ${currentTheme.accent}55 40%, transparent 100%)` }} />
+                <div className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: `linear-gradient(to bottom, ${currentTheme.accent}70, transparent)` }} />
 
                 <div className="p-5 pl-6">
                   <div className="flex items-center justify-between mb-4">
@@ -942,35 +1006,35 @@ const UrlTable = forwardRef(({
                       <div
                         className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 mr-3 transition-all duration-200"
                         style={{
-                          border: isSelected ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.1)",
-                          background: isSelected ? "rgba(56,189,248,0.15)" : "transparent",
+                          border: isSelected ? `1px solid ${currentTheme.accent}` : `1px solid ${currentTheme.borderLight}`,
+                          background: isSelected ? currentTheme.accentGlow : "transparent",
                         }}
                       >
-                        {isSelected && <span style={{ color: "#38bdf8", fontSize: "8px" }}>✓</span>}
+                        {isSelected && <span style={{ color: currentTheme.accent, fontSize: "8px" }}>✓</span>}
                       </div>
                     )}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleToggleSite(item); }}
-                      style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", color: "#38bdf8", fontWeight: 400 }}
+                      style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", color: currentTheme.accent, fontWeight: 700 }}
                       className="hover:underline text-left flex items-center gap-2 flex-1"
                     >
-                      {item.domain}<ExpandChevron expanded={isExpanded} />
+                      {item.domain}<ExpandChevron expanded={isExpanded} currentTheme={currentTheme} />
                     </button>
-                    <StatusBadge status={item.status} />
+                    <StatusBadge status={item.status} currentTheme={currentTheme} />
                   </div>
 
-                  <a href={item.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="block mb-4 break-all hover:underline" style={{ ...monoLabel, fontSize: "9px", color: "rgba(56,189,248,0.4)" }}>{item.url}</a>
+                  <a href={item.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="block mb-4 break-all hover:underline" style={{ ...monoLabel, fontSize: "9px", color: currentTheme.accent, opacity: 0.85 }}>{item.url}</a>
 
                   <div className="grid grid-cols-2 gap-3 mb-4">
-                    {[{ label: "Status Code", value: item.statusCode != null ? item.statusCode : "--" }, { label: "SSL", value: <SslBadge item={item} /> }].map(({ label, value }) => (
-                      <div key={label} className="rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                        <div style={{ ...monoLabel, fontSize: "8px", color: "rgba(148,163,184,0.4)", marginBottom: "6px" }}>{label}</div>
-                        <div style={{ ...monoLabel, fontSize: "11px", color: "rgba(148,163,184,0.8)" }}>{value}</div>
+                    {[{ label: "Status Code", value: item.statusCode != null ? item.statusCode : "--" }, { label: "SSL", value: <SslBadge item={item} currentTheme={currentTheme} /> }].map(({ label, value }) => (
+                      <div key={label} className="rounded-xl px-3 py-2.5" style={{ background: currentTheme.bgInput, border: `1px solid ${currentTheme.borderLight}` }}>
+                        <div style={{ ...monoLabel, fontSize: "8px", color: currentTheme.textSecondary, marginBottom: "6px" }}>{label}</div>
+                        <div style={{ ...monoLabel, fontSize: "11px", color: currentTheme.text, fontWeight: 600 }}>{value}</div>
                       </div>
                     ))}
                   </div>
 
-                  <div style={{ borderTop: "1px solid rgba(56,189,248,0.06)", marginBottom: "16px" }} />
+                  <div style={{ borderTop: `1px solid ${currentTheme.borderAccent}`, marginBottom: "16px" }} />
 
                   <div className="flex items-center justify-between">
                     {!isViewer && (
@@ -978,14 +1042,14 @@ const UrlTable = forwardRef(({
                         whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                         onClick={(e) => { e.stopPropagation(); onEdit(item); }}
                         className="px-4 py-2 rounded-xl"
-                        style={{ ...monoLabel, fontSize: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.22)", color: "#38bdf8" }}
+                        style={{ ...monoLabel, fontSize: "10px", background: currentTheme.accentGlow, border: `1px solid ${currentTheme.borderAccent}`, color: currentTheme.accent, fontWeight: 700 }}
                       >
                         Edit
                       </motion.button>
                     )}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleToggleSite(item); }}
-                      style={{ ...monoLabel, fontSize: "10px", color: "rgba(56,189,248,0.6)" }}
+                      style={{ ...monoLabel, fontSize: "10px", color: currentTheme.accent, opacity: 0.9, fontWeight: 600 }}
                       className="hover:underline ml-auto"
                     >
                       {isExpanded ? "Hide Report ↑" : "View Report ↓"}
@@ -1000,7 +1064,7 @@ const UrlTable = forwardRef(({
                     initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                     className="mt-3 rounded-2xl overflow-hidden"
-                    style={{ background: "rgba(3,7,18,0.68)", border: "1px solid rgba(56,189,248,0.09)", backdropFilter: "blur(16px)" }}
+                    style={{ background: currentTheme.bgCard, border: `1px solid ${currentTheme.borderAccent}`, backdropFilter: "blur(16px)" }}
                   >
                     <div className="p-4">
                       {/* ── showFullDetailBtn=true for mobile card view ── */}
@@ -1041,7 +1105,7 @@ const FragmentRow = ({
   item, i, selectionMode, selectedIds, setSelectedIds, hiddenColumns,
   isSuperAdmin, isViewer, expandedSite, handleToggleSite, onPin, onEdit,
   onDelete, siteLogs, siteStats, theme, colSpan, handleGlobalCheck, globalCheckLoading,
-  onRowClick,
+  onRowClick, currentTheme,
 }) => {
   const isSelected = selectedIds.includes(item._id);
 
@@ -1054,20 +1118,20 @@ const FragmentRow = ({
         className="group transition-all duration-200"
         onClick={() => onRowClick(item._id)}
         style={{
-          borderTop: "1px solid rgba(56,189,248,0.045)",
+          borderTop: `1px solid ${currentTheme.borderAccent}`,
           cursor: selectionMode ? "pointer" : "default",
-          background: isSelected && selectionMode ? "rgba(56,189,248,0.05)" : "transparent",
-          boxShadow: isSelected && selectionMode ? "inset 2px 0 0 rgba(56,189,248,0.5)" : "none",
+          background: isSelected && selectionMode ? currentTheme.accentGlow : "transparent",
+          boxShadow: isSelected && selectionMode ? `inset 2px 0 0 ${currentTheme.accent}` : "none",
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = isSelected && selectionMode
-            ? "rgba(56,189,248,0.07)"
-            : "rgba(56,189,248,0.03)";
-          if (!isSelected) e.currentTarget.style.boxShadow = "inset 2px 0 0 rgba(56,189,248,0.25)";
+            ? currentTheme.accentGlow
+            : currentTheme.bgInput;
+          if (!isSelected) e.currentTarget.style.boxShadow = `inset 2px 0 0 ${currentTheme.accent}40`;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = isSelected && selectionMode ? "rgba(56,189,248,0.05)" : "transparent";
-          e.currentTarget.style.boxShadow  = isSelected && selectionMode ? "inset 2px 0 0 rgba(56,189,248,0.5)" : "none";
+          e.currentTarget.style.background = isSelected && selectionMode ? currentTheme.accentGlow : "transparent";
+          e.currentTarget.style.boxShadow  = isSelected && selectionMode ? `inset 2px 0 0 ${currentTheme.accent}` : "none";
         }}
       >
         {selectionMode && (
@@ -1075,33 +1139,33 @@ const FragmentRow = ({
             <div
               className="w-4 h-4 rounded flex items-center justify-center cursor-pointer transition-all duration-200"
               style={{
-                border: isSelected ? "1px solid rgba(56,189,248,0.5)" : "1px solid rgba(255,255,255,0.1)",
-                background: isSelected ? "rgba(56,189,248,0.15)" : "transparent",
+                border: isSelected ? `1px solid ${currentTheme.accent}` : `1px solid ${currentTheme.borderLight}`,
+                background: isSelected ? currentTheme.accentGlow : "transparent",
               }}
               onClick={(e) => {
                 e.stopPropagation();
                 onRowClick(item._id);
               }}
             >
-              {isSelected && <span style={{ color: "#38bdf8", fontSize: "8px" }}>✓</span>}
+              {isSelected && <span style={{ color: currentTheme.accent, fontSize: "8px" }}>✓</span>}
             </div>
           </td>
         )}
 
         {!hiddenColumns.includes("sno") && (
-          <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(248,250,252,0.78)" }}>{i + 1}</td>
+          <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: currentTheme.textSecondary, fontWeight: 600 }}>{i + 1}</td>
         )}
 
         {!hiddenColumns.includes("domain") && (
           <td className="px-4 py-3">
             <div className="flex items-center gap-2">
-              {item.pinned && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ color: "rgba(56,189,248,0.6)", fontSize: "11px" }}>📌</motion.span>}
+              {item.pinned && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ color: currentTheme.accent, opacity: 0.85, fontSize: "11px" }}>📌</motion.span>}
               <button
                 onClick={(e) => { e.stopPropagation(); handleToggleSite(item); }}
-                style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "#38bdf8", letterSpacing: "0.02em", fontWeight: 400 }}
+                style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: currentTheme.accent, letterSpacing: "0.02em", fontWeight: 600 }}
                 className="hover:underline text-left flex items-center gap-1.5"
               >
-                {item.domain}<ExpandChevron expanded={expandedSite === item._id} />
+                {item.domain}<ExpandChevron expanded={expandedSite === item._id} currentTheme={currentTheme} />
               </button>
             </div>
           </td>
@@ -1113,23 +1177,23 @@ const FragmentRow = ({
               href={item.url} target="_blank" rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
               className="hover:underline truncate block"
-              style={{ ...monoLabel, fontSize: "10px", color: "rgba(56,189,248,0.78)" }}
+              style={{ ...monoLabel, fontSize: "10px", color: currentTheme.accent, opacity: 0.92 }}
             >{item.url}</a>
           </td>
         )}
 
         {!hiddenColumns.includes("ssl") && (
-          <td className="px-4 py-3"><SslBadge item={item} /></td>
+          <td className="px-4 py-3"><SslBadge item={item} currentTheme={currentTheme} /></td>
         )}
 
         {!hiddenColumns.includes("status") && (
-          <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
+          <td className="px-4 py-3"><StatusBadge status={item.status} currentTheme={currentTheme} /></td>
         )}
 
         {!hiddenColumns.includes("globalStatus") && (
           <td className="px-4 py-3">
             <div className="flex items-center gap-2">
-              <StatusBadge status={item.globalStatus || "UNKNOWN"} />
+              <StatusBadge status={item.globalStatus || "UNKNOWN"} currentTheme={currentTheme} />
               <motion.button
                 whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
                 onClick={(e) => { e.stopPropagation(); handleGlobalCheck(item._id); }}
@@ -1137,9 +1201,10 @@ const FragmentRow = ({
                 title="Manual Global Check — runs real HTTP check for each region"
                 className="w-5 h-5 flex items-center justify-center rounded transition-all"
                 style={{
-                  background: globalCheckLoading === item._id ? "rgba(56,189,248,0.2)" : "rgba(56,189,248,0.08)",
-                  border: "1px solid rgba(56,189,248,0.2)",
-                  color: globalCheckLoading === item._id ? "#38bdf8" : "rgba(56,189,248,0.6)",
+                  background: globalCheckLoading === item._id ? currentTheme.accentGlow : currentTheme.bgInput,
+                  border: `1px solid ${currentTheme.borderAccent}`,
+                  color: currentTheme.accent,
+                  opacity: globalCheckLoading === item._id ? 1 : 0.85,
                   cursor: globalCheckLoading === item._id ? "wait" : "pointer",
                 }}
               >
@@ -1155,21 +1220,21 @@ const FragmentRow = ({
 
         {isSuperAdmin && (
           <>
-            {!hiddenColumns.includes("userEmail") && <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(248,250,252,0.78)" }}>{item.ownerEmail || "--"}</td>}
-            {!hiddenColumns.includes("userRole")  && <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: "rgba(248,250,252,0.82)" }}>{item.ownerRole  || "--"}</td>}
+            {!hiddenColumns.includes("userEmail") && <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: currentTheme.textSecondary, fontWeight: 500 }}>{item.ownerEmail || "--"}</td>}
+            {!hiddenColumns.includes("userRole")  && <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "10px", color: currentTheme.textSecondary, fontWeight: 500 }}>{item.ownerRole  || "--"}</td>}
           </>
         )}
 
         {!hiddenColumns.includes("statusCode") && (
-          <td className="px-4 py-3 text-center" style={{ ...monoLabel, fontSize: "11px", color: "rgba(148,163,184,0.6)" }}>
+          <td className="px-4 py-3 text-center" style={{ ...monoLabel, fontSize: "11px", color: currentTheme.text, fontWeight: 600 }}>
             {item.statusCode != null ? (
-              <span style={{ color: item.statusCode >= 200 && item.statusCode < 300 ? "#34d399" : item.statusCode >= 400 ? "#f87171" : "rgba(148,163,184,0.6)" }}>{item.statusCode}</span>
+              <span style={{ color: item.statusCode >= 200 && item.statusCode < 300 ? currentTheme.success : item.statusCode >= 400 ? currentTheme.error : currentTheme.text }}>{item.statusCode}</span>
             ) : "--"}
           </td>
         )}
 
         {!hiddenColumns.includes("lastCheckedAt") && (
-          <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "9px", color: "rgba(248,250,252,0.72)" }}>
+          <td className="px-4 py-3" style={{ ...monoLabel, fontSize: "9px", color: currentTheme.textSecondary, fontWeight: 500 }}>
             {item.lastCheckedAt ? new Date(item.lastCheckedAt).toLocaleString() : "-"}
           </td>
         )}
@@ -1177,13 +1242,13 @@ const FragmentRow = ({
         {!isViewer && !hiddenColumns.includes("actions") && (
           <td className="px-4 py-3">
             <div className="flex items-center justify-center gap-2">
-              <ActionBtn onClick={() => onPin(item._id)} title={item.pinned ? "Unpin" : "Pin"}>
+              <ActionBtn onClick={() => onPin(item._id)} title={item.pinned ? "Unpin" : "Pin"} currentTheme={currentTheme}>
                 {item.pinned ? <PinOff size={13} /> : <Pin size={13} />}
               </ActionBtn>
-              <ActionBtn onClick={() => onEdit(item)} title="Edit">
+              <ActionBtn onClick={() => onEdit(item)} title="Edit" currentTheme={currentTheme}>
                 <span style={{ fontSize: "12px" }}>✏️</span>
               </ActionBtn>
-              <ActionBtn onClick={() => onDelete(item)} title="Delete" danger>
+              <ActionBtn onClick={() => onDelete(item)} title="Delete" danger currentTheme={currentTheme}>
                 <Trash2 size={13} />
               </ActionBtn>
             </div>
@@ -1198,7 +1263,7 @@ const FragmentRow = ({
               <motion.div
                 initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                style={{ background: "rgba(56,189,248,0.018)", borderTop: "1px solid rgba(56,189,248,0.09)", borderBottom: "1px solid rgba(56,189,248,0.09)" }}
+                style={{ background: currentTheme.bgInput, borderTop: `1px solid ${currentTheme.borderAccent}`, borderBottom: `1px solid ${currentTheme.borderAccent}` }}
               >
                 <div className="p-5">
                   {/* ── showFullDetailBtn=true for desktop expanded row ── */}

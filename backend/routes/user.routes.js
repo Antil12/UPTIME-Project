@@ -6,9 +6,11 @@ import {
   getAllUsers,
   deleteUser,
   updateUserPassword,
-  updateUser,  
+  updateUser,
   getHiddenColumns,
   updateHiddenColumns,
+  getTheme,
+  updateTheme,
   getPinnedSites,
   pinSite,
   unpinSite,
@@ -18,8 +20,11 @@ const router = express.Router();
 
 // Only SUPERADMIN can manage users
 router.get("/hidden-columns", protect, getHiddenColumns);
-
 router.put("/hidden-columns", protect, updateHiddenColumns);
+
+// Theme preference routes
+router.get("/theme", protect, getTheme);
+router.put("/theme", protect, updateTheme);
 
 // Pinned sites routes
 router.get("/pinned-sites", protect, getPinnedSites);
@@ -27,16 +32,16 @@ router.post("/pin-site/:siteId", protect, pinSite);
 router.delete("/unpin-site/:siteId", protect, unpinSite);
 
 router.post("/create", protect, authorizePermission("canCreateUser"), createUser);
-
 router.get("/users", protect, authorizePermission("canCreateUser"), getAllUsers);
-
 router.delete("/:id", protect, authorizePermission("canEditUser"), deleteUser);
+
 router.put(
   "/:id/password",
   protect,
   authorizePermission("canEditUser"),
   updateUserPassword
 );
+
 router.put(
   "/:id",
   protect,

@@ -19,6 +19,7 @@ import {
 import AlertRoutingForm from "../components/AlertRoutingForm";
 import NotificationGroupSelect from "../components/NotificationGroupSelect";
 import { getUserNotificationGroups } from "../api/notificationGroupApi";
+import { useTheme } from "../contexts/ThemeContext";
 
 // ─── Font Loader ──────────────────────────────────────────────────────────────
 const FontLoader = () => {  
@@ -35,7 +36,7 @@ const FontLoader = () => {
 };
 
 // ─── Cursor Glow ──────────────────────────────────────────────────────────────
-const CursorGlow = () => {
+const CursorGlow = ({ currentTheme }) => {
   const x = useMotionValue(-400);
   const y = useMotionValue(-400);
   const sx = useSpring(x, { stiffness: 90, damping: 24 });
@@ -55,38 +56,38 @@ const CursorGlow = () => {
         translateX: "-50%", translateY: "-50%",
         width: 320, height: 320,
         borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(56,189,248,0.045) 0%, transparent 72%)",
+        background: `radial-gradient(circle, ${currentTheme.accent}0c 0%, transparent 72%)`,
       }}
     />
   );
 };
 
 // ─── Background ───────────────────────────────────────────────────────────────
-const Background = () => (
+const Background = ({ currentTheme }) => (
   <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-    <div className="absolute inset-0" style={{ background: "#030712" }} />
+    <div className="absolute inset-0" style={{ background: currentTheme.bg }} />
     <div className="absolute inset-0" style={{
-      background: "radial-gradient(ellipse 60% 40% at 50% 20%, rgba(56,189,248,0.045) 0%, transparent 100%)",
+      background: `radial-gradient(ellipse 60% 40% at 50% 20%, ${currentTheme.accent}0c 0%, transparent 100%)`,
     }} />
     <div className="absolute" style={{
       top: "62%", left: "16%", width: 320, height: 320,
-      background: "radial-gradient(circle, rgba(129,140,248,0.035) 0%, transparent 68%)",
+      background: `radial-gradient(circle, ${currentTheme.accentSecondary}09 0%, transparent 68%)`,
       filter: "blur(90px)",
     }} />
     <div className="absolute" style={{
       top: "18%", right: "12%", width: 260, height: 260,
-      background: "radial-gradient(circle, rgba(16,185,129,0.025) 0%, transparent 68%)",
+      background: `radial-gradient(circle, ${currentTheme.success}06 0%, transparent 68%)`,
       filter: "blur(80px)",
     }} />
     <div className="absolute inset-0" style={{
       backgroundImage:
-        "linear-gradient(rgba(148,163,184,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.025) 1px, transparent 1px)",
+        `linear-gradient(${currentTheme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${currentTheme.gridColor} 1px, transparent 1px)`,
       backgroundSize: "42px 42px",
     }} />
     <motion.div
       className="absolute inset-0"
       style={{
-        background: "linear-gradient(to bottom, transparent 48%, rgba(56,189,248,0.012) 50%, transparent 52%)",
+        background: `linear-gradient(to bottom, transparent 48%, ${currentTheme.accent}06 50%, transparent 52%)`,
       }}
       animate={{ y: ["-100%", "100%"] }}
       transition={{ duration: 6, repeat: Infinity, ease: "linear", repeatDelay: 2.5 }}
@@ -95,7 +96,7 @@ const Background = () => (
 );
 
 // ─── HUD Corner ───────────────────────────────────────────────────────────────
-const HUDCorner = ({ pos, delay = 0 }) => {
+const HUDCorner = ({ pos, delay = 0, currentTheme }) => {
   const cls = { tl: "top-4 left-4", tr: "top-4 right-4", bl: "bottom-4 left-4", br: "bottom-4 right-4" };
   const rot = { tl: "0deg", tr: "90deg", bl: "-90deg", br: "180deg" };
   return (
@@ -106,10 +107,10 @@ const HUDCorner = ({ pos, delay = 0 }) => {
       animate={{ opacity: 0.8, scale: 1 }}
       transition={{ delay, duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}
     >
-      <motion.div className="absolute top-0 left-0 h-[1.5px] bg-sky-400/80"
+      <motion.div className="absolute top-0 left-0 h-[1.5px]" style={{ background: currentTheme.accent, opacity: 0.8 }}
         initial={{ width: 0 }} animate={{ width: "100%" }}
         transition={{ delay: delay + 0.15, duration: 0.35 }} />
-      <motion.div className="absolute top-0 left-0 w-[1.5px] bg-sky-400/80"
+      <motion.div className="absolute top-0 left-0 w-[1.5px]" style={{ background: currentTheme.accent, opacity: 0.8 }}
         initial={{ height: 0 }} animate={{ height: "100%" }}
         transition={{ delay: delay + 0.15, duration: 0.35 }} />
     </motion.div>
@@ -163,7 +164,7 @@ const StatusDot = ({ color = "#34d399", label }) => (
     {label && (
       <span style={{
         fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
-        letterSpacing: "0.16em", color: `${color}88`, textTransform: "uppercase",
+        letterSpacing: "0.16em", color: `${color}cc`, textTransform: "uppercase", fontWeight: 500,
       }}>
         {label}
       </span>
@@ -172,31 +173,32 @@ const StatusDot = ({ color = "#34d399", label }) => (
 );
 
 // ─── Section Label ────────────────────────────────────────────────────────────
-const SectionLabel = ({ icon: Icon, label }) => (
+const SectionLabel = ({ icon: Icon, label, currentTheme }) => (
   <div className="flex items-center gap-3 mb-4">
     <div className="w-7 h-7 rounded-lg flex items-center justify-center border"
-      style={{ borderColor: "rgba(56,189,248,0.12)", background: "rgba(56,189,248,0.04)" }}>
-      <Icon size={13} className="text-sky-400" />
+      style={{ borderColor: currentTheme.borderAccent, background: currentTheme.accentGlow }}>
+      <Icon size={13} style={{ color: currentTheme.accent }} />
     </div>
     <span style={{
       fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
-      letterSpacing: "0.22em", color: "rgba(56,189,248,0.78)", textTransform: "uppercase",
+      letterSpacing: "0.22em", color: currentTheme.accent, textTransform: "uppercase", fontWeight: 600,
     }}>
       {label}
     </span>
-    <div className="flex-1 h-[1px]" style={{ background: "rgba(56,189,248,0.06)" }} />
+    <div className="flex-1 h-[1px]" style={{ background: currentTheme.borderAccent, opacity: 0.5 }} />
   </div>
 );
 
 // ─── HUD Input ────────────────────────────────────────────────────────────────
-const HudInput = ({ type = "text", placeholder, value, onChange, required, label, ...rest }) => (
+const HudInput = ({ type = "text", placeholder, value, onChange, required, label, currentTheme, ...rest }) => (
   <div className="relative group w-full">
     {label && (
-      <label className="block text-xs font-medium mb-2" style={{ 
+      <label className="block text-xs font-medium mb-2" style={{
         fontFamily: "'JetBrains Mono', monospace",
         letterSpacing: "0.1em",
-        color: "rgba(56,189,248,0.88)", 
-        textTransform: "uppercase"
+        color: currentTheme.accent,
+        textTransform: "uppercase",
+        fontWeight: 600
       }}>
         {label}
       </label>
@@ -210,20 +212,20 @@ const HudInput = ({ type = "text", placeholder, value, onChange, required, label
       {...rest}
       className="w-full px-4 py-3 rounded-xl outline-none transition-all duration-300"
       style={{
-        background: "rgba(255,255,255,0.022)",
-        border: "1px solid rgba(56,189,248,0.09)",
-        color: "white",
+        background: currentTheme.bgInput,
+        border: `1px solid ${currentTheme.borderLight}`,
+        color: currentTheme.text,
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: "12px",
         letterSpacing: "0.02em",
         backdropFilter: "blur(12px)",
       }}
       onFocus={e => {
-        e.target.style.border = "1px solid rgba(56,189,248,0.35)";
-        e.target.style.boxShadow = "0 0 0 3px rgba(56,189,248,0.06), 0 0 20px rgba(56,189,248,0.04)";
+        e.target.style.border = `1px solid ${currentTheme.accent}`;
+        e.target.style.boxShadow = `0 0 0 3px ${currentTheme.accentGlow}, 0 0 20px ${currentTheme.accentGlow}`;
       }}
       onBlur={e => {
-        e.target.style.border = "1px solid rgba(56,189,248,0.09)";
+        e.target.style.border = `1px solid ${currentTheme.borderLight}`;
         e.target.style.boxShadow = "none";
       }}
     />
@@ -248,7 +250,7 @@ export const CHECK_FREQUENCY_OPTIONS = [
 ];
 
 // ─── Generic Portal Dropdown ──────────────────────────────────────────────────
-const PortalDropdown = ({ value, onChange, options, placeholder, label }) => {
+const PortalDropdown = ({ value, onChange, options, placeholder, label, currentTheme }) => {
   const [open, setOpen] = useState(false);
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
   const triggerRef = useRef(null);
@@ -282,11 +284,12 @@ const PortalDropdown = ({ value, onChange, options, placeholder, label }) => {
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-xs font-medium mb-2" style={{ 
+        <label className="block text-xs font-medium mb-2" style={{
           fontFamily: "'JetBrains Mono', monospace",
           letterSpacing: "0.1em",
-          color: "rgba(56,189,248,0.88)", 
-          textTransform: "uppercase"
+          color: currentTheme.accent,
+          textTransform: "uppercase",
+          fontWeight: 600
         }}>
           {label}
         </label>
@@ -297,14 +300,14 @@ const PortalDropdown = ({ value, onChange, options, placeholder, label }) => {
         onClick={handleOpen}
         className="w-full px-4 py-3 rounded-xl outline-none transition-all duration-300 flex items-center justify-between"
         style={{
-          background: "rgba(255,255,255,0.022)",
-          border: open ? "1px solid rgba(56,189,248,0.35)" : "1px solid rgba(56,189,248,0.09)",
-          color: displayLabel ? "white" : "rgba(248,250,252,0.82)",
+          background: currentTheme.bgInput,
+          border: open ? `1px solid ${currentTheme.accent}` : `1px solid ${currentTheme.borderLight}`,
+          color: displayLabel ? currentTheme.text : currentTheme.textMuted,
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: "12px",
           letterSpacing: "0.02em",
           backdropFilter: "blur(12px)",
-          boxShadow: open ? "0 0 0 3px rgba(56,189,248,0.06), 0 0 20px rgba(56,189,248,0.04)" : "none",
+          boxShadow: open ? `0 0 0 3px ${currentTheme.accentGlow}, 0 0 20px ${currentTheme.accentGlow}` : "none",
           textAlign: "left",
         }}
       >
@@ -312,7 +315,7 @@ const PortalDropdown = ({ value, onChange, options, placeholder, label }) => {
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          style={{ color: "rgba(56,189,248,0.78)", flexShrink: 0 }}
+          style={{ color: currentTheme.accent, opacity: 0.78, flexShrink: 0 }}
         >
           <ChevronDown size={14} />
         </motion.span>
@@ -329,10 +332,10 @@ const PortalDropdown = ({ value, onChange, options, placeholder, label }) => {
               position: "absolute",
               top: dropPos.top, left: dropPos.left, width: dropPos.width,
               zIndex: 9999,
-              background: "rgba(3,7,18,0.97)",
-              border: "1px solid rgba(56,189,248,0.14)",
+              background: currentTheme.bgPanel,
+              border: `1px solid ${currentTheme.borderAccent}`,
               backdropFilter: "blur(28px)",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 24px rgba(56,189,248,0.05)",
+              boxShadow: currentTheme.shadow,
               borderRadius: "12px",
               overflow: "hidden",
               maxHeight: "260px",
@@ -353,16 +356,17 @@ const PortalDropdown = ({ value, onChange, options, placeholder, label }) => {
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: "11px",
                     letterSpacing: "0.06em",
-                    color: isSelected ? "#38bdf8" : "rgba(248,250,252,0.83)",
-                    background: isSelected ? "rgba(56,189,248,0.07)" : "transparent",
-                    borderTop: idx === 0 ? "none" : "1px solid rgba(56,189,248,0.045)",
-                    borderLeft: isSelected ? "2px solid rgba(56,189,248,0.45)" : "2px solid transparent",
+                    color: isSelected ? currentTheme.accent : currentTheme.textSecondary,
+                    background: isSelected ? currentTheme.accentGlow : "transparent",
+                    borderTop: idx === 0 ? "none" : `1px solid ${currentTheme.borderLight}`,
+                    borderLeft: isSelected ? `2px solid ${currentTheme.accent}` : "2px solid transparent",
+                    fontWeight: isSelected ? 600 : 400,
                   }}
-                  onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
+                  onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = currentTheme.bgInput; }}
                   onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
                 >
                   <span>{optLabel}</span>
-                  {isSelected && <span style={{ color: "#38bdf8", fontSize: "9px" }}>✓</span>}
+                  {isSelected && <span style={{ color: currentTheme.accent, fontSize: "9px" }}>✓</span>}
                 </button>
               );
             })}
@@ -380,7 +384,7 @@ const CATEGORY_OPTIONS = [
 ];
 
 // ─── Toggle Chip ──────────────────────────────────────────────────────────────
-const ToggleChip = ({ label, active, onClick, activeColor = "#38bdf8" }) => (
+const ToggleChip = ({ label, active, onClick, activeColor = "#38bdf8", currentTheme }) => (
   <motion.button
     type="button"
     onClick={onClick}
@@ -392,11 +396,11 @@ const ToggleChip = ({ label, active, onClick, activeColor = "#38bdf8" }) => (
       fontSize: "10px",
       letterSpacing: "0.1em",
       textTransform: "uppercase",
-      border: active ? `1px solid ${activeColor}55` : "1px solid rgba(56,189,248,0.08)",
+      border: active ? `1px solid ${activeColor}55` : `1px solid ${currentTheme.borderLight}`,
       background: active
         ? `linear-gradient(135deg, ${activeColor}18, ${activeColor}08)`
-        : "rgba(255,255,255,0.018)",
-      color: active ? activeColor : "rgba(248,250,252,0.82)",
+        : currentTheme.bgInput,
+      color: active ? activeColor : currentTheme.textSecondary,
       boxShadow: active ? `0 0 18px ${activeColor}18` : "none",
     }}
   >
@@ -414,6 +418,7 @@ const AddUrl = ({
   onSave,
   urls = [],
 }) => {
+  const { currentTheme } = useTheme();
   const [responseThresholdMs, setResponseThresholdMs] = useState("15000");
   const [alertChannels, setAlertChannels]             = useState([]);
   const [regions, setRegions]                         = useState([]);
@@ -661,17 +666,17 @@ const AddUrl = ({
       <FontLoader />
 
       <div
-        className="relative min-h-screen w-full overflow-hidden px-4 sm:px-6 lg:px-8 py-5 text-white"
-        style={{ background: "transparent" }}
+        className="relative min-h-screen w-full overflow-hidden px-4 sm:px-6 lg:px-8 py-5"
+        style={{ background: "transparent", color: currentTheme.text }}
       >
-        <Background />
-        <CursorGlow />
+        <Background currentTheme={currentTheme} />
+        <CursorGlow currentTheme={currentTheme} />
 
-        <OrbitRing radius={220} duration={20} dotCount={8}  color="#38bdf8" tilt={72} />
-        <OrbitRing radius={290} duration={30} dotCount={10} color="#818cf8" tilt={68} delay={1} />
+        <OrbitRing radius={220} duration={20} dotCount={8}  color={currentTheme.accent} tilt={72} />
+        <OrbitRing radius={290} duration={30} dotCount={10} color={currentTheme.accentSecondary} tilt={68} delay={1} />
 
         {["tl", "tr", "bl", "br"].map((p, i) => (
-          <HUDCorner key={p} pos={p} delay={0.1 + i * 0.05} />
+          <HUDCorner key={p} pos={p} delay={0.1 + i * 0.05} currentTheme={currentTheme} />
         ))}
 
         {/* ─── Page Content ─── */}
@@ -685,29 +690,29 @@ const AddUrl = ({
             className="mb-6"
           >
             <div className="flex items-center gap-3 mb-3">
-              <div className="h-[1px] w-8 bg-sky-400/20" />
+              <div className="h-[1px] w-8" style={{ background: currentTheme.accent, opacity: 0.2 }} />
               <span style={{
                 fontFamily: "'JetBrains Mono', monospace", fontSize: "8px",
-                letterSpacing: "0.28em", color: "rgba(56,189,248,0.42)", textTransform: "uppercase",
+                letterSpacing: "0.28em", color: currentTheme.accent, textTransform: "uppercase", fontWeight: 600,
               }}>
                 Configuration
               </span>
-              <div className="h-[1px] w-24 bg-sky-400/10" />
+              <div className="h-[1px] w-24" style={{ background: currentTheme.accent, opacity: 0.1 }} />
             </div>
 
             <div className="flex items-center justify-between">
               <h1 className="text-xl sm:text-2xl" style={{
                 fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
-                letterSpacing: "0.05em", textShadow: "0 0 24px rgba(56,189,248,0.08)",
+                letterSpacing: "0.05em", textShadow: `0 0 24px ${currentTheme.accent}14`, color: currentTheme.text,
               }}>
                 ADD WEBSITE
               </h1>
-              <StatusDot color="#34d399" label="Ready" />
+              <StatusDot color={currentTheme.success} label="Ready" />
             </div>
 
             <p className="mt-2" style={{
               fontFamily: "'JetBrains Mono', monospace", fontSize: "10px",
-              color: "rgba(248,250,252,0.88)", letterSpacing: "0.03em",
+              color: currentTheme.textSecondary, letterSpacing: "0.03em",
             }}>
               Configure uptime monitoring, alert channels, and regional tracking.
             </p>
@@ -720,25 +725,25 @@ const AddUrl = ({
             transition={{ delay: 0.08, duration: 0.45 }}
             className="mb-5 rounded-xl px-4 py-3 flex items-center justify-between"
             style={{
-              background: "rgba(3,7,18,0.64)", border: "1px solid rgba(56,189,248,0.08)",
-              backdropFilter: "blur(14px)", boxShadow: "0 0 18px rgba(56,189,248,0.02)",
+              background: currentTheme.bgCard, border: `1px solid ${currentTheme.borderAccent}`,
+              backdropFilter: "blur(14px)", boxShadow: currentTheme.shadow,
             }}
           >
             <div>
               <div style={{
                 fontFamily: "'Orbitron', sans-serif", fontWeight: 700,
-                fontSize: "11px", letterSpacing: "0.06em", color: "white",
+                fontSize: "11px", letterSpacing: "0.06em", color: currentTheme.text,
               }}>
                 SITE CONFIGURATION PANEL
               </div>
               <div style={{
                 fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
-                color: "rgba(248,250,252,0.82)", marginTop: "3px",
+                color: currentTheme.textSecondary, marginTop: "3px", fontWeight: 500,
               }}>
                 Fill all required fields to activate monitoring.
               </div>
             </div>
-            <StatusDot color="#38bdf8" label="Input Mode" />
+            <StatusDot color={currentTheme.accent} label="Input Mode" />
           </motion.div>
 
           {/* ─── Form ─── */}
@@ -752,16 +757,16 @@ const AddUrl = ({
                 transition={{ delay: 0.12, duration: 0.45 }}
                 className="rounded-xl p-5 relative overflow-visible"
                 style={{
-                  background: "rgba(3,7,18,0.72)",
-                  border: "1px solid rgba(56,189,248,0.09)",
+                  background: currentTheme.bgCard,
+                  border: `1px solid ${currentTheme.borderAccent}`,
                   backdropFilter: "blur(18px)",
-                  boxShadow: "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                  boxShadow: currentTheme.shadow,
                 }}
               >
                 <div className="absolute top-0 left-0 right-0 h-[1px]"
-                  style={{ background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.32) 30%, rgba(129,140,248,0.28) 70%, transparent 100%)" }} />
+                  style={{ background: currentTheme.gradientCard }} />
 
-                <SectionLabel icon={Globe2} label="Site Identity" />
+                <SectionLabel icon={Globe2} label="Site Identity" currentTheme={currentTheme} />
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <HudInput 
@@ -769,6 +774,7 @@ const AddUrl = ({
                     value={domain} 
                     onChange={(e) => setDomain(e.target.value)}
                     label="Domain"
+                    currentTheme={currentTheme}
                   />
                   <HudInput 
                     type="url" 
@@ -776,6 +782,7 @@ const AddUrl = ({
                     value={url} 
                     onChange={(e) => setUrl(e.target.value)}
                     label="URL"
+                    currentTheme={currentTheme}
                   />
                 </div>
 
@@ -783,7 +790,7 @@ const AddUrl = ({
                   <label className="block text-xs font-medium mb-2" style={{ 
                     fontFamily: "'JetBrains Mono', monospace",
                     letterSpacing: "0.1em",
-                    color: "rgba(56,189,248,0.88)", 
+                    color: currentTheme.accent, 
                     textTransform: "uppercase"
                   }}>
                     Category
@@ -798,6 +805,7 @@ const AddUrl = ({
                       }}
                       options={CATEGORY_OPTIONS}
                       placeholder="Select Category"
+                      currentTheme={currentTheme}
                     />
                     <HudInput
                       placeholder="Or enter manually"
@@ -806,6 +814,7 @@ const AddUrl = ({
                         setManualCategory(e.target.value);
                         setUseManualCategory(true);
                       }}
+                      currentTheme={currentTheme}
                     />
                   </div>
                 </div>
@@ -818,24 +827,24 @@ const AddUrl = ({
                 transition={{ delay: 0.18, duration: 0.45 }}
                 className="rounded-xl p-5 relative overflow-hidden"
                 style={{
-                  background: "rgba(3,7,18,0.72)",
-                  border: "1px solid rgba(56,189,248,0.09)",
+                  background: currentTheme.bgCard,
+                  border: `1px solid ${currentTheme.borderAccent}`,
                   backdropFilter: "blur(18px)",
-                  boxShadow: "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                  boxShadow: currentTheme.shadow,
                 }}
               >
                 <div className="absolute top-0 left-0 right-0 h-[1px]"
-                  style={{ background: "linear-gradient(90deg, transparent 0%, rgba(129,140,248,0.32) 30%, rgba(56,189,248,0.28) 70%, transparent 100%)" }} />
+                  style={{ background: currentTheme.gradientCard }} />
 
                 <div className="flex items-center justify-between mb-4">
-                  <SectionLabel icon={Zap} label="Performance Threshold" />
+                  <SectionLabel icon={Zap} label="Performance Threshold" currentTheme={currentTheme} />
                   <label className="flex items-center gap-2 cursor-pointer"
-                    style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: priority === 1 ? "#f87171" : "rgba(248,250,252,0.86)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: priority === 1 ? currentTheme.error : currentTheme.textSecondary, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>
                     <div
                       className="relative w-8 h-4 rounded-full cursor-pointer transition-all duration-300"
                       style={{
-                        background: priority === 1 ? "rgba(248,113,113,0.3)" : "rgba(255,255,255,0.06)",
-                        border: priority === 1 ? "1px solid rgba(248,113,113,0.4)" : "1px solid rgba(255,255,255,0.08)",
+                        background: priority === 1 ? currentTheme.errorBg : currentTheme.bgInput,
+                        border: priority === 1 ? `1px solid ${currentTheme.error}` : `1px solid ${currentTheme.borderLight}`,
                       }}
                       onClick={() => setPriority(priority === 1 ? 0 : 1)}
                     >
@@ -843,7 +852,7 @@ const AddUrl = ({
                         className="absolute top-0.5 w-3 h-3 rounded-full"
                         animate={{ left: priority === 1 ? "17px" : "2px" }}
                         transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                        style={{ background: priority === 1 ? "#f87171" : "rgba(148,163,184,0.4)", boxShadow: priority === 1 ? "0 0 6px rgba(248,113,113,0.6)" : "none" }}
+                        style={{ background: priority === 1 ? currentTheme.error : currentTheme.textMuted, boxShadow: priority === 1 ? `0 0 6px ${currentTheme.error}` : "none" }}
                       />
                     </div>
                     HIGH PRIORITY
@@ -870,24 +879,25 @@ const AddUrl = ({
                       min="5000"
                       max="60000"
                       label="Response Threshold"
+                      currentTheme={currentTheme}
                     />
                     {responseThresholdError && (
                       <motion.div
                         initial={{ opacity: 0, y: -4 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="mt-2"
-                        style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "#f87171", letterSpacing: "0.05em" }}
+                        style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: currentTheme.error, letterSpacing: "0.05em" }}
                       >
                         {responseThresholdError}
                       </motion.div>
                     )}
                     <div className="mt-2 flex items-center gap-2">
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(56,189,248,0.35)", letterSpacing: "0.08em" }}>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: currentTheme.textDim, letterSpacing: "0.08em" }}>
                         Default: 15s
                       </span>
                       {responseThresholdMs && (
                         <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                          style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(52,211,153,0.6)" }}>
+                          style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: currentTheme.success }}>
                           ✓
                         </motion.span>
                       )}
@@ -901,9 +911,10 @@ const AddUrl = ({
                       options={CHECK_FREQUENCY_OPTIONS}
                       placeholder="Select check interval"
                       label="Check Frequency"
+                      currentTheme={currentTheme}
                     />
                     <div className="mt-2">
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(56,189,248,0.35)", letterSpacing: "0.08em" }}>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: currentTheme.textDim, letterSpacing: "0.08em" }}>
                         Default: 1 min
                       </span>
                     </div>
@@ -918,26 +929,26 @@ const AddUrl = ({
                 transition={{ delay: 0.24, duration: 0.45 }}
                 className="rounded-xl p-5 relative overflow-hidden"
                 style={{
-                  background: "rgba(3,7,18,0.72)",
-                  border: "1px solid rgba(56,189,248,0.09)",
+                  background: currentTheme.bgCard,
+                  border: `1px solid ${currentTheme.borderAccent}`,
                   backdropFilter: "blur(18px)",
-                  boxShadow: "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                  boxShadow: currentTheme.shadow,
                 }}
               >
                 <div className="absolute top-0 left-0 right-0 h-[1px]"
-                  style={{ background: "linear-gradient(90deg, transparent 0%, rgba(16,185,129,0.32) 30%, rgba(56,189,248,0.28) 70%, transparent 100%)" }} />
+                  style={{ background: `linear-gradient(90deg, transparent 0%, ${currentTheme.success}32 30%, ${currentTheme.accent}28 70%, transparent 100%)` }} />
 
-                <SectionLabel icon={Bell} label="Notification Channels" />
+                <SectionLabel icon={Bell} label="Notification Channels" currentTheme={currentTheme} />
 
                 <div className="flex flex-wrap gap-2 mb-4">
                   {["email", "sms", "whatsapp", "voice"].map((ch) => (
-                    <ToggleChip key={ch} label={ch} active={alertChannels.includes(ch)} onClick={() => toggleChannel(ch)} />
+                    <ToggleChip key={ch} label={ch} active={alertChannels.includes(ch)} onClick={() => toggleChannel(ch)} currentTheme={currentTheme} />
                   ))}
                 </div>
 
                 {alertChannels.includes("email") && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mb-4">
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.72)", textTransform: "uppercase", marginBottom: "10px" }}>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", letterSpacing: "0.16em", color: currentTheme.accent, textTransform: "uppercase", marginBottom: "10px" }}>
                       <Mail size={10} style={{ display: "inline", marginRight: "6px" }} />
                       Alert Emails
                     </div>
@@ -948,7 +959,7 @@ const AddUrl = ({
                       value={selectedEmailGroups}
                       onChange={handleSetSelectedEmailGroups}
                       groups={notificationGroups}
-                      color="#38bdf8"
+                      color={currentTheme.accent}
                       icon={Mail}
                       loading={loadingNotificationGroups}
                       type="email"
@@ -957,7 +968,7 @@ const AddUrl = ({
                     
                     {/* Manual Email Entry */}
                     <div style={{ marginTop: "12px" }}>
-                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "7px", letterSpacing: "0.12em", color: "rgba(148,163,184,0.5)", textTransform: "uppercase", marginBottom: "8px" }}>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "7px", letterSpacing: "0.12em", color: currentTheme.textDim, textTransform: "uppercase", marginBottom: "8px" }}>
                         Or add email  manually
                       </div>
                       <div className="flex gap-2 mb-3">
@@ -973,11 +984,12 @@ const AddUrl = ({
                               if (v && !emailContacts.includes(v)) { setEmailContacts((p) => [...p, v]); setEmailInput(""); }
                             }
                           }}
+                          currentTheme={currentTheme}
                         />
                         <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                           onClick={() => { const v = emailInput.trim(); if (v && !emailContacts.includes(v)) { setEmailContacts((p) => [...p, v]); setEmailInput(""); } }}
                           className="px-3 rounded-xl flex items-center justify-center"
-                          style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "44px", height: "44px" }}>
+                          style={{ background: currentTheme.accentGlow, border: `1px solid ${currentTheme.accent}`, color: currentTheme.accent, minWidth: "44px", height: "44px" }}>
                           <Plus size={14} />
                         </motion.button>
                       </div>
@@ -985,9 +997,9 @@ const AddUrl = ({
                         {manualOnlyEmails.map((em, idx) => (
                           <motion.span key={idx} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
-                            style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.8)" }}>
+                            style={{ background: currentTheme.accentGlow, border: `1px solid ${currentTheme.accent}`, fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: currentTheme.textSecondary }}>
                             {em}
-                            <button type="button" onClick={() => setEmailContacts((p) => p.filter((x) => x !== em))} className="text-red-400/60 hover:text-red-400 transition-colors">
+                            <button type="button" onClick={() => setEmailContacts((p) => p.filter((x) => x !== em))} style={{ color: currentTheme.error }} className="hover:opacity-80 transition-colors">
                               <X size={9} />
                             </button>
                           </motion.span>
@@ -999,7 +1011,7 @@ const AddUrl = ({
 
                 {(alertChannels.includes("sms") || alertChannels.includes("whatsapp") || alertChannels.includes("voice")) && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", letterSpacing: "0.16em", color: "rgba(56,189,248,0.72)", textTransform: "uppercase", marginBottom: "10px" }}>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", letterSpacing: "0.16em", color: currentTheme.accent, textTransform: "uppercase", marginBottom: "10px" }}>
                       <Phone size={10} style={{ display: "inline", marginRight: "6px" }} />
                       Mobile Contacts
                     </div>
@@ -1010,7 +1022,7 @@ const AddUrl = ({
                       value={selectedPhoneGroups}
                       onChange={handleSetSelectedPhoneGroups}
                       groups={notificationGroups}
-                      color="#38bdf8"
+                      color={currentTheme.accent}
                       icon={Phone}
                       loading={loadingNotificationGroups}
                       type="phone"
@@ -1019,7 +1031,7 @@ const AddUrl = ({
                     
                     {/* Manual Phone Entry */}
                     <div style={{ marginTop: "12px" }}>
-                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "7px", letterSpacing: "0.12em", color: "rgba(148,163,184,0.5)", textTransform: "uppercase", marginBottom: "8px" }}>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "7px", letterSpacing: "0.12em", color: currentTheme.textDim, textTransform: "uppercase", marginBottom: "8px" }}>
                         Or add phone number manually
                       </div>
                       <div className="flex gap-2 mb-3">
@@ -1063,6 +1075,7 @@ const AddUrl = ({
                               }
                             }
                           }}
+                          currentTheme={currentTheme}
                          />
                         <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                           onClick={() => {
@@ -1093,7 +1106,7 @@ const AddUrl = ({
                             }
                           }}
                           className="px-3 rounded-xl flex items-center justify-center"
-                          style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)", color: "#38bdf8", minWidth: "44px", height: "44px" }}>
+                          style={{ background: currentTheme.accentGlow, border: `1px solid ${currentTheme.accent}`, color: currentTheme.accent, minWidth: "44px", height: "44px" }}>
                           <Plus size={14} />
                         </motion.button>
                       </div>
@@ -1102,15 +1115,15 @@ const AddUrl = ({
                           manualOnlyPhones.map((phone, idx) => (
                             <motion.span key={idx} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                               className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
-                              style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.8)" }}>
+                              style={{ background: currentTheme.accentGlow, border: `1px solid ${currentTheme.accent}`, fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: currentTheme.textSecondary }}>
                               {phone}
-                              <button type="button" onClick={() => setPhoneContacts((p) => p.filter((x) => x !== phone))} className="text-red-400/60 hover:text-red-400 transition-colors">
+                              <button type="button" onClick={() => setPhoneContacts((p) => p.filter((x) => x !== phone))} style={{ color: currentTheme.error }} className="hover:opacity-80 transition-colors">
                                 <X size={9} />
                               </button>
                             </motion.span>
                           ))
                         ) : (
-                          <span className="text-slate-500 text-sm font-mono">No phone numbers added yet</span>
+                          <span className="text-sm font-mono" style={{ color: currentTheme.textDim }}>No phone numbers added yet</span>
                         )}
                       </div>
 
@@ -1121,17 +1134,17 @@ const AddUrl = ({
                           animate={{ opacity: 1, y: 0 }}
                           className="mt-3 rounded-xl px-3 py-2"
                           style={{
-                            background: "rgba(239,68,68,0.1)",
-                            border: "1px solid rgba(239,68,68,0.3)",
+                            background: currentTheme.errorBg,
+                            border: `1px solid ${currentTheme.error}`,
                             backdropFilter: "blur(14px)",
                           }}
                         >
                           <div className="flex items-center gap-2">
-                            <ShieldAlert size={14} style={{ color: "#ef4444" }} />
+                            <ShieldAlert size={14} style={{ color: currentTheme.error }} />
                             <span style={{
                               fontFamily: "'JetBrains Mono', monospace",
                               fontSize: "9px",
-                              color: "#fca5a5",
+                              color: currentTheme.error,
                               letterSpacing: "0.02em",
                             }}>
                               {groupWarning}
@@ -1151,20 +1164,20 @@ const AddUrl = ({
                 transition={{ delay: 0.3, duration: 0.45 }}
                 className="rounded-xl p-5 relative overflow-hidden"
                 style={{
-                  background: "rgba(3,7,18,0.72)",
-                  border: "1px solid rgba(56,189,248,0.09)",
+                  background: currentTheme.bgCard,
+                  border: `1px solid ${currentTheme.borderAccent}`,
                   backdropFilter: "blur(18px)",
-                  boxShadow: "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                  boxShadow: currentTheme.shadow,
                 }}
               >
                 <div className="absolute top-0 left-0 right-0 h-[1px]"
-                  style={{ background: "linear-gradient(90deg, transparent 0%, rgba(129,140,248,0.32) 50%, transparent 100%)" }} />
+                  style={{ background: `linear-gradient(90deg, transparent 0%, ${currentTheme.accentSecondary}32 50%, transparent 100%)` }} />
 
-                <SectionLabel icon={MapPin} label="Monitoring Regions" />
+                <SectionLabel icon={MapPin} label="Monitoring Regions" currentTheme={currentTheme} />
 
                 <div className="flex flex-wrap gap-2 mb-4">
                   {["South America", "Australia", "North America", "Europe", "Asia", "Africa"].map((r) => (
-                    <ToggleChip key={r} label={r} active={regions.includes(r)} onClick={() => toggleRegion(r)} activeColor="#34d399" />
+                    <ToggleChip key={r} label={r} active={regions.includes(r)} onClick={() => toggleRegion(r)} activeColor={currentTheme.success} currentTheme={currentTheme} />
                   ))}
                 </div>
 
@@ -1172,8 +1185,8 @@ const AddUrl = ({
                   <div
                     className="relative w-8 h-4 rounded-full transition-all duration-300"
                     style={{
-                      background: alertIfAllRegionsDown ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.04)",
-                      border: alertIfAllRegionsDown ? "1px solid rgba(56,189,248,0.35)" : "1px solid rgba(255,255,255,0.07)",
+                      background: alertIfAllRegionsDown ? currentTheme.accentGlow : currentTheme.bgInput,
+                      border: alertIfAllRegionsDown ? `1px solid ${currentTheme.accent}` : `1px solid ${currentTheme.borderLight}`,
                     }}
                     onClick={() => setAlertIfAllRegionsDown(!alertIfAllRegionsDown)}
                   >
@@ -1182,14 +1195,14 @@ const AddUrl = ({
                       animate={{ left: alertIfAllRegionsDown ? "17px" : "2px" }}
                       transition={{ type: "spring", stiffness: 300, damping: 25 }}
                       style={{
-                        background: alertIfAllRegionsDown ? "#38bdf8" : "rgba(148,163,184,0.3)",
-                        boxShadow: alertIfAllRegionsDown ? "0 0 6px rgba(56,189,248,0.6)" : "none",
+                        background: alertIfAllRegionsDown ? currentTheme.accent : currentTheme.textMuted,
+                        boxShadow: alertIfAllRegionsDown ? `0 0 6px ${currentTheme.accent}` : "none",
                       }}
                     />
                   </div>
                   <span style={{
                     fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
-                    letterSpacing: "0.1em", color: alertIfAllRegionsDown ? "rgba(56,189,248,0.85)" : "rgba(248,250,252,0.8)",
+                    letterSpacing: "0.1em", color: alertIfAllRegionsDown ? currentTheme.accent : currentTheme.textSecondary,
                     textTransform: "uppercase",
                   }}>
                     Alert only if ALL regions are down
@@ -1204,22 +1217,22 @@ const AddUrl = ({
                 transition={{ delay: 0.33, duration: 0.45 }}
                 className="rounded-xl p-5 relative overflow-visible"
                 style={{
-                  background: "rgba(3,7,18,0.72)",
-                  border: "1px solid rgba(56,189,248,0.09)",
+                  background: currentTheme.bgCard,
+                  border: `1px solid ${currentTheme.borderAccent}`,
                   backdropFilter: "blur(18px)",
-                  boxShadow: "0 0 22px rgba(56,189,248,0.03), inset 0 1px 0 rgba(56,189,248,0.035)",
+                  boxShadow: currentTheme.shadow,
                 }}
               >
                 {/* purple-ish top gradient to visually differentiate */}
                 <div className="absolute top-0 left-0 right-0 h-[1px]"
                   style={{ background: "linear-gradient(90deg, transparent 0%, rgba(192,132,252,0.35) 30%, rgba(248,113,113,0.28) 70%, transparent 100%)" }} />
 
-                <SectionLabel icon={ShieldAlert} label="Alert Routing — Escalation Groups" />
+                <SectionLabel icon={ShieldAlert} label="Alert Routing — Escalation Groups" currentTheme={currentTheme} />
 
                 <p style={{
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: "9px",
-                  color: "rgba(248,250,252,0.32)",
+                  color: currentTheme.textDim,
                   letterSpacing: "0.05em",
                   marginBottom: "16px",
                   lineHeight: 1.6,
@@ -1240,10 +1253,10 @@ const AddUrl = ({
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="rounded-xl px-4 py-3 flex items-center gap-3"
-                  style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.18)", backdropFilter: "blur(12px)" }}
+                  style={{ background: currentTheme.errorBg, border: `1px solid ${currentTheme.error}`, backdropFilter: "blur(12px)" }}
                 >
-                  <X size={13} className="text-red-400 shrink-0" />
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(248,113,113,0.85)", letterSpacing: "0.02em" }}>
+                  <X size={13} style={{ color: currentTheme.error }} className="shrink-0" />
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: currentTheme.error, letterSpacing: "0.02em" }}>
                     {localError || urlError}
                   </span>
                 </motion.div>
@@ -1262,10 +1275,10 @@ const AddUrl = ({
                   className="w-full py-4 rounded-xl relative overflow-hidden"
                   style={{
                     background: submitted
-                      ? "linear-gradient(135deg, rgba(52,211,153,0.2), rgba(16,185,129,0.1))"
-                      : "linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(129,140,248,0.1) 100%)",
-                    border: submitted ? "1px solid rgba(52,211,153,0.35)" : "1px solid rgba(56,189,248,0.2)",
-                    boxShadow: submitted ? "0 0 28px rgba(52,211,153,0.1)" : "0 0 28px rgba(56,189,248,0.06)",
+                      ? currentTheme.successBg
+                      : currentTheme.gradientPrimary,
+                    border: submitted ? `1px solid ${currentTheme.success}` : `1px solid ${currentTheme.accent}`,
+                    boxShadow: submitted ? `0 0 28px ${currentTheme.success}20` : currentTheme.shadowGlow,
                     transition: "all 0.4s ease",
                   }}
                 >
@@ -1278,15 +1291,15 @@ const AddUrl = ({
                   <div className="relative flex items-center justify-center gap-3">
                     {submitted ? (
                       <>
-                        <CheckCircle2 size={15} className="text-emerald-400" />
-                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.12em", color: "#34d399" }}>
+                        <CheckCircle2 size={15} style={{ color: currentTheme.success }} />
+                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.12em", color: currentTheme.success }}>
                           SITE ADDED
                         </span>
                       </>
                     ) : (
                       <>
-                        <Link2 size={15} className="text-sky-400" />
-                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.12em", color: "white" }}>
+                        <Link2 size={15} style={{ color: currentTheme.accent }} />
+                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.12em", color: currentTheme.text }}>
                           ACTIVATE MONITORING
                         </span>
                       </>

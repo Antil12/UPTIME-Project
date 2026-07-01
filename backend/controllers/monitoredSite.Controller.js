@@ -1190,7 +1190,7 @@ export const getSlowAlertBatch = async (req, res) => {
 ===================================================================== */
 export const getDeletedLogs = async (req, res) => {
   try {
-    const { fromDate, toDate, q, page = 1, limit = 10 } = req.query;
+    const { fromDate, toDate, q, action, page = 1, limit = 10 } = req.query;
 
     let fromMs = null;
     let toMs   = null;
@@ -1256,7 +1256,7 @@ export const getDeletedLogs = async (req, res) => {
     };
 
     const qStr = q ? String(q).trim().toLowerCase() : "";
-    const filtered = qStr
+    let filtered = qStr
       ? formattedLogs.filter((l) =>
           (l.domain || "").toLowerCase().includes(qStr) ||
           (l.url    || "").toLowerCase().includes(qStr) ||
@@ -1264,6 +1264,11 @@ export const getDeletedLogs = async (req, res) => {
           (l.user   || "").toLowerCase().includes(qStr)
         )
       : formattedLogs;
+
+    // Filter by action if specified
+    if (action && action !== "all") {
+      filtered = filtered.filter((l) => l.action === action);
+    }
 
     const PAGE       = Math.max(1, parseInt(page,  10) || 1);
     const LIMIT      = Math.max(1, parseInt(limit, 10) || 10);

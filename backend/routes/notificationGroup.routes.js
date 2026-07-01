@@ -4,6 +4,7 @@ import {
   createNotificationGroup,
   getUserNotificationGroups,
   getAllNotificationGroups,
+  getOthersNotificationGroups,
   getNotificationGroup,
   updateNotificationGroup,
   deleteNotificationGroup,
@@ -14,14 +15,15 @@ const router = express.Router();
 // All routes require authentication
 router.use(protect);
 
+// ─── Admin: all groups (must come before /:id) ─────────────────────────────────
+router.get("/all", getAllNotificationGroups);
+router.get("/others-groups", getOthersNotificationGroups);
+
 // ─── User's own groups ────────────────────────────────────────────────────────
 router.post("/", createNotificationGroup);
 router.get("/my-groups", getUserNotificationGroups);
 router.get("/:id", getNotificationGroup);
 router.put("/:id", updateNotificationGroup);
 router.delete("/:id", deleteNotificationGroup);
-
-// ─── Admin: all groups ────────────────────────────────────────────────────────
-router.get("/admin/all-groups", getAllNotificationGroups);
 
 export default router;

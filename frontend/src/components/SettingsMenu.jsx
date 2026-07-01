@@ -10,9 +10,12 @@ import {
   User2,
   PanelTop,
   Activity,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useTheme } from "../contexts/ThemeContext";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -51,29 +54,55 @@ const getRoleConfig = (role = "USER") =>
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
-const GlassCard = ({ children, className = "", style = {}, ...rest }) => (
-  <div
-    className={`relative overflow-hidden rounded-2xl ${className}`}
-    style={{
-      background: "rgba(255,255,255,0.028)",
-      border: "1px solid rgba(255,255,255,0.07)",
-      backdropFilter: "blur(18px)",
-      ...style,
-    }}
-    {...rest}
-  >
-    {/* top-edge highlight */}
+const GlassCard = ({ children, className = "", style = {}, ...rest }) => {
+  const { currentTheme } = useTheme();
+  return (
     <div
-      aria-hidden
-      className="pointer-events-none absolute inset-x-0 top-0 h-px"
+      className={`relative overflow-hidden rounded-2xl ${className}`}
       style={{
-        background:
-          "linear-gradient(90deg,transparent 0%,rgba(56,189,248,.22) 35%,rgba(139,92,246,.18) 65%,transparent 100%)",
+        background: currentTheme.bgCard,
+        border: `1px solid ${currentTheme.border}`,
+        backdropFilter: "blur(18px)",
+        ...style,
       }}
-    />
-    {children}
-  </div>
-);
+      {...rest}
+    >
+      {/* top-edge highlight */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        style={{
+          background: currentTheme.gradientTopBar,
+        }}
+      />
+      {children}
+    </div>
+  );
+};
+
+const ToggleSwitch = ({ isOn, onToggle, accent = "#38bdf8" }) => {
+  const { currentTheme } = useTheme();
+  return (
+    <motion.button
+      whileTap={{ scale: 0.95 }}
+      onClick={onToggle}
+      className="relative w-12 h-6 rounded-full transition-colors duration-300"
+      style={{
+        background: isOn ? accent : currentTheme.bgInput,
+        border: `1px solid ${isOn ? accent : currentTheme.borderLight}`,
+      }}
+    >
+      <motion.div
+        animate={{ x: isOn ? 24 : 0 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        className="absolute top-1 w-4 h-4 rounded-full shadow-md"
+        style={{
+          background: isOn ? "#ffffff" : currentTheme.textMuted,
+        }}
+      />
+    </motion.button>
+  );
+};
 
 const SectionLabel = ({ children }) => (
   <div className="flex items-center gap-2 mb-2">
@@ -89,65 +118,69 @@ const SectionLabel = ({ children }) => (
 
 // ─── Menu Item ───────────────────────────────────────────────────────────────
 
-const MenuItem = ({ icon, accent = "#38bdf8", title, subtitle, onClick, delay = 0 }) => (
-  <motion.button
-    initial={{ opacity: 0, x: 10 }}
-    animate={{ opacity: 1, x: 0 }}
-    transition={{ delay, duration: 0.22 }}
-    whileHover={{ x: 2 }}
-    whileTap={{ scale: 0.985 }}
-    onClick={onClick}
-    className="w-full group relative overflow-hidden flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors duration-200"
-    style={{
-      background: "rgba(255,255,255,0.025)",
-      border: "1px solid rgba(255,255,255,0.06)",
-    }}
-  >
-    {/* hover glow */}
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"
+const MenuItem = ({ icon, accent = "#38bdf8", title, subtitle, onClick, delay = 0 }) => {
+  const { currentTheme } = useTheme();
+  return (
+    <motion.button
+      initial={{ opacity: 0, x: 10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay, duration: 0.22 }}
+      whileHover={{ x: 2 }}
+      whileTap={{ scale: 0.985 }}
+      onClick={onClick}
+      className="w-full group relative overflow-hidden flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors duration-200"
       style={{
-        background: `radial-gradient(ellipse 60% 80% at 10% 50%, ${accent}12, transparent)`,
+        background: currentTheme.bgInput,
+        border: `1px solid ${currentTheme.borderLight}`,
       }}
-    />
-
-    <div className="relative z-10 flex items-center gap-3 min-w-0">
+    >
+      {/* hover glow */}
       <div
-        className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"
         style={{
-          background: `${accent}12`,
-          border: `1px solid ${accent}20`,
+          background: `radial-gradient(ellipse 60% 80% at 10% 50%, ${accent}12, transparent)`,
         }}
-      >
-        {icon}
-      </div>
+      />
 
-      <div className="text-left min-w-0">
-        <p
-          className="text-white text-[11px] font-semibold tracking-wide truncate"
-          style={{ fontFamily: "'Orbitron',sans-serif", letterSpacing: ".04em" }}
-        >
-          {title}
-        </p>
-        <p
-          className="text-[9px] mt-0.5 truncate"
+      <div className="relative z-10 flex items-center gap-3 min-w-0">
+        <div
+          className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
           style={{
-            fontFamily: "'JetBrains Mono',monospace",
-            color: "rgba(148,163,184,.60)",
+            background: `${accent}12`,
+            border: `1px solid ${accent}20`,
           }}
         >
-          {subtitle}
-        </p>
-      </div>
-    </div>
+          {icon}
+        </div>
 
-    <ChevronRight
-      size={14}
-      className="relative z-10 shrink-0 text-slate-500 group-hover:text-slate-300 transition-colors duration-200"
-    />
-  </motion.button>
-);
+        <div className="text-left min-w-0">
+          <p
+            className="text-[11px] font-semibold tracking-wide truncate"
+            style={{ fontFamily: "'Orbitron',sans-serif", letterSpacing: ".04em", color: currentTheme.text }}
+          >
+            {title}
+          </p>
+          <p
+            className="text-[9px] mt-0.5 truncate"
+            style={{
+              fontFamily: "'JetBrains Mono',monospace",
+              color: currentTheme.textMuted,
+            }}
+          >
+            {subtitle}
+          </p>
+        </div>
+      </div>
+
+      <ChevronRight
+        size={14}
+        className="relative z-10 shrink-0 transition-colors duration-200"
+        style={{ color: currentTheme.textMuted }}
+      />
+    </motion.button>
+  );
+};
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
@@ -157,6 +190,7 @@ const SettingsMenu = ({ onLogout }) => {
   const navigate = useNavigate();
   const prefersReducedMotion = useReducedMotion();
   const closeTimeoutRef = useRef(null);
+  const { theme, toggleTheme, currentTheme } = useTheme();
 
   const user = (() => {
     try {
@@ -254,21 +288,20 @@ const SettingsMenu = ({ onLogout }) => {
         aria-expanded={open}
         className="relative flex items-center justify-center p-2 md:p-2.5 rounded-xl overflow-hidden"
         style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(56,189,248,0.15)",
+          background: currentTheme.bgInput,
+          border: `1px solid ${currentTheme.borderAccent}`,
           backdropFilter: "blur(16px)",
-          boxShadow: "0 0 20px rgba(56,189,248,0.05)",
+          boxShadow: currentTheme.shadow,
         }}
       >
         <div
           aria-hidden
           className="absolute inset-0"
           style={{
-            background:
-              "linear-gradient(135deg,rgba(56,189,248,.08) 0%,rgba(139,92,246,.06) 100%)",
+            background: `linear-gradient(135deg,${currentTheme.accent}12 0%,${currentTheme.accent}08 100%)`,
           }}
         />
-        <Settings size={17} className="relative z-10 text-white" />
+        <Settings size={17} className="relative z-10" style={{ color: currentTheme.text }} />
       </motion.button>
 
       {/* ── Panel + Overlay ────────────────────────────────────────────── */}
@@ -285,7 +318,7 @@ const SettingsMenu = ({ onLogout }) => {
               transition={{ duration: 0.2 }}
               onClick={handleClose}
               className="fixed inset-0 z-40"
-              style={{ background: "rgba(2,6,23,.72)", backdropFilter: "blur(6px)" }}
+              style={{ background: currentTheme.bgOverlay, backdropFilter: "blur(6px)" }}
               aria-hidden
             />
 
@@ -303,10 +336,10 @@ const SettingsMenu = ({ onLogout }) => {
               className="fixed top-0 right-0 h-full z-50 flex flex-col
                          w-[280px] sm:w-[320px] lg:w-[360px] overflow-hidden"
               style={{
-                background: "rgba(3,7,18,.94)",
-                borderLeft: "1px solid rgba(255,255,255,.06)",
+                background: currentTheme.bgPanel,
+                borderLeft: `1px solid ${currentTheme.border}`,
                 backdropFilter: "blur(24px)",
-                boxShadow: "-12px 0 48px rgba(0,0,0,.40)",
+                boxShadow: currentTheme.shadow,
               }}
             >
               {/* decorative bg */}
@@ -314,15 +347,13 @@ const SettingsMenu = ({ onLogout }) => {
                 <div
                   className="absolute inset-0"
                   style={{
-                    background:
-                      "radial-gradient(ellipse 70% 50% at 90% 0%,rgba(56,189,248,.07),transparent)",
+                    background: `radial-gradient(ellipse 70% 50% at 90% 0%,${currentTheme.accent}12,transparent)`,
                   }}
                 />
                 <div
                   className="absolute inset-0"
                   style={{
-                    backgroundImage:
-                      "linear-gradient(rgba(148,163,184,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.018) 1px,transparent 1px)",
+                    backgroundImage: `linear-gradient(${currentTheme.gridColor} 1px,transparent 1px),linear-gradient(90deg,${currentTheme.gridColor} 1px,transparent 1px)`,
                     backgroundSize: "40px 40px",
                   }}
                 />
@@ -330,20 +361,19 @@ const SettingsMenu = ({ onLogout }) => {
                 <div
                   className="absolute top-0 inset-x-0 h-px"
                   style={{
-                    background:
-                      "linear-gradient(90deg,transparent,rgba(56,189,248,.38) 30%,rgba(139,92,246,.30) 70%,transparent)",
+                    background: currentTheme.gradientTopBar,
                   }}
                 />
               </div>
 
               {/* ── Header ─────────────────────────────────────────────── */}
-              <div className="relative z-10 px-4 pt-4 pb-3 border-b border-white/[.05] shrink-0">
+              <div className="relative z-10 px-4 pt-4 pb-3 border-b shrink-0" style={{ borderColor: currentTheme.borderLight }}>
                 <div className="flex items-center justify-between">
                   <div>
                     <SectionLabel>Control Panel</SectionLabel>
                     <h2
-                      className="text-white text-base tracking-wider"
-                      style={{ fontFamily: "'Orbitron',sans-serif", fontWeight: 700 }}
+                      className="text-base tracking-wider"
+                      style={{ fontFamily: "'Orbitron',sans-serif", fontWeight: 700, color: currentTheme.text }}
                     >
                       SETTINGS
                     </h2>
@@ -357,11 +387,11 @@ const SettingsMenu = ({ onLogout }) => {
                     aria-label="Close settings"
                     className="w-9 h-9 rounded-xl flex items-center justify-center"
                     style={{
-                      background: "rgba(255,255,255,.04)",
-                      border: "1px solid rgba(255,255,255,.07)",
+                      background: currentTheme.bgInput,
+                      border: `1px solid ${currentTheme.borderLight}`,
                     }}
                   >
-                    <X size={15} className="text-slate-300" />
+                    <X size={15} style={{ color: currentTheme.textMuted }} />
                   </motion.button>
                 </div>
               </div>
@@ -382,19 +412,18 @@ const SettingsMenu = ({ onLogout }) => {
                         <div
                           className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-sm font-extrabold"
                           style={{
-                            fontFamily: "'Orbitron',sans-serif",
+                            fontFamily: "'Orbitron', sans-serif",
                             letterSpacing: ".06em",
-                            background:
-                              "linear-gradient(135deg,rgba(56,189,248,.95),rgba(139,92,246,.90))",
-                            boxShadow: "0 0 24px rgba(56,189,248,.22)",
+                            background: `linear-gradient(135deg,${currentTheme.accent},${currentTheme.accent})`,
+                            boxShadow: `0 0 24px ${currentTheme.accent}30`,
                           }}
                         >
                           {initials}
                         </div>
                         {/* online dot */}
                         <div
-                          className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#030712]"
-                          style={{ background: "#34d399" }}
+                          className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
+                          style={{ background: currentTheme.success, borderColor: currentTheme.bgSecondary }}
                         />
                       </div>
 
@@ -402,8 +431,8 @@ const SettingsMenu = ({ onLogout }) => {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <span
-                            className="text-white text-[11px] font-bold truncate max-w-[130px]"
-                            style={{ fontFamily: "'Orbitron',sans-serif", letterSpacing: ".04em" }}
+                            className="text-[11px] font-bold truncate max-w-[130px]"
+                            style={{ fontFamily: "'Orbitron',sans-serif", letterSpacing: ".04em", color: currentTheme.text }}
                           >
                             {user?.name || "User"}
                           </span>
@@ -421,17 +450,17 @@ const SettingsMenu = ({ onLogout }) => {
                           className="text-[9.5px] break-all"
                           style={{
                             fontFamily: "'JetBrains Mono',monospace",
-                            color: "rgba(148,163,184,.62)",
+                            color: currentTheme.textMuted,
                           }}
                         >
                           {user?.email || "—"}
                         </p>
 
                         <div className="mt-3 flex items-center gap-2">
-                          <Activity size={10} className="text-emerald-400" />
+                          <Activity size={10} style={{ color: currentTheme.success }} />
                           <span
-                            className="text-[8px] uppercase tracking-[.12em] text-emerald-400/75"
-                            style={{ fontFamily: "'JetBrains Mono',monospace" }}
+                            className="text-[8px] uppercase tracking-[.12em]"
+                            style={{ fontFamily: "'JetBrains Mono',monospace", color: currentTheme.success }}
                           >
                             Session Active
                           </span>
@@ -440,6 +469,57 @@ const SettingsMenu = ({ onLogout }) => {
                     </div>
                   </GlassCard>
                 </motion.div>
+
+                {/* Navigation */}
+                <div>
+                  <SectionLabel>Preferences</SectionLabel>
+                  <div className="space-y-2">
+                    <motion.div
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.08, duration: 0.22 }}
+                      className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5"
+                      style={{
+                        background: currentTheme.bgInput,
+                        border: `1px solid ${currentTheme.borderLight}`,
+                      }}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
+                          style={{
+                            background: `${theme === "dark" ? "#fbbf24" : "#6366f1"}12`,
+                            border: `1px solid ${theme === "dark" ? "#fbbf24" : "#6366f1"}20`,
+                          }}
+                        >
+                          {theme === "dark" ? <Sun size={16} className="text-amber-300" /> : <Moon size={16} className="text-indigo-300" />}
+                        </div>
+                        <div className="text-left min-w-0">
+                          <p
+                            className="text-[11px] font-semibold tracking-wide"
+                            style={{ fontFamily: "'Orbitron',sans-serif", letterSpacing: ".04em", color: currentTheme.text }}
+                          >
+                            {theme === "dark" ? "Light Theme" : "Dark Theme"}
+                          </p>
+                          <p
+                            className="text-[9px] mt-0.5"
+                            style={{
+                              fontFamily: "'JetBrains Mono',monospace",
+                              color: currentTheme.textMuted,
+                            }}
+                          >
+                            {theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                          </p>
+                        </div>
+                      </div>
+                      <ToggleSwitch
+                        isOn={theme === "dark"}
+                        onToggle={toggleTheme}
+                        accent={theme === "dark" ? "#fbbf24" : "#6366f1"}
+                      />
+                    </motion.div>
+                  </div>
+                </div>
 
                 {/* Navigation */}
                 <div>
@@ -471,23 +551,23 @@ const SettingsMenu = ({ onLogout }) => {
               </div>
 
               {/* ── Footer ─────────────────────────────────────────────── */}
-              <div className="relative z-10 px-4 pb-4 pt-3 border-t border-white/[.04] shrink-0">
-                <GlassCard className="p-3" style={{ background: "rgba(255,255,255,.018)" }}>
+              <div className="relative z-10 px-4 pb-4 pt-3 border-t shrink-0" style={{ borderColor: currentTheme.borderLight }}>
+                <GlassCard className="p-3" style={{ background: currentTheme.bgInput }}>
                   <div className="flex items-center justify-between mb-3 px-0.5">
                     <div className="flex items-center gap-1.5">
-                      <PanelTop size={12} className="text-sky-400/60" />
+                      <PanelTop size={12} style={{ color: currentTheme.accent }} />
                       <span
-                        className="text-[8.5px] uppercase tracking-[.12em] text-slate-400/60"
-                        style={{ fontFamily: "'JetBrains Mono',monospace" }}
+                        className="text-[8.5px] uppercase tracking-[.12em]"
+                        style={{ fontFamily: "'JetBrains Mono',monospace", color: currentTheme.textMuted }}
                       >
                         Secure Session
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ background: currentTheme.success }} />
                       <span
-                        className="text-[8.5px] text-emerald-400/70"
-                        style={{ fontFamily: "'JetBrains Mono',monospace" }}
+                        className="text-[8.5px]"
+                        style={{ fontFamily: "'JetBrains Mono',monospace", color: currentTheme.success }}
                       >
                         Online
                       </span>
@@ -504,19 +584,20 @@ const SettingsMenu = ({ onLogout }) => {
                         className="space-y-2"
                       >
                         <p
-                          className="text-center text-[9px] text-red-300/80 tracking-wide"
-                          style={{ fontFamily: "'JetBrains Mono',monospace" }}
+                          className="text-center text-[9px] tracking-wide"
+                          style={{ fontFamily: "'JetBrains Mono',monospace", color: currentTheme.error }}
                         >
                           Confirm logout?
                         </p>
                         <div className="flex gap-2">
                           <button
                             onClick={() => setLogoutConfirm(false)}
-                            className="flex-1 py-2 rounded-xl text-[10px] text-slate-300 transition-colors duration-150"
+                            className="flex-1 py-2 rounded-xl text-[10px] transition-colors duration-150"
                             style={{
                               fontFamily: "'JetBrains Mono',monospace",
-                              background: "rgba(255,255,255,.05)",
-                              border: "1px solid rgba(255,255,255,.08)",
+                              background: currentTheme.bgInput,
+                              border: `1px solid ${currentTheme.borderLight}`,
+                              color: currentTheme.textMuted,
                             }}
                           >
                             Cancel
@@ -524,11 +605,12 @@ const SettingsMenu = ({ onLogout }) => {
                           <motion.button
                             whileTap={{ scale: 0.97 }}
                             onClick={handleLogoutClick}
-                            className="flex-1 py-2 rounded-xl text-[10px] font-semibold text-red-300 flex items-center justify-center gap-1.5 transition-all duration-150"
+                            className="flex-1 py-2 rounded-xl text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all duration-150"
                             style={{
                               fontFamily: "'JetBrains Mono',monospace",
-                              background: "rgba(239,68,68,.12)",
-                              border: "1px solid rgba(239,68,68,.28)",
+                              background: currentTheme.errorBg,
+                              border: `1px solid ${currentTheme.error}`,
+                              color: currentTheme.error,
                             }}
                           >
                             <LogOut size={12} />
@@ -548,9 +630,9 @@ const SettingsMenu = ({ onLogout }) => {
                         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] transition-all duration-200"
                         style={{
                           fontFamily: "'JetBrains Mono',monospace",
-                          background: "rgba(239,68,68,.07)",
-                          border: "1px solid rgba(239,68,68,.16)",
-                          color: "#fca5a5",
+                          background: currentTheme.errorBg,
+                          border: `1px solid ${currentTheme.error}`,
+                          color: currentTheme.error,
                         }}
                       >
                         <LogOut size={13} />

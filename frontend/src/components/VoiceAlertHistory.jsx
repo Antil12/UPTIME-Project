@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function VoiceAlertHistory({ monitorId }) {
+  const { currentTheme } = useTheme();
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -47,7 +49,7 @@ export default function VoiceAlertHistory({ monitorId }) {
     <div style={{
       fontFamily: "'JetBrains Mono', monospace",
       fontSize: "12px",
-      color: "rgba(148, 163, 184, 0.8)"
+      color: currentTheme.textSecondary
     }}>
       <div style={{ 
         display: "flex", 
@@ -58,7 +60,7 @@ export default function VoiceAlertHistory({ monitorId }) {
         <h2 style={{ 
           fontSize: "14px", 
           fontWeight: 600, 
-          color: "white",
+          color: currentTheme.text,
           letterSpacing: "0.02em"
         }}>
           Voice Alert History
@@ -71,9 +73,9 @@ export default function VoiceAlertHistory({ monitorId }) {
               style={{
                 padding: "6px 12px",
                 borderRadius: "6px",
-                background: filter === f ? "rgba(56, 189, 248, 0.15)" : "rgba(255, 255, 255, 0.05)",
-                border: filter === f ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(255, 255, 255, 0.1)",
-                color: filter === f ? "#38bdf8" : "rgba(148, 163, 184, 0.7)",
+                background: filter === f ? currentTheme.accentGlow : currentTheme.bgInput,
+                border: filter === f ? `1px solid ${currentTheme.accent}40` : `1px solid ${currentTheme.borderLight}`,
+                color: filter === f ? currentTheme.accent : currentTheme.textMuted,
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: "10px",
                 fontWeight: 500,
@@ -82,10 +84,10 @@ export default function VoiceAlertHistory({ monitorId }) {
                 transition: "all 0.15s"
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = filter === f ? "rgba(56, 189, 248, 0.2)" : "rgba(255, 255, 255, 0.08)";
+                e.currentTarget.style.background = filter === f ? `${currentTheme.accent}25` : currentTheme.bgInput;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = filter === f ? "rgba(56, 189, 248, 0.15)" : "rgba(255, 255, 255, 0.05)";
+                e.currentTarget.style.background = filter === f ? currentTheme.accentGlow : currentTheme.bgInput;
               }}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -98,7 +100,7 @@ export default function VoiceAlertHistory({ monitorId }) {
         <div style={{ 
           padding: "40px", 
           textAlign: "center", 
-          color: "rgba(148, 163, 184, 0.5)" 
+          color: currentTheme.textDim 
         }}>
           Loading alerts...
         </div>
@@ -106,7 +108,7 @@ export default function VoiceAlertHistory({ monitorId }) {
         <div style={{ 
           padding: "40px", 
           textAlign: "center", 
-          color: "rgba(148, 163, 184, 0.5)" 
+          color: currentTheme.textDim 
         }}>
           No voice alerts
         </div>
@@ -118,8 +120,8 @@ export default function VoiceAlertHistory({ monitorId }) {
               style={{
                 padding: "16px",
                 borderRadius: "12px",
-                background: "rgba(3, 7, 18, 0.6)",
-                border: `1px solid ${getStatusBorderColor(alert.status)}`,
+                background: currentTheme.bgCard,
+                border: `1px solid ${getStatusBorderColor(alert.status, currentTheme)}`,
                 backdropFilter: "blur(8px)"
               }}
             >
@@ -133,9 +135,9 @@ export default function VoiceAlertHistory({ monitorId }) {
                   <span style={{
                     padding: "4px 8px",
                     borderRadius: "4px",
-                    background: getStatusBackgroundColor(alert.status),
-                    border: `1px solid ${getStatusBorderColor(alert.status)}`,
-                    color: getStatusTextColor(alert.status),
+                    background: getStatusBackgroundColor(alert.status, currentTheme),
+                    border: `1px solid ${getStatusBorderColor(alert.status, currentTheme)}`,
+                    color: getStatusTextColor(alert.status, currentTheme),
                     fontSize: "10px",
                     fontWeight: 500,
                     letterSpacing: "0.04em"
@@ -145,9 +147,9 @@ export default function VoiceAlertHistory({ monitorId }) {
                   <span style={{
                     padding: "4px 8px",
                     borderRadius: "4px",
-                    background: getSeverityBackgroundColor(alert.severity),
-                    border: `1px solid ${getSeverityBorderColor(alert.severity)}`,
-                    color: getSeverityTextColor(alert.severity),
+                    background: getSeverityBackgroundColor(alert.severity, currentTheme),
+                    border: `1px solid ${getSeverityBorderColor(alert.severity, currentTheme)}`,
+                    color: getSeverityTextColor(alert.severity, currentTheme),
                     fontSize: "10px",
                     fontWeight: 500,
                     letterSpacing: "0.04em"
@@ -158,14 +160,14 @@ export default function VoiceAlertHistory({ monitorId }) {
               </div>
               
               <div style={{ marginBottom: "12px" }}>
-                <p style={{ marginBottom: "4px" }}>
-                  <strong style={{ color: "rgba(148, 163, 184, 0.9)" }}>Recipient:</strong> {alert.recipientName || 'N/A'} ({alert.recipientPhone})
+                <p style={{ marginBottom: "4px", color: currentTheme.textSecondary }}>
+                  <strong style={{ color: currentTheme.text, fontWeight: 600 }}>Recipient:</strong> {alert.recipientName || 'N/A'} ({alert.recipientPhone})
                 </p>
-                <p style={{ marginBottom: "4px" }}>
-                  <strong style={{ color: "rgba(148, 163, 184, 0.9)" }}>Message:</strong> {alert.alertMessage}
+                <p style={{ marginBottom: "4px", color: currentTheme.textSecondary }}>
+                  <strong style={{ color: currentTheme.text, fontWeight: 600 }}>Message:</strong> {alert.alertMessage}
                 </p>
-                <p>
-                  <strong style={{ color: "rgba(148, 163, 184, 0.9)" }}>Type:</strong> {alert.alertType}
+                <p style={{ color: currentTheme.textSecondary }}>
+                  <strong style={{ color: currentTheme.text, fontWeight: 600 }}>Type:</strong> {alert.alertType}
                 </p>
               </div>
 
@@ -175,19 +177,19 @@ export default function VoiceAlertHistory({ monitorId }) {
                 marginBottom: "12px",
                 padding: "12px",
                 borderRadius: "8px",
-                background: "rgba(255, 255, 255, 0.02)",
-                border: "1px solid rgba(255, 255, 255, 0.05)"
+                background: currentTheme.bgInput,
+                border: `1px solid ${currentTheme.borderLight}`
               }}>
                 <div>
                   <label style={{ 
                     display: "block", 
                     fontSize: "9px", 
-                    color: "rgba(148, 163, 184, 0.5)",
+                    color: currentTheme.textDim,
                     marginBottom: "2px"
                   }}>
                     Duration
                   </label>
-                  <value style={{ fontSize: "11px", color: "rgba(148, 163, 184, 0.8)" }}>
+                  <value style={{ fontSize: "11px", color: currentTheme.textSecondary }}>
                     {alert.callDuration || '—'}s
                   </value>
                 </div>
@@ -195,12 +197,12 @@ export default function VoiceAlertHistory({ monitorId }) {
                   <label style={{ 
                     display: "block", 
                     fontSize: "9px", 
-                    color: "rgba(148, 163, 184, 0.5)",
+                    color: currentTheme.textDim,
                     marginBottom: "2px"
                   }}>
                     Attempts
                   </label>
-                  <value style={{ fontSize: "11px", color: "rgba(148, 163, 184, 0.8)" }}>
+                  <value style={{ fontSize: "11px", color: currentTheme.textSecondary }}>
                     {alert.attemptCount}/{alert.maxRetries}
                   </value>
                 </div>
@@ -208,12 +210,12 @@ export default function VoiceAlertHistory({ monitorId }) {
                   <label style={{ 
                     display: "block", 
                     fontSize: "9px", 
-                    color: "rgba(148, 163, 184, 0.5)",
+                    color: currentTheme.textDim,
                     marginBottom: "2px"
                   }}>
                     Called
                   </label>
-                  <value style={{ fontSize: "11px", color: "rgba(148, 163, 184, 0.8)" }}>
+                  <value style={{ fontSize: "11px", color: currentTheme.textSecondary }}>
                     {alert.callStartedAt ? new Date(alert.callStartedAt).toLocaleString() : '—'}
                   </value>
                 </div>
@@ -226,9 +228,9 @@ export default function VoiceAlertHistory({ monitorId }) {
                     style={{
                       padding: "8px 16px",
                       borderRadius: "6px",
-                      background: "rgba(56, 189, 248, 0.1)",
-                      border: "1px solid rgba(56, 189, 248, 0.2)",
-                      color: "#38bdf8",
+                      background: currentTheme.accentGlow,
+                      border: `1px solid ${currentTheme.accent}30`,
+                      color: currentTheme.accent,
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: "10px",
                       fontWeight: 500,
@@ -237,10 +239,10 @@ export default function VoiceAlertHistory({ monitorId }) {
                       transition: "all 0.15s"
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "rgba(56, 189, 248, 0.15)";
+                      e.currentTarget.style.background = `${currentTheme.accent}20`;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "rgba(56, 189, 248, 0.1)";
+                      e.currentTarget.style.background = currentTheme.accentGlow;
                     }}
                   >
                     Retry
@@ -251,9 +253,9 @@ export default function VoiceAlertHistory({ monitorId }) {
                   style={{
                     padding: "8px 16px",
                     borderRadius: "6px",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    color: "rgba(148, 163, 184, 0.7)",
+                    background: currentTheme.bgInput,
+                    border: `1px solid ${currentTheme.borderLight}`,
+                    color: currentTheme.textMuted,
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: "10px",
                     fontWeight: 500,
@@ -262,10 +264,12 @@ export default function VoiceAlertHistory({ monitorId }) {
                     transition: "all 0.15s"
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                    e.currentTarget.style.background = currentTheme.bgInput;
+                    e.currentTarget.style.color = currentTheme.textSecondary;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                    e.currentTarget.style.background = currentTheme.bgInput;
+                    e.currentTarget.style.color = currentTheme.textMuted;
                   }}
                 >
                   Details
@@ -292,68 +296,68 @@ function formatStatus(status) {
   return map[status] || status;
 }
 
-function getStatusBackgroundColor(status) {
+function getStatusBackgroundColor(status, currentTheme) {
   const colors = {
-    queued: 'rgba(148, 163, 184, 0.1)',
-    dialing: 'rgba(56, 189, 248, 0.1)',
-    ringing: 'rgba(56, 189, 248, 0.1)',
-    answered: 'rgba(52, 211, 153, 0.1)',
-    completed: 'rgba(52, 211, 153, 0.1)',
-    failed: 'rgba(248, 113, 113, 0.1)',
-    missed: 'rgba(248, 113, 113, 0.1)'
+    queued: currentTheme.textDim,
+    dialing: currentTheme.accentGlow,
+    ringing: currentTheme.accentGlow,
+    answered: currentTheme.successBg,
+    completed: currentTheme.successBg,
+    failed: currentTheme.errorBg,
+    missed: currentTheme.errorBg
   };
-  return colors[status] || 'rgba(148, 163, 184, 0.1)';
+  return colors[status] || currentTheme.textDim;
 }
 
-function getStatusBorderColor(status) {
+function getStatusBorderColor(status, currentTheme) {
   const colors = {
-    queued: 'rgba(148, 163, 184, 0.2)',
-    dialing: 'rgba(56, 189, 248, 0.2)',
-    ringing: 'rgba(56, 189, 248, 0.2)',
-    answered: 'rgba(52, 211, 153, 0.2)',
-    completed: 'rgba(52, 211, 153, 0.2)',
-    failed: 'rgba(248, 113, 113, 0.2)',
-    missed: 'rgba(248, 113, 113, 0.2)'
+    queued: currentTheme.border,
+    dialing: `${currentTheme.accent}30`,
+    ringing: `${currentTheme.accent}30`,
+    answered: `${currentTheme.success}30`,
+    completed: `${currentTheme.success}30`,
+    failed: `${currentTheme.error}30`,
+    missed: `${currentTheme.error}30`
   };
-  return colors[status] || 'rgba(148, 163, 184, 0.2)';
+  return colors[status] || currentTheme.border;
 }
 
-function getStatusTextColor(status) {
+function getStatusTextColor(status, currentTheme) {
   const colors = {
-    queued: 'rgba(148, 163, 184, 0.8)',
-    dialing: '#38bdf8',
-    ringing: '#38bdf8',
-    answered: '#34d399',
-    completed: '#34d399',
-    failed: '#f87171',
-    missed: '#f87171'
+    queued: currentTheme.textSecondary,
+    dialing: currentTheme.accent,
+    ringing: currentTheme.accent,
+    answered: currentTheme.success,
+    completed: currentTheme.success,
+    failed: currentTheme.error,
+    missed: currentTheme.error
   };
-  return colors[status] || 'rgba(148, 163, 184, 0.8)';
+  return colors[status] || currentTheme.textSecondary;
 }
 
-function getSeverityBackgroundColor(severity) {
+function getSeverityBackgroundColor(severity, currentTheme) {
   const colors = {
-    critical: 'rgba(248, 113, 113, 0.1)',
-    warning: 'rgba(251, 191, 36, 0.1)',
-    info: 'rgba(56, 189, 248, 0.1)'
+    critical: currentTheme.errorBg,
+    warning: `${currentTheme.warning}12`,
+    info: currentTheme.accentGlow
   };
-  return colors[severity] || 'rgba(148, 163, 184, 0.1)';
+  return colors[severity] || currentTheme.textDim;
 }
 
-function getSeverityBorderColor(severity) {
+function getSeverityBorderColor(severity, currentTheme) {
   const colors = {
-    critical: 'rgba(248, 113, 113, 0.2)',
-    warning: 'rgba(251, 191, 36, 0.2)',
-    info: 'rgba(56, 189, 248, 0.2)'
+    critical: `${currentTheme.error}30`,
+    warning: `${currentTheme.warning}30`,
+    info: `${currentTheme.accent}30`
   };
-  return colors[severity] || 'rgba(148, 163, 184, 0.2)';
+  return colors[severity] || currentTheme.border;
 }
 
-function getSeverityTextColor(severity) {
+function getSeverityTextColor(severity, currentTheme) {
   const colors = {
-    critical: '#f87171',
-    warning: '#fbbf24',
-    info: '#38bdf8'
+    critical: currentTheme.error,
+    warning: currentTheme.warning,
+    info: currentTheme.accent
   };
-  return colors[severity] || 'rgba(148, 163, 184, 0.8)';
+  return colors[severity] || currentTheme.textSecondary;
 }

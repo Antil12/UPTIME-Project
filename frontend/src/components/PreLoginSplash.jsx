@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useTheme } from "../contexts/ThemeContext";
 
 // ─── Fonts ───────────────────────────────────────────────────────────────────
 const FontLoader = () => {
@@ -15,7 +16,7 @@ const FontLoader = () => {
 };
 
 // ─── Cursor Glow ─────────────────────────────────────────────────────────────
-const CursorGlow = () => {
+const CursorGlow = ({ currentTheme }) => {
   const x = useMotionValue(-200);
   const y = useMotionValue(-200);
   const sx = useSpring(x, { stiffness: 120, damping: 20 });
@@ -38,7 +39,7 @@ const CursorGlow = () => {
         width: 400,
         height: 400,
         borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(56,189,248,0.07) 0%, transparent 70%)",
+        background: `radial-gradient(circle, ${currentTheme.accent}15 0%, transparent 70%)`,
       }}
     />
   );
@@ -56,19 +57,18 @@ const Noise = () => (
 );
 
 // ─── Fine Grid ────────────────────────────────────────────────────────────────
-const Grid = () => (
+const Grid = ({ currentTheme }) => (
   <div
     className="pointer-events-none absolute inset-0 z-0"
     style={{
-      backgroundImage:
-        "linear-gradient(rgba(148,163,184,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.04) 1px, transparent 1px)",
+      backgroundImage: `linear-gradient(${currentTheme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${currentTheme.gridColor} 1px, transparent 1px)`,
       backgroundSize: "40px 40px",
     }}
   />
 );
 
 // ─── Perspective Grid Floor ───────────────────────────────────────────────────
-const PerspectiveGrid = () => (
+const PerspectiveGrid = ({ currentTheme }) => (
   <div
     className="pointer-events-none absolute bottom-0 left-0 right-0 z-0"
     style={{ height: "45%", overflow: "hidden" }}
@@ -89,7 +89,7 @@ const PerspectiveGrid = () => (
           y1={400 * t}
           x2={600 + 600 * t}
           y2={400 * t}
-          stroke="#38bdf8"
+          stroke={currentTheme.accent}
           strokeWidth={0.5 + t * 0.5}
         />
       ))}
@@ -103,7 +103,7 @@ const PerspectiveGrid = () => (
             y1={0}
             x2={600 + spread * 600}
             y2={400}
-            stroke="#38bdf8"
+            stroke={currentTheme.accent}
             strokeWidth={0.4}
           />
         );
@@ -113,7 +113,7 @@ const PerspectiveGrid = () => (
     <div
       className="absolute inset-0"
       style={{
-        background: "linear-gradient(to bottom, #030712 0%, transparent 40%)",
+        background: `linear-gradient(to bottom, ${currentTheme.bg} 0%, transparent 40%)`,
       }}
     />
   </div>
@@ -211,7 +211,7 @@ const HUDCorner = ({ pos }) => {
 };
 
 // ─── HUD Side Panel ───────────────────────────────────────────────────────────
-const HUDPanel = ({ side }) => {
+const HUDPanel = ({ side, currentTheme }) => {
   const lines = [
     "NODE_01 ··· ACTIVE",
     "NODE_02 ··· ACTIVE",
@@ -231,15 +231,15 @@ const HUDPanel = ({ side }) => {
       <div
         className="flex flex-col gap-1 px-3 py-3"
         style={{
-          borderLeft: side === "left" ? "1px solid rgba(56,189,248,0.2)" : "none",
-          borderRight: side === "right" ? "1px solid rgba(56,189,248,0.2)" : "none",
+          borderLeft: side === "left" ? `1px solid ${currentTheme.accent}30` : "none",
+          borderRight: side === "right" ? `1px solid ${currentTheme.accent}30` : "none",
         }}
       >
         {lines.map((line, i) => (
           <motion.div
             key={i}
             className="text-[9px] tracking-widest whitespace-nowrap"
-            style={{ color: "rgba(56,189,248,0.35)" }}
+            style={{ color: `${currentTheme.accent}55` }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.6 + i * 0.08 }}
@@ -249,7 +249,7 @@ const HUDPanel = ({ side }) => {
         ))}
         <motion.div
           className="mt-2 h-[1px] w-full"
-          style={{ background: "linear-gradient(90deg, rgba(56,189,248,0.3), transparent)" }}
+          style={{ background: `linear-gradient(90deg, ${currentTheme.accent}50, transparent)` }}
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
           transition={{ delay: 2.0, duration: 0.5, transformOrigin: side === "left" ? "left" : "right" }}
@@ -262,7 +262,7 @@ const HUDPanel = ({ side }) => {
 // ─── Glitch Title ─────────────────────────────────────────────────────────────
 const WORD = "PULSE";
 
-const GlitchTitle = () => {
+const GlitchTitle = ({ currentTheme }) => {
   const [glitchIdx, setGlitchIdx] = useState(-1);
 
   useEffect(() => {
@@ -283,7 +283,7 @@ const GlitchTitle = () => {
         fontSize: "clamp(4.5rem, 16vw, 8.5rem)",
         fontWeight: 900,
         letterSpacing: "0.18em",
-        color: "white",
+        color: currentTheme.textSecondary,
       }}
     >
       {/* Main text */}
@@ -304,8 +304,8 @@ const GlitchTitle = () => {
               display: "inline-block",
               textShadow:
                 glitchIdx === i
-                  ? "3px 0 #38bdf8, -3px 0 #f87171"
-                  : "0 0 60px rgba(56,189,248,0.25)",
+                  ? `3px 0 ${currentTheme.accent}, -3px 0 ${currentTheme.error}`
+                  : `0 0 60px ${currentTheme.accent}40`,
               transform: glitchIdx === i ? "translateX(2px) skewX(-3deg)" : "none",
               transition: "transform 0.04s, text-shadow 0.04s",
             }}
@@ -359,7 +359,7 @@ const GlitchTitle = () => {
             fontSize: "clamp(4.5rem, 16vw, 8.5rem)",
             fontWeight: 900,
             letterSpacing: "0.18em",
-            color: "white",
+            color: "#2563eb",
             transform: "scaleY(-1)",
             opacity: 0.06,
             filter: "blur(3px)",
@@ -378,7 +378,7 @@ const GlitchTitle = () => {
 // ─── Tagline Typewriter ───────────────────────────────────────────────────────
 const TAGLINE = "Monitoring · Performance · Reliability";
 
-const Typewriter = ({ delay = 1.5 }) => {
+const Typewriter = ({ delay = 1.5, currentTheme }) => {
   const [displayed, setDisplayed] = useState("");
   const [started, setStarted] = useState(false);
 
@@ -404,7 +404,7 @@ const Typewriter = ({ delay = 1.5 }) => {
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: "0.65rem",
         letterSpacing: "0.28em",
-        color: "rgba(148,163,184,0.5)",
+        color: currentTheme.textMuted,
         textTransform: "uppercase",
         minHeight: "1.2em",
       }}
@@ -414,7 +414,7 @@ const Typewriter = ({ delay = 1.5 }) => {
         <motion.span
           animate={{ opacity: [1, 0] }}
           transition={{ duration: 0.5, repeat: Infinity }}
-          style={{ display: "inline-block", width: 6, height: "0.8em", background: "rgba(56,189,248,0.6)" }}
+          style={{ display: "inline-block", width: 6, height: "0.8em", background: currentTheme.accent }}
         />
       )}
     </div>
@@ -424,7 +424,7 @@ const Typewriter = ({ delay = 1.5 }) => {
 // ─── Progress Assembly ────────────────────────────────────────────────────────
 const PHASES = ["BOOT", "AUTH", "SYNC", "READY"];
 
-const ProgressAssembly = () => {
+const ProgressAssembly = ({ currentTheme }) => {
   const [phase, setPhase] = useState(0);
   const [pct, setPct] = useState(0);
 
@@ -462,8 +462,8 @@ const ProgressAssembly = () => {
               <motion.div
                 className="w-1.5 h-1.5 rounded-full"
                 animate={{
-                  background: i <= phase ? "#38bdf8" : "rgba(56,189,248,0.15)",
-                  boxShadow: i === phase ? "0 0 8px #38bdf8" : "none",
+                  background: i <= phase ? currentTheme.accent : `${currentTheme.accent}20`,
+                  boxShadow: i === phase ? `0 0 8px ${currentTheme.accent}` : "none",
                 }}
               />
               <span
@@ -471,17 +471,17 @@ const ProgressAssembly = () => {
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: "8px",
                   letterSpacing: "0.15em",
-                  color: i <= phase ? "rgba(56,189,248,0.7)" : "rgba(56,189,248,0.2)",
+                  color: i <= phase ? `${currentTheme.accent}aa` : `${currentTheme.accent}40`,
                 }}
               >
                 {label}
               </span>
             </div>
             {i < PHASES.length - 1 && (
-              <div className="flex-1 h-[1px] mx-1" style={{ background: "rgba(56,189,248,0.1)" }}>
+              <div className="flex-1 h-[1px] mx-1" style={{ background: `${currentTheme.accent}15` }}>
                 <motion.div
                   className="h-full"
-                  style={{ background: "#38bdf8", originX: 0 }}
+                  style={{ background: currentTheme.accent, originX: 0 }}
                   animate={{ scaleX: i < phase ? 1 : 0 }}
                   transition={{ duration: 0.4 }}
                 />
@@ -494,13 +494,13 @@ const ProgressAssembly = () => {
       {/* Progress bar */}
       <div
         className="w-full h-[3px] rounded-full overflow-hidden"
-        style={{ background: "rgba(56,189,248,0.08)" }}
+        style={{ background: `${currentTheme.accent}15` }}
       >
         <motion.div
           className="h-full rounded-full"
           style={{
-            background: "linear-gradient(90deg, #0ea5e9, #38bdf8, #818cf8)",
-            boxShadow: "0 0 12px rgba(56,189,248,0.9)",
+            background: `linear-gradient(90deg, ${currentTheme.accent}, ${currentTheme.accent}cc, ${currentTheme.accent}99)`,
+            boxShadow: `0 0 12px ${currentTheme.accent}`,
             width: `${pct}%`,
             transition: "width 0.1s ease-out",
           }}
@@ -517,13 +517,13 @@ const ProgressAssembly = () => {
         }}
       >
         <motion.span
-          style={{ color: "rgba(56,189,248,0.4)" }}
+          style={{ color: `${currentTheme.accent}80` }}
           animate={{ opacity: [0.4, 0.7, 0.4] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
           INIT SYS
         </motion.span>
-        <span style={{ color: "rgba(56,189,248,0.7)" }}>
+        <span style={{ color: `${currentTheme.accent}bb` }}>
           {String(pct).padStart(3, "0")}%
         </span>
       </div>
@@ -534,7 +534,7 @@ const ProgressAssembly = () => {
 // ─── Floating Glyphs ──────────────────────────────────────────────────────────
 const GLYPHS = "01アイウエオ∑∆∇λΩ∞≈∈ABCDEF01101100";
 
-const FloatingGlyph = ({ i }) => {
+const FloatingGlyph = ({ i, currentTheme }) => {
   const char = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
   const x = Math.random() * 100;
   const duration = 6 + Math.random() * 8;
@@ -549,7 +549,7 @@ const FloatingGlyph = ({ i }) => {
         left: `${x}%`,
         bottom: "-5%",
         fontSize: size,
-        color: `rgba(56,189,248,${opacity})`,
+        color: `${currentTheme.accent}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
         fontFamily: "'JetBrains Mono', monospace",
       }}
       animate={{ y: [0, -(window.innerHeight + 60)], opacity: [0, opacity * 10, 0] }}
@@ -561,12 +561,11 @@ const FloatingGlyph = ({ i }) => {
 };
 
 // ─── Scanline ─────────────────────────────────────────────────────────────────
-const Scanline = () => (
+const Scanline = ({ currentTheme }) => (
   <motion.div
     className="pointer-events-none absolute inset-0 z-30"
     style={{
-      background:
-        "linear-gradient(to bottom, transparent 48%, rgba(56,189,248,0.025) 50%, transparent 52%)",
+      background: `linear-gradient(to bottom, transparent 48%, ${currentTheme.accent}08 50%, transparent 52%)`,
     }}
     animate={{ y: ["-100%", "100%"] }}
     transition={{ duration: 4, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
@@ -574,7 +573,7 @@ const Scanline = () => (
 );
 
 // ─── Atmospheric Glow ─────────────────────────────────────────────────────────
-const AtmoGlow = () => (
+const AtmoGlow = ({ currentTheme }) => (
   <>
     <div
       className="pointer-events-none absolute z-0"
@@ -584,7 +583,7 @@ const AtmoGlow = () => (
         width: 700,
         height: 400,
         transform: "translate(-50%, -50%)",
-        background: "radial-gradient(ellipse, rgba(56,189,248,0.05) 0%, transparent 65%)",
+        background: `radial-gradient(ellipse, ${currentTheme.accent}10 0%, transparent 65%)`,
         filter: "blur(60px)",
       }}
     />
@@ -595,7 +594,7 @@ const AtmoGlow = () => (
         left: "30%",
         width: 400,
         height: 400,
-        background: "radial-gradient(ellipse, rgba(129,140,248,0.04) 0%, transparent 65%)",
+        background: `radial-gradient(ellipse, ${currentTheme.accent}08 0%, transparent 65%)`,
         filter: "blur(80px)",
       }}
     />
@@ -606,7 +605,7 @@ const AtmoGlow = () => (
         left: "70%",
         width: 300,
         height: 300,
-        background: "radial-gradient(ellipse, rgba(16,185,129,0.03) 0%, transparent 65%)",
+        background: `radial-gradient(ellipse, ${currentTheme.success}08 0%, transparent 65%)`,
         filter: "blur(60px)",
       }}
     />
@@ -615,12 +614,15 @@ const AtmoGlow = () => (
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const PreLoginSplash = () => {
+  const { currentTheme } = useTheme();
   const [visible, setVisible] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setVisible(false);
+      // Navigate only after the exit animation has fully finished (800ms),
+      // so the splash doesn't get torn out of the tree mid-fade.
       setTimeout(() => navigate("/login", { replace: true }), 800);
     }, 3800);
     return () => clearTimeout(timer);
@@ -634,7 +636,7 @@ const PreLoginSplash = () => {
           <motion.div
             key="splash"
             className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden z-[9999]"
-            style={{ background: "#030712" }}
+            style={{ background: currentTheme.bg }}
             exit={{
               opacity: 0,
               scale: 1.06,
@@ -643,12 +645,12 @@ const PreLoginSplash = () => {
             transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
           >
             {/* Layers */}
-            <AtmoGlow />
-            <Grid />
+            <AtmoGlow currentTheme={currentTheme} />
+            <Grid currentTheme={currentTheme} />
             <Noise />
-            <Scanline />
-            <PerspectiveGrid />
-            <CursorGlow />
+            <Scanline currentTheme={currentTheme} />
+            <PerspectiveGrid currentTheme={currentTheme} />
+            <CursorGlow currentTheme={currentTheme} />
 
             {/* Orbiting rings */}
             <OrbitRing radius={220} duration={14} dotCount={8} color="#38bdf8" tilt={72} />
@@ -658,19 +660,19 @@ const PreLoginSplash = () => {
             {/* Floating glyphs */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               {Array.from({ length: 40 }).map((_, i) => (
-                <FloatingGlyph key={i} i={i} />
+                <FloatingGlyph key={i} i={i} currentTheme={currentTheme} />
               ))}
             </div>
 
             {/* HUD corners */}
             {["tl", "tr", "bl", "br"].map((p) => (
-              <HUDCorner key={p} pos={p} />
+              <HUDCorner key={p} pos={p} currentTheme={currentTheme} />
             ))}
 
             {/* Side panels (hidden on small screens) */}
             <div className="hidden lg:block">
-              <HUDPanel side="left" />
-              <HUDPanel side="right" />
+              <HUDPanel side="left" currentTheme={currentTheme} />
+              <HUDPanel side="right" currentTheme={currentTheme} />
             </div>
 
             {/* Center content */}
@@ -683,7 +685,8 @@ const PreLoginSplash = () => {
                 transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               >
                 <motion.div
-                  className="h-[1px] bg-sky-400/30"
+                  className="h-[1px]"
+                  style={{ background: `${currentTheme.accent}50` }}
                   initial={{ width: 0 }}
                   animate={{ width: 32 }}
                   transition={{ delay: 0.5, duration: 0.5 }}
@@ -693,14 +696,15 @@ const PreLoginSplash = () => {
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: "9px",
                     letterSpacing: "0.4em",
-                    color: "rgba(56,189,248,0.45)",
+                    color: `${currentTheme.accent}80`,
                     textTransform: "uppercase",
                   }}
                 >
                   System Online
                 </span>
                 <motion.div
-                  className="h-[1px] bg-sky-400/30"
+                  className="h-[1px]"
+                  style={{ background: `${currentTheme.accent}50` }}
                   initial={{ width: 0 }}
                   animate={{ width: 32 }}
                   transition={{ delay: 0.5, duration: 0.5 }}
@@ -708,10 +712,10 @@ const PreLoginSplash = () => {
               </motion.div>
 
               {/* Main logo */}
-              <GlitchTitle />
+              <GlitchTitle currentTheme={currentTheme} />
 
               {/* Tagline */}
-              <Typewriter delay={1.6} />
+              <Typewriter delay={1.6} currentTheme={currentTheme} />
 
               {/* Divider */}
               <motion.div
@@ -720,13 +724,13 @@ const PreLoginSplash = () => {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.2 }}
               >
-                <div className="flex-1 h-[1px]" style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.2))" }} />
-                <div className="w-1 h-1 rounded-full" style={{ background: "rgba(56,189,248,0.4)" }} />
-                <div className="flex-1 h-[1px]" style={{ background: "linear-gradient(90deg, rgba(56,189,248,0.2), transparent)" }} />
+                <div className="flex-1 h-[1px]" style={{ background: `linear-gradient(90deg, transparent, ${currentTheme.accent}40)` }} />
+                <div className="w-1 h-1 rounded-full" style={{ background: `${currentTheme.accent}80` }} />
+                <div className="flex-1 h-[1px]" style={{ background: `linear-gradient(90deg, ${currentTheme.accent}40, transparent)` }} />
               </motion.div>
 
               {/* Progress */}
-              <ProgressAssembly />
+              <ProgressAssembly currentTheme={currentTheme} />
             </div>
 
             {/* Bottom left — status */}
@@ -741,18 +745,19 @@ const PreLoginSplash = () => {
                 style={{ width: 8, height: 8 }}
               >
                 <motion.div
-                  className="absolute inset-0 rounded-full bg-emerald-400"
+                  className="absolute inset-0 rounded-full"
+                  style={{ background: currentTheme.success }}
                   animate={{ scale: [1, 2], opacity: [0.6, 0] }}
                   transition={{ duration: 1.4, repeat: Infinity }}
                 />
-                <div className="absolute inset-0 rounded-full bg-emerald-400" />
+                <div className="absolute inset-0 rounded-full" style={{ background: currentTheme.success }} />
               </motion.div>
               <span
                 style={{
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: "9px",
                   letterSpacing: "0.22em",
-                  color: "rgba(52,211,153,0.55)",
+                  color: `${currentTheme.success}90`,
                   textTransform: "uppercase",
                 }}
               >
@@ -770,7 +775,7 @@ const PreLoginSplash = () => {
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: "9px",
                 letterSpacing: "0.22em",
-                color: "rgba(100,116,139,0.5)",
+                color: currentTheme.textMuted,
               }}
             >
               v2.4.1 · PROD · BUILD 20240401
@@ -786,7 +791,7 @@ const PreLoginSplash = () => {
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: "9px",
                 letterSpacing: "0.2em",
-                color: "rgba(56,189,248,0.3)",
+                color: `${currentTheme.accent}50`,
               }}
             >
               {new Date().toISOString().replace("T", " ").slice(0, 19)} UTC

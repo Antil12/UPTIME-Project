@@ -1,31 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
-import { Plus, Trash2, Edit2, Mail, Phone, X, Check, Users, AlertTriangle, RefreshCw, Shield } from "lucide-react";
+import { Plus, Trash2, Edit2, Mail, Phone, X, Check, Users, AlertTriangle, RefreshCw, Shield, Globe } from "lucide-react";
 import axios from "axios";
 import DeleteConfirmationModal from "../components/DeleteConfirmationModal";
-
-// ─── Design tokens ─────────────────────────────────────────────────────────────
-const T = {
-  font: "'JetBrains Mono', 'IBM Plex Mono', monospace",
-  bg: "#030712",
-  surface: "rgba(3,7,18,0.74)",
-  surfaceHover: "rgba(255,255,255,0.042)",
-  surfaceActive: "rgba(255,255,255,0.06)",
-  border: "rgba(56,189,248,0.08)",
-  borderMid: "rgba(56,189,248,0.15)",
-  borderStrong: "rgba(56,189,248,0.25)",
-  dim: "rgba(148,163,184,0.45)",
-  mid: "rgba(148,163,184,0.7)",
-  bright: "rgba(255,255,255,0.95)",
-  accent: "#38bdf8",
-  accentMid: "rgba(56,189,248,0.55)",
-  accentDim: "rgba(56,189,248,0.25)",
-  accentFaint: "rgba(56,189,248,0.06)",
-  danger: "#f87171",
-  dangerFaint: "rgba(248,113,113,0.08)",
-  success: "#86efac",
-  successFaint: "rgba(134,239,172,0.07)",
-};
+import { useTheme } from "../contexts/ThemeContext";
 
 // ─── Font Loader ──────────────────────────────────────────────────────────────
 const FontLoader = () => {
@@ -41,7 +19,7 @@ const FontLoader = () => {
 };
 
 // ─── Cursor Glow ──────────────────────────────────────────────────────────────
-const CursorGlow = () => {
+const CursorGlow = ({ currentTheme }) => {
   const x = useMotionValue(-400);
   const y = useMotionValue(-400);
   const sx = useSpring(x, { stiffness: 90, damping: 24 });
@@ -60,23 +38,23 @@ const CursorGlow = () => {
         left: sx, top: sy,
         translateX: "-50%", translateY: "-50%",
         width: 300, height: 300, borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(56,189,248,0.045) 0%, transparent 70%)",
+        background: `radial-gradient(circle, ${currentTheme.accent}15 0%, transparent 70%)`,
       }}
     />
   );
 };
 
 // ─── Full Page Background ─────────────────────────────────────────────────────
-const Background = () => (
+const Background = ({ currentTheme }) => (
   <div style={{ pointerEvents: "none", position: "fixed", inset: 0, zIndex: 0, overflow: "hidden" }}>
-    <div style={{ position: "absolute", inset: 0, background: "#030712" }} />
-    <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 70% 45% at 50% 0%, rgba(56,189,248,0.05) 0%, transparent 100%)" }} />
-    <div style={{ position: "absolute", top: "60%", left: "10%", width: 340, height: 340, background: "radial-gradient(circle, rgba(129,140,248,0.035) 0%, transparent 68%)", filter: "blur(90px)" }} />
-    <div style={{ position: "absolute", top: "15%", right: "8%", width: 260, height: 260, background: "radial-gradient(circle, rgba(16,185,129,0.028) 0%, transparent 68%)", filter: "blur(85px)" }} />
-    <div style={{ position: "absolute", bottom: "5%", right: "20%", width: 240, height: 240, background: "radial-gradient(circle, rgba(56,189,248,0.022) 0%, transparent 68%)", filter: "blur(75px)" }} />
-    <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(148,163,184,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.022) 1px, transparent 1px)", backgroundSize: "42px 42px" }} />
+    <div style={{ position: "absolute", inset: 0, background: currentTheme.bg }} />
+    <div style={{ position: "absolute", inset: 0, background: `radial-gradient(ellipse 70% 45% at 50% 0%, ${currentTheme.accent}12 0%, transparent 100%)` }} />
+    <div style={{ position: "absolute", top: "60%", left: "10%", width: 340, height: 340, background: `radial-gradient(circle, ${currentTheme.accentSecondary}10 0%, transparent 68%)`, filter: "blur(90px)" }} />
+    <div style={{ position: "absolute", top: "15%", right: "8%", width: 260, height: 260, background: `radial-gradient(circle, ${currentTheme.success}10 0%, transparent 68%)`, filter: "blur(85px)" }} />
+    <div style={{ position: "absolute", bottom: "5%", right: "20%", width: 240, height: 240, background: `radial-gradient(circle, ${currentTheme.accent}08 0%, transparent 68%)`, filter: "blur(75px)" }} />
+    <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(${currentTheme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${currentTheme.gridColor} 1px, transparent 1px)`, backgroundSize: "42px 42px" }} />
     <motion.div
-      style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 48%, rgba(56,189,248,0.012) 50%, transparent 52%)" }}
+      style={{ position: "absolute", inset: 0, background: `linear-gradient(to bottom, transparent 48%, ${currentTheme.accent}08 50%, transparent 52%)` }}
       animate={{ y: ["-100%", "100%"] }}
       transition={{ duration: 7, repeat: Infinity, ease: "linear", repeatDelay: 3 }}
     />
@@ -84,7 +62,7 @@ const Background = () => (
 );
 
 // ─── HUD Corner Brackets ──────────────────────────────────────────────────────
-const HUDCorner = ({ pos, delay = 0 }) => {
+const HUDCorner = ({ pos, delay = 0, currentTheme }) => {
   const positions = { tl: { top: 16, left: 16 }, tr: { top: 16, right: 16 }, bl: { bottom: 16, left: 16 }, br: { bottom: 16, right: 16 } };
   const rotations = { tl: "0deg", tr: "90deg", bl: "-90deg", br: "180deg" };
   return (
@@ -94,8 +72,8 @@ const HUDCorner = ({ pos, delay = 0 }) => {
       animate={{ opacity: 0.75, scale: 1 }}
       transition={{ delay, duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}
     >
-      <motion.div style={{ position: "absolute", top: 0, left: 0, height: 1.5, background: "rgba(56,189,248,0.65)" }} initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ delay: delay + 0.15, duration: 0.35 }} />
-      <motion.div style={{ position: "absolute", top: 0, left: 0, width: 1.5, background: "rgba(56,189,248,0.65)" }} initial={{ height: 0 }} animate={{ height: "100%" }} transition={{ delay: delay + 0.15, duration: 0.35 }} />
+      <motion.div style={{ position: "absolute", top: 0, left: 0, height: 1.5, background: `${currentTheme.accent}88` }} initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ delay: delay + 0.15, duration: 0.35 }} />
+      <motion.div style={{ position: "absolute", top: 0, left: 0, width: 1.5, background: `${currentTheme.accent}88` }} initial={{ height: 0 }} animate={{ height: "100%" }} transition={{ delay: delay + 0.15, duration: 0.35 }} />
     </motion.div>
   );
 };
@@ -149,98 +127,109 @@ const StatusDot = ({ color = "#34d399", label }) => (
       <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: color }} />
     </div>
     {label && (
-      <span style={{ fontFamily: T.font, fontSize: 8, letterSpacing: "0.15em", color: `${color}88`, textTransform: "uppercase" }}>
+      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, letterSpacing: "0.15em", color: `${color}88`, textTransform: "uppercase" }}>
         {label}
       </span>
     )}
   </div>
 );
 
-// ─── Scanline texture ─────────────────────────────────────────────────────────
-const Scanline = () => (
-  <div aria-hidden style={{
-    position: "absolute", inset: 0, pointerEvents: "none",
-    backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.055) 3px,rgba(0,0,0,0.055) 4px)",
-    borderRadius: "inherit", zIndex: 0,
-  }} />
-);
-
 // ─── Glowing dot ─────────────────────────────────────────────────────────────
-const Dot = ({ color = T.accent, size = 5 }) => (
+const Dot = ({ color, size = 5 }) => (
   <span style={{
     display: "inline-block", width: size, height: size, borderRadius: "50%",
     background: color, boxShadow: `0 0 6px ${color}`, flexShrink: 0,
   }} />
 );
 
-// ─── Section divider ─────────────────────────────────────────────────────────
-const Divider = ({ label }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0" }}>
-    <div style={{ flex: 1, height: "0.5px", background: T.border }} />
-    {label && <span style={{ fontFamily: T.font, fontSize: 8, letterSpacing: "0.22em", color: T.dim, textTransform: "uppercase" }}>{label}</span>}
-    <div style={{ flex: 1, height: "0.5px", background: T.border }} />
+// ─── Section divider ──────────────────────────────────────────────────────────
+const Divider = ({ label, currentTheme }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0 20px 0", width: "100%" }}>
+    <div style={{ flex: 1, height: "1px", background: `${currentTheme.accent}25` }} />
+    {label && (
+      <span style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 7,
+        letterSpacing: "0.25em",
+        color: currentTheme.accent,
+        textTransform: "uppercase",
+        whiteSpace: "nowrap",
+        fontWeight: 700,
+        padding: "0 4px"
+      }}>
+        {label}
+      </span>
+    )}
+    <div style={{ flex: 1, height: "1px", background: `${currentTheme.accent}25` }} />
   </div>
 );
 
 // ─── Stat badge ───────────────────────────────────────────────────────────────
-const StatBadge = ({ value, label, color = T.accent }) => (
+const StatBadge = ({ value, label, color, currentTheme }) => (
   <div style={{
     padding: "12px 18px", borderRadius: 12,
-    background: "rgba(3,7,18,0.74)",
-    border: `1px solid ${color}12`,
+    background: `rgba(255,255,255,0.03)`,
+    border: `1px solid ${color}20`,
     backdropFilter: "blur(18px)",
-    boxShadow: `0 0 22px ${color}06, inset 0 1px 0 ${color}06`,
+    boxShadow: currentTheme.shadow,
     position: "relative", overflow: "hidden",
     display: "flex", flexDirection: "column", gap: 4,
   }}>
-    {/* top accent line */}
     <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent 0%, ${color}45 35%, ${color}22 70%, transparent 100%)` }} />
-    <Scanline />
     <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 700, color, position: "relative", zIndex: 1, lineHeight: 1, textShadow: `0 0 16px ${color}18` }}>
       {value}
     </span>
-    <span style={{ fontFamily: T.font, fontSize: 8, letterSpacing: "0.16em", color: T.dim, textTransform: "uppercase", position: "relative", zIndex: 1 }}>
+    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, letterSpacing: "0.16em", color: currentTheme.textMuted, textTransform: "uppercase", position: "relative", zIndex: 1 }}>
       {label}
     </span>
   </div>
 );
 
-// ─── Input field ──────────────────────────────────────────────────────────────
-const Field = ({ label, hint, children }) => (
-  <div>
-    <div style={{ fontFamily: T.font, fontSize: 8, letterSpacing: "0.2em", color: T.dim, textTransform: "uppercase", marginBottom: 7 }}>
+// ─── Input field LABEL ──────────────────────────────────────────────────────────
+const Field = ({ label, hint, children, currentTheme }) => (
+  <div style={{ marginBottom: "2px" }}>
+    <div style={{
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: 8,
+      letterSpacing: "0.2em",
+      color: currentTheme.accent,
+      textTransform: "uppercase",
+      marginBottom: 10,
+      fontWeight: 700
+    }}>
       {label}
     </div>
     {children}
-    {hint && <div style={{ fontFamily: T.font, fontSize: 8, color: T.dim, marginTop: 5, letterSpacing: "0.05em" }}>{hint}</div>}
+    {hint && <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: currentTheme.textMuted, marginTop: 6, letterSpacing: "0.05em" }}>{hint}</div>}
   </div>
 );
 
-const inputStyle = {
-  width: "100%", padding: "10px 13px", borderRadius: 10, outline: "none",
-  background: "rgba(255,255,255,0.025)",
-  border: "1px solid rgba(56,189,248,0.09)",
-  color: T.bright, fontFamily: T.font, fontSize: 11, letterSpacing: "0.03em",
-  transition: "border-color 0.15s, box-shadow 0.15s",
+const getInputStyle = (currentTheme) => ({
+  width: "100%", padding: "11px 14px", borderRadius: 10, outline: "none",
+  background: `rgba(255,255,255,0.04)`,
+  border: `1.5px solid ${currentTheme.border}`,
+  color: currentTheme.text, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.03em",
+  transition: "all 0.2s ease",
   backdropFilter: "blur(12px)",
-};
+  boxSizing: "border-box"
+});
 
 // ─── Email chip (read-only) ───────────────────────────────────────────────────
-const EmailChip = ({ email }) => (
+const EmailChip = ({ email, currentTheme }) => (
   <div style={{
     display: "flex", alignItems: "center", gap: 6,
-    padding: "5px 10px", borderRadius: 7,
-    background: "rgba(56,189,248,0.05)", border: "1px solid rgba(56,189,248,0.12)",
+    padding: "6px 11px", borderRadius: 7,
+    background: `${currentTheme.accent}15`, border: `1.5px solid ${currentTheme.accent}35`,
   }}>
-    <Mail size={9} style={{ color: T.accentDim, flexShrink: 0 }} />
-    <span style={{ fontFamily: T.font, fontSize: 10, color: T.mid, letterSpacing: "0.02em", wordBreak: "break-all" }}>
+    <Mail size={10} style={{ color: currentTheme.accent, flexShrink: 0 }} />
+    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: currentTheme.text, letterSpacing: "0.02em", wordBreak: "break-all" }}>
       {email}
     </span>
   </div>
 );
 
 // ─── Email chip (removable) ───────────────────────────────────────────────────
-const EmailTag = ({ email, onRemove, disabled }) => (
+const EmailTag = ({ email, onRemove, disabled, currentTheme }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.85 }}
     animate={{ opacity: 1, scale: 1 }}
@@ -248,31 +237,31 @@ const EmailTag = ({ email, onRemove, disabled }) => (
     transition={{ duration: 0.15 }}
     style={{
       display: "inline-flex", alignItems: "center", gap: 5,
-      padding: "4px 8px 4px 10px", borderRadius: 8,
-      background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)",
+      padding: "5px 9px 5px 11px", borderRadius: 8,
+      background: `${currentTheme.accent}18`, border: `1.5px solid ${currentTheme.accent}40`,
       maxWidth: "100%",
     }}
   >
-    <Mail size={8} style={{ color: T.accentMid, flexShrink: 0 }} />
-    <span style={{ fontFamily: T.font, fontSize: 10, color: T.accent, letterSpacing: "0.02em", wordBreak: "break-all", lineHeight: 1.3 }}>
+    <Mail size={9} style={{ color: currentTheme.accent, flexShrink: 0 }} />
+    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: currentTheme.accent, letterSpacing: "0.02em", wordBreak: "break-all", lineHeight: 1.3 }}>
       {email}
     </span>
     {!disabled && (
       <button
         type="button"
         onClick={() => onRemove(email)}
-        style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2, borderRadius: 4, color: "rgba(56,189,248,0.45)", transition: "color 0.12s", flexShrink: 0 }}
-        onMouseEnter={(e) => e.currentTarget.style.color = T.danger}
-        onMouseLeave={(e) => e.currentTarget.style.color = "rgba(56,189,248,0.45)"}
+        style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2, borderRadius: 4, color: `${currentTheme.accent}70`, transition: "color 0.12s", flexShrink: 0 }}
+        onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.error}
+        onMouseLeave={(e) => e.currentTarget.style.color = `${currentTheme.accent}70`}
       >
-        <X size={9} />
+        <X size={10} />
       </button>
     )}
   </motion.div>
 );
 
 // ─── Multi-email input widget ─────────────────────────────────────────────────
-const EmailListInput = ({ emails, onChange, disabled }) => {
+const EmailListInput = ({ emails, onChange, disabled, currentTheme }) => {
   const [inputVal, setInputVal] = useState("");
   const [inputError, setInputError] = useState("");
   const inputRef = React.useRef(null);
@@ -317,19 +306,20 @@ const EmailListInput = ({ emails, onChange, disabled }) => {
       <div
         onClick={() => inputRef.current?.focus()}
         style={{
-          minHeight: 48, padding: "8px 10px", borderRadius: 10, cursor: "text",
-          background: "rgba(255,255,255,0.025)",
-          border: `1px solid ${inputError ? "rgba(248,113,113,0.45)" : "rgba(56,189,248,0.09)"}`,
-          transition: "border-color 0.15s",
-          display: "flex", flexWrap: "wrap", gap: 6, alignItems: "flex-start",
+          minHeight: 52, padding: "10px 12px", borderRadius: 10, cursor: "text",
+          background: `rgba(255,255,255,0.04)`,
+          border: `1.5px solid ${inputError ? currentTheme.error : currentTheme.border}`,
+          transition: "all 0.2s ease",
+          display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-start",
           backdropFilter: "blur(12px)",
+          boxSizing: "border-box"
         }}
-        onFocusCapture={(e) => { if (!inputError) e.currentTarget.style.borderColor = "rgba(56,189,248,0.34)"; }}
-        onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.style.borderColor = inputError ? "rgba(248,113,113,0.45)" : "rgba(56,189,248,0.09)"; }}
+        onFocusCapture={(e) => { if (!inputError) e.currentTarget.style.borderColor = currentTheme.accent; }}
+        onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.style.borderColor = inputError ? currentTheme.error : currentTheme.border; }}
       >
         <AnimatePresence>
           {emails.map((email) => (
-            <EmailTag key={email} email={email} onRemove={handleRemove} disabled={disabled} />
+            <EmailTag key={email} email={email} onRemove={handleRemove} disabled={disabled} currentTheme={currentTheme} />
           ))}
         </AnimatePresence>
         <input
@@ -342,13 +332,13 @@ const EmailListInput = ({ emails, onChange, disabled }) => {
           onBlur={() => { if (inputVal.trim()) addEmail(inputVal); }}
           disabled={disabled}
           placeholder={emails.length === 0 ? "ops@company.com, sre@company.com…" : "Add another…"}
-          style={{ flex: 1, minWidth: 140, background: "none", border: "none", outline: "none", color: T.bright, fontFamily: T.font, fontSize: 11, letterSpacing: "0.03em", padding: "3px 2px", opacity: disabled ? 0.5 : 1 }}
+          style={{ flex: 1, minWidth: 140, background: "none", border: "none", outline: "none", color: currentTheme.text, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.03em", padding: "3px 2px", opacity: disabled ? 0.5 : 1 }}
         />
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 7, gap: 8 }}>
-        <div style={{ fontFamily: T.font, fontSize: 8, color: inputError ? "rgba(248,113,113,0.8)" : T.dim, letterSpacing: "0.05em", transition: "color 0.2s", display: "flex", alignItems: "center", gap: 4 }}>
-          {inputError ? <><AlertTriangle size={8} /> {inputError}</> : "Press Enter, comma or Tab to add · Backspace to remove last"}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, gap: 8 }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: inputError ? currentTheme.error : currentTheme.textMuted, letterSpacing: "0.05em", transition: "color 0.2s", display: "flex", alignItems: "center", gap: 4 }}>
+          {inputError ? <><AlertTriangle size={9} /> {inputError}</> : "Enter, comma or Tab to add · Backspace to remove"}
         </div>
         <button
           type="button"
@@ -356,28 +346,28 @@ const EmailListInput = ({ emails, onChange, disabled }) => {
           onClick={() => { if (inputVal.trim()) addEmail(inputVal); }}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            padding: "4px 10px", borderRadius: 7,
+            padding: "5px 11px", borderRadius: 7,
             cursor: (disabled || !inputVal.trim()) ? "not-allowed" : "pointer",
-            background: inputVal.trim() ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.03)",
-            border: `1px solid ${inputVal.trim() ? "rgba(56,189,248,0.28)" : "rgba(56,189,248,0.09)"}`,
-            color: inputVal.trim() ? T.accent : T.dim,
-            fontFamily: T.font, fontSize: 9, letterSpacing: "0.1em", fontWeight: 600,
-            transition: "all 0.15s", flexShrink: 0,
+            background: inputVal.trim() ? `${currentTheme.accent}18` : "rgba(255,255,255,0.04)",
+            border: `1.5px solid ${inputVal.trim() ? `${currentTheme.accent}40` : currentTheme.border}`,
+            color: inputVal.trim() ? currentTheme.accent : currentTheme.textMuted,
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.1em", fontWeight: 600,
+            transition: "all 0.2s ease", flexShrink: 0,
           }}
-          onMouseEnter={(e) => { if (inputVal.trim()) e.currentTarget.style.background = "rgba(56,189,248,0.2)"; }}
-          onMouseLeave={(e) => { if (inputVal.trim()) e.currentTarget.style.background = "rgba(56,189,248,0.12)"; }}
+          onMouseEnter={(e) => { if (inputVal.trim()) e.currentTarget.style.background = `${currentTheme.accent}28`; }}
+          onMouseLeave={(e) => { if (inputVal.trim()) e.currentTarget.style.background = `${currentTheme.accent}18`; }}
         >
-          <Plus size={9} /> Add
+          <Plus size={10} /> Add
         </button>
       </div>
 
       {emails.length > 0 && (
-        <div style={{ marginTop: 7, display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 5,
-            padding: "3px 9px", borderRadius: 99,
-            background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.14)",
-            fontFamily: T.font, fontSize: 8, color: T.accentMid, letterSpacing: "0.1em",
+            padding: "4px 10px", borderRadius: 99,
+            background: `${currentTheme.accent}15`, border: `1px solid ${currentTheme.accent}30`,
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: currentTheme.accent, letterSpacing: "0.1em",
           }}>
             <Users size={8} />
             {emails.length} recipient{emails.length !== 1 ? "s" : ""} added
@@ -389,7 +379,7 @@ const EmailListInput = ({ emails, onChange, disabled }) => {
 };
 
 // ─── Phone tag (removable) ───────────────────────────────────────────────────
-const PhoneTag = ({ phone, onRemove, disabled }) => (
+const PhoneTag = ({ phone, onRemove, disabled, currentTheme }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.85 }}
     animate={{ opacity: 1, scale: 1 }}
@@ -397,31 +387,31 @@ const PhoneTag = ({ phone, onRemove, disabled }) => (
     transition={{ duration: 0.15 }}
     style={{
       display: "inline-flex", alignItems: "center", gap: 5,
-      padding: "4px 8px 4px 10px", borderRadius: 8,
-      background: "rgba(129,140,248,0.1)", border: "1px solid rgba(129,140,248,0.25)",
+      padding: "5px 9px 5px 11px", borderRadius: 8,
+      background: `${currentTheme.accentSecondary}18`, border: `1.5px solid ${currentTheme.accentSecondary}40`,
       maxWidth: "100%",
     }}
   >
-    <Phone size={8} style={{ color: "rgba(129,140,248,0.7)", flexShrink: 0 }} />
-    <span style={{ fontFamily: T.font, fontSize: 10, color: "#818cf8", letterSpacing: "0.02em", wordBreak: "break-all", lineHeight: 1.3 }}>
+    <Phone size={9} style={{ color: currentTheme.accentSecondary, flexShrink: 0 }} />
+    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: currentTheme.accentSecondary, letterSpacing: "0.02em", wordBreak: "break-all", lineHeight: 1.3 }}>
       {phone}
     </span>
     {!disabled && (
       <button
         type="button"
         onClick={() => onRemove(phone)}
-        style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2, borderRadius: 4, color: "rgba(129,140,248,0.45)", transition: "color 0.12s", flexShrink: 0 }}
-        onMouseEnter={(e) => e.currentTarget.style.color = T.danger}
-        onMouseLeave={(e) => e.currentTarget.style.color = "rgba(129,140,248,0.45)"}
+        style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 2, borderRadius: 4, color: `${currentTheme.accentSecondary}70`, transition: "color 0.12s", flexShrink: 0 }}
+        onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.error}
+        onMouseLeave={(e) => e.currentTarget.style.color = `${currentTheme.accentSecondary}70`}
       >
-        <X size={9} />
+        <X size={10} />
       </button>
     )}
   </motion.div>
 );
 
 // ─── Multi-phone input widget ─────────────────────────────────────────────────
-const PhoneListInput = ({ phones, onChange, disabled }) => {
+const PhoneListInput = ({ phones, onChange, disabled, currentTheme }) => {
   const [inputVal, setInputVal] = useState("");
   const [inputError, setInputError] = useState("");
   const inputRef = React.useRef(null);
@@ -466,19 +456,20 @@ const PhoneListInput = ({ phones, onChange, disabled }) => {
       <div
         onClick={() => inputRef.current?.focus()}
         style={{
-          minHeight: 48, padding: "8px 10px", borderRadius: 10, cursor: "text",
-          background: "rgba(255,255,255,0.025)",
-          border: `1px solid ${inputError ? "rgba(248,113,113,0.45)" : "rgba(56,189,248,0.09)"}`,
-          transition: "border-color 0.15s",
-          display: "flex", flexWrap: "wrap", gap: 6, alignItems: "flex-start",
+          minHeight: 52, padding: "10px 12px", borderRadius: 10, cursor: "text",
+          background: `rgba(255,255,255,0.04)`,
+          border: `1.5px solid ${inputError ? currentTheme.error : currentTheme.border}`,
+          transition: "all 0.2s ease",
+          display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-start",
           backdropFilter: "blur(12px)",
+          boxSizing: "border-box"
         }}
-        onFocusCapture={(e) => { if (!inputError) e.currentTarget.style.borderColor = "rgba(56,189,248,0.34)"; }}
-        onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.style.borderColor = inputError ? "rgba(248,113,113,0.45)" : "rgba(56,189,248,0.09)"; }}
+        onFocusCapture={(e) => { if (!inputError) e.currentTarget.style.borderColor = currentTheme.accentSecondary; }}
+        onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.style.borderColor = inputError ? currentTheme.error : currentTheme.border; }}
       >
         <AnimatePresence>
           {phones.map((phone) => (
-            <PhoneTag key={phone} phone={phone} onRemove={handleRemove} disabled={disabled} />
+            <PhoneTag key={phone} phone={phone} onRemove={handleRemove} disabled={disabled} currentTheme={currentTheme} />
           ))}
         </AnimatePresence>
         <input
@@ -490,14 +481,14 @@ const PhoneListInput = ({ phones, onChange, disabled }) => {
           onPaste={handlePaste}
           onBlur={() => { if (inputVal.trim()) addPhone(inputVal); }}
           disabled={disabled}
-          placeholder={phones.length === 0 ? "+91 9876543210, +1 2345678900…" : "Add another…"}
-          style={{ flex: 1, minWidth: 140, background: "none", border: "none", outline: "none", color: T.bright, fontFamily: T.font, fontSize: 11, letterSpacing: "0.03em", padding: "3px 2px", opacity: disabled ? 0.5 : 1 }}
+          placeholder={phones.length === 0 ? "+91" : "Add another…"}
+          style={{ flex: 1, minWidth: 140, background: "none", border: "none", outline: "none", color: currentTheme.text, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.03em", padding: "3px 2px", opacity: disabled ? 0.5 : 1 }}
         />
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 7, gap: 8 }}>
-        <div style={{ fontFamily: T.font, fontSize: 8, color: inputError ? "rgba(248,113,113,0.8)" : T.dim, letterSpacing: "0.05em", transition: "color 0.2s", display: "flex", alignItems: "center", gap: 4 }}>
-          {inputError ? <><AlertTriangle size={8} /> {inputError}</> : "Press Enter, comma or Tab to add · Backspace to remove last"}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, gap: 8 }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: inputError ? currentTheme.error : currentTheme.textMuted, letterSpacing: "0.05em", transition: "color 0.2s", display: "flex", alignItems: "center", gap: 4 }}>
+          {inputError ? <><AlertTriangle size={9} /> {inputError}</> : "Enter, comma or Tab to add · Backspace to remove"}
         </div>
         <button
           type="button"
@@ -505,28 +496,28 @@ const PhoneListInput = ({ phones, onChange, disabled }) => {
           onClick={() => { if (inputVal.trim()) addPhone(inputVal); }}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            padding: "4px 10px", borderRadius: 7,
+            padding: "5px 11px", borderRadius: 7,
             cursor: (disabled || !inputVal.trim()) ? "not-allowed" : "pointer",
-            background: inputVal.trim() ? "rgba(129,140,248,0.12)" : "rgba(255,255,255,0.03)",
-            border: `1px solid ${inputVal.trim() ? "rgba(129,140,248,0.28)" : "rgba(56,189,248,0.09)"}`,
-            color: inputVal.trim() ? "#818cf8" : T.dim,
-            fontFamily: T.font, fontSize: 9, letterSpacing: "0.1em", fontWeight: 600,
-            transition: "all 0.15s", flexShrink: 0,
+            background: inputVal.trim() ? `${currentTheme.accentSecondary}18` : "rgba(255,255,255,0.04)",
+            border: `1.5px solid ${inputVal.trim() ? `${currentTheme.accentSecondary}40` : currentTheme.border}`,
+            color: inputVal.trim() ? currentTheme.accentSecondary : currentTheme.textMuted,
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.1em", fontWeight: 600,
+            transition: "all 0.2s ease", flexShrink: 0,
           }}
-          onMouseEnter={(e) => { if (inputVal.trim()) e.currentTarget.style.background = "rgba(129,140,248,0.2)"; }}
-          onMouseLeave={(e) => { if (inputVal.trim()) e.currentTarget.style.background = "rgba(129,140,248,0.12)"; }}
+          onMouseEnter={(e) => { if (inputVal.trim()) e.currentTarget.style.background = `${currentTheme.accentSecondary}28`; }}
+          onMouseLeave={(e) => { if (inputVal.trim()) e.currentTarget.style.background = `${currentTheme.accentSecondary}18`; }}
         >
-          <Plus size={9} /> Add
+          <Plus size={10} /> Add
         </button>
       </div>
 
       {phones.length > 0 && (
-        <div style={{ marginTop: 7, display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 5,
-            padding: "3px 9px", borderRadius: 99,
-            background: "rgba(129,140,248,0.06)", border: "1px solid rgba(129,140,248,0.14)",
-            fontFamily: T.font, fontSize: 8, color: "rgba(129,140,248,0.7)", letterSpacing: "0.1em",
+            padding: "4px 10px", borderRadius: 99,
+            background: `${currentTheme.accentSecondary}15`, border: `1px solid ${currentTheme.accentSecondary}30`,
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: currentTheme.accentSecondary, letterSpacing: "0.1em",
           }}>
             <Phone size={8} />
             {phones.length} phone{phones.length !== 1 ? "s" : ""} added
@@ -537,8 +528,8 @@ const PhoneListInput = ({ phones, onChange, disabled }) => {
   );
 };
 
-// ─── Notification Group card ───────────────────────────────────────────────────────
-const NotificationGroupCard = ({ group, index, onEdit, onDelete, isDeleting }) => {
+// ─── Notification Group card ──────────────────────────────────────────────────
+const NotificationGroupCard = ({ group, index, onEdit, onDelete, isDeleting, currentTheme }) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -549,48 +540,48 @@ const NotificationGroupCard = ({ group, index, onEdit, onDelete, isDeleting }) =
       transition={{ delay: index * 0.04, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       style={{
         borderRadius: 14, position: "relative", overflow: "hidden",
-        background: "rgba(3,7,18,0.74)", border: "1px solid rgba(129,140,248,0.08)",
-        backdropFilter: "blur(16px)",
-        boxShadow: "0 0 18px rgba(129,140,248,0.04), inset 0 1px 0 rgba(129,140,248,0.06)",
+        background: `rgba(255,255,255,0.03)`,
+        border: `1px solid ${currentTheme.borderAccent}`,
+        backdropFilter: "blur(20px)",
+        boxShadow: currentTheme.shadow,
       }}
     >
-      <Scanline />
       <div style={{ position: "relative", zIndex: 1 }}>
         {/* Card header */}
-        <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: expanded ? "1px solid rgba(129,140,248,0.08)" : "none" }}>
+        <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: expanded ? `1px solid ${currentTheme.borderAccent}` : "none" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(129,140,248,0.1)", border: "1px solid rgba(129,140,248,0.18)" }}>
-              <Phone size={16} style={{ color: "#818cf8" }} />
+            <div style={{ width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: `${currentTheme.accentSecondary}12`, border: `1px solid ${currentTheme.accentSecondary}25` }}>
+              <Phone size={16} style={{ color: currentTheme.accentSecondary }} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, fontWeight: 700, color: "white", letterSpacing: "0.05em", marginBottom: 3, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, fontWeight: 700, color: currentTheme.text, letterSpacing: "0.05em", marginBottom: 3, display: "flex", alignItems: "center", gap: 8 }}>
                 {group.groupName}
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 99, background: "rgba(129,140,248,0.08)", border: "1px solid rgba(129,140,248,0.14)" }}>
-                  <Mail size={7} style={{ color: "rgba(129,140,248,0.7)" }} />
-                  <span style={{ fontFamily: T.font, fontSize: 7, color: "rgba(129,140,248,0.8)", letterSpacing: "0.08em" }}>{group.emails?.length || 0}</span>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 99, background: `${currentTheme.accent}12`, border: `1px solid ${currentTheme.accent}25` }}>
+                  <Mail size={7} style={{ color: currentTheme.accent }} />
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 7, color: currentTheme.accent, letterSpacing: "0.08em" }}>{group.emails?.length || 0}</span>
                 </div>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 99, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.14)" }}>
-                  <Phone size={7} style={{ color: "rgba(34,197,94,0.7)" }} />
-                  <span style={{ fontFamily: T.font, fontSize: 7, color: "rgba(34,197,94,0.8)", letterSpacing: "0.08em" }}>{group.phoneNumbers?.length || 0}</span>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 99, background: `${currentTheme.success}12`, border: `1px solid ${currentTheme.success}25` }}>
+                  <Phone size={7} style={{ color: currentTheme.success }} />
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 7, color: currentTheme.success, letterSpacing: "0.08em" }}>{group.phoneNumbers?.length || 0}</span>
                 </div>
               </div>
-              <div style={{ fontFamily: T.font, fontSize: 8, color: T.dim, letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: currentTheme.textMuted, letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 8 }}>
                 <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
                 {group.owner && (
-            <span style={{ fontFamily: T.font, fontSize: 8, color: T.dim, letterSpacing: "0.08em" }}>
-              By {group.owner.name || group.owner.email} ({group.owner.role})
-            </span>
-          )}
-                {group.description && <span style={{ color: "rgba(129,140,248,0.5)" }}>· {group.description}</span>}
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: currentTheme.textMuted, letterSpacing: "0.08em" }}>
+                    By {group.owner.name || group.owner.email} ({group.owner.role})
+                  </span>
+                )}
+                {group.description && <span style={{ color: `${currentTheme.accent}70` }}>· {group.description}</span>}
               </div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <button
               onClick={() => setExpanded(!expanded)}
-              style={{ background: "none", border: "none", cursor: "pointer", color: T.dim, display: "flex", padding: 6, borderRadius: 6, transition: "all 0.15s" }}
-              onMouseEnter={(e) => e.currentTarget.style.color = T.mid}
-              onMouseLeave={(e) => e.currentTarget.style.color = T.dim}
+              style={{ background: "none", border: "none", cursor: "pointer", color: currentTheme.textMuted, display: "flex", padding: 6, borderRadius: 6, transition: "all 0.15s" }}
+              onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.text}
+              onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.textMuted}
             >
               <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
                 <RefreshCw size={11} />
@@ -598,18 +589,18 @@ const NotificationGroupCard = ({ group, index, onEdit, onDelete, isDeleting }) =
             </button>
             <button
               onClick={() => onEdit(group)}
-              style={{ background: "none", border: "none", cursor: "pointer", color: T.dim, display: "flex", padding: 6, borderRadius: 6, transition: "color 0.15s" }}
-              onMouseEnter={(e) => e.currentTarget.style.color = "#818cf8"}
-              onMouseLeave={(e) => e.currentTarget.style.color = T.dim}
+              style={{ background: "none", border: "none", cursor: "pointer", color: currentTheme.textMuted, display: "flex", padding: 6, borderRadius: 6, transition: "color 0.15s" }}
+              onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accentSecondary}
+              onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.textMuted}
             >
               <Edit2 size={11} />
             </button>
             <button
               onClick={() => onDelete(group._id)}
               disabled={isDeleting}
-              style={{ background: "none", border: "none", cursor: isDeleting ? "not-allowed" : "pointer", color: isDeleting ? "rgba(248,113,113,0.3)" : "rgba(248,113,113,0.5)", display: "flex", padding: 6, borderRadius: 6, transition: "color 0.15s" }}
-              onMouseEnter={(e) => { if (!isDeleting) e.currentTarget.style.color = T.danger; }}
-              onMouseLeave={(e) => e.currentTarget.style.color = isDeleting ? "rgba(248,113,113,0.3)" : "rgba(248,113,113,0.5)"}
+              style={{ background: "none", border: "none", cursor: isDeleting ? "not-allowed" : "pointer", color: isDeleting ? `${currentTheme.error}50` : `${currentTheme.error}80`, display: "flex", padding: 6, borderRadius: 6, transition: "color 0.15s" }}
+              onMouseEnter={(e) => { if (!isDeleting) e.currentTarget.style.color = currentTheme.error; }}
+              onMouseLeave={(e) => e.currentTarget.style.color = isDeleting ? `${currentTheme.error}50` : `${currentTheme.error}80`}
             >
               {isDeleting ? <RefreshCw size={11} style={{ animation: "spin 0.8s linear infinite" }} /> : <Trash2 size={11} />}
             </button>
@@ -626,16 +617,16 @@ const NotificationGroupCard = ({ group, index, onEdit, onDelete, isDeleting }) =
               transition={{ duration: 0.2 }}
               style={{ overflow: "hidden" }}
             >
-              <div style={{ padding: "16px", borderTop: "1px solid rgba(129,140,248,0.08)" }}>
+              <div style={{ padding: "16px", borderTop: `1px solid ${currentTheme.borderAccent}` }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {group.emails && group.emails.length > 0 && (
                     <div>
-                      <div style={{ fontFamily: T.font, fontSize: 8, color: "rgba(129,140,248,0.7)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: currentTheme.accent, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
                         <Mail size={8} /> Email Addresses
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         {group.emails.map((email, idx) => (
-                          <div key={idx} style={{ padding: "4px 10px", borderRadius: 6, background: "rgba(129,140,248,0.08)", border: "1px solid rgba(129,140,248,0.14)", fontFamily: T.font, fontSize: 9, color: "rgba(129,140,248,0.9)", letterSpacing: "0.03em" }}>
+                          <div key={idx} style={{ padding: "5px 11px", borderRadius: 6, background: `${currentTheme.accent}15`, border: `1px solid ${currentTheme.accent}30`, fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: currentTheme.accent, letterSpacing: "0.03em" }}>
                             {email}
                           </div>
                         ))}
@@ -644,12 +635,12 @@ const NotificationGroupCard = ({ group, index, onEdit, onDelete, isDeleting }) =
                   )}
                   {group.phoneNumbers && group.phoneNumbers.length > 0 && (
                     <div>
-                      <div style={{ fontFamily: T.font, fontSize: 8, color: "rgba(34,197,94,0.7)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: currentTheme.success, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
                         <Phone size={8} /> Phone Numbers
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         {group.phoneNumbers.map((phone, idx) => (
-                          <div key={idx} style={{ padding: "4px 10px", borderRadius: 6, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.14)", fontFamily: T.font, fontSize: 9, color: "rgba(34,197,94,0.9)", letterSpacing: "0.03em" }}>
+                          <div key={idx} style={{ padding: "5px 11px", borderRadius: 6, background: `${currentTheme.success}15`, border: `1px solid ${currentTheme.success}30`, fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: currentTheme.success, letterSpacing: "0.03em" }}>
                             {phone}
                           </div>
                         ))}
@@ -667,7 +658,7 @@ const NotificationGroupCard = ({ group, index, onEdit, onDelete, isDeleting }) =
 };
 
 // ─── Group card ───────────────────────────────────────────────────────────────
-const GroupCard = ({ group, index, onEdit, onDelete, isDeleting }) => {
+const GroupCard = ({ group, index, onEdit, onDelete, isDeleting, currentTheme }) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -678,83 +669,83 @@ const GroupCard = ({ group, index, onEdit, onDelete, isDeleting }) => {
       transition={{ delay: index * 0.04, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       style={{
         borderRadius: 16, overflow: "hidden", position: "relative",
-        background: "rgba(3,7,18,0.74)",
-        border: "1px solid rgba(56,189,248,0.08)",
-        backdropFilter: "blur(18px)",
-        boxShadow: "0 0 22px rgba(56,189,248,0.04)",
+        background: `rgba(255,255,255,0.03)`,
+        border: `1px solid ${currentTheme.borderAccent}`,
+        backdropFilter: "blur(20px)",
+        boxShadow: currentTheme.shadow,
         transition: "border-color 0.2s, box-shadow 0.2s",
       }}
-      whileHover={{ borderColor: "rgba(56,189,248,0.18)" }}
+      whileHover={{ borderColor: `${currentTheme.accent}40` }}
     >
       {/* top accent line */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.35) 35%, rgba(56,189,248,0.15) 70%, transparent 100%)" }} />
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent 0%, ${currentTheme.accent}45 35%, ${currentTheme.accent}22 70%, transparent 100%)` }} />
       {/* top-right corner bracket */}
       <div style={{ position: "absolute", top: 0, right: 0, width: 28, height: 28, overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, right: 0, width: 1, height: 16, background: "rgba(56,189,248,0.22)" }} />
-        <div style={{ position: "absolute", top: 0, right: 0, height: 1, width: 16, background: "rgba(56,189,248,0.22)" }} />
+        <div style={{ position: "absolute", top: 0, right: 0, width: 1, height: 16, background: `${currentTheme.accent}40` }} />
+        <div style={{ position: "absolute", top: 0, right: 0, height: 1, width: 16, background: `${currentTheme.accent}40` }} />
       </div>
-      <Scanline />
 
       <div style={{ position: "relative", zIndex: 1, padding: "16px 18px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <Dot color={T.accent} />
-              <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, fontWeight: 700, color: T.bright, letterSpacing: "0.06em" }}>
+              <Dot color={currentTheme.accent} />
+              <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, fontWeight: 700, color: currentTheme.text, letterSpacing: "0.06em" }}>
                 {group.groupName}
               </span>
             </div>
             {group.description && (
-              <div style={{ fontFamily: T.font, fontSize: 9, color: T.dim, letterSpacing: "0.06em", paddingLeft: 13 }}>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: currentTheme.textMuted, letterSpacing: "0.06em", paddingLeft: 13 }}>
                 {group.description}
               </div>
             )}
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-            <ActionBtn icon={<Edit2 size={12} />} label="Edit" color="#38bdf8" onClick={() => onEdit(group)} />
+            <ActionBtn icon={<Edit2 size={12} />} label="Edit" color={currentTheme.accent} onClick={() => onEdit(group)} currentTheme={currentTheme} />
             <ActionBtn
               icon={isDeleting ? <RefreshCw size={12} style={{ animation: "spin 1s linear infinite" }} /> : <Trash2 size={12} />}
-              label="Delete" color={T.danger}
+              label="Delete" color={currentTheme.error}
               onClick={() => onDelete(group._id)}
               disabled={isDeleting}
+              currentTheme={currentTheme}
             />
           </div>
         </div>
 
-        <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 7, background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.13)" }}>
-            <Users size={9} style={{ color: T.accentDim }} />
-            <span style={{ fontFamily: T.font, fontSize: 9, color: T.accentMid, letterSpacing: "0.08em" }}>
+        <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 11px", borderRadius: 7, background: `${currentTheme.accent}15`, border: `1px solid ${currentTheme.accent}30` }}>
+            <Users size={9} style={{ color: `${currentTheme.accent}70` }} />
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: currentTheme.accent, letterSpacing: "0.08em" }}>
               {group.emails.length} email{group.emails.length !== 1 ? "s" : ""}
             </span>
           </div>
           {group.phoneNumbers && group.phoneNumbers.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 7, background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.13)" }}>
-              <Phone size={9} style={{ color: "rgba(34,197,94,0.7)" }} />
-              <span style={{ fontFamily: T.font, fontSize: 9, color: "rgba(34,197,94,0.8)", letterSpacing: "0.08em" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 11px", borderRadius: 7, background: `${currentTheme.success}15`, border: `1px solid ${currentTheme.success}30` }}>
+              <Phone size={9} style={{ color: currentTheme.success }} />
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: currentTheme.success, letterSpacing: "0.08em" }}>
                 {group.phoneNumbers.length} phone{group.phoneNumbers.length !== 1 ? "s" : ""}
               </span>
             </div>
           )}
 
           {group.createdAt && (
-            <span style={{ fontFamily: T.font, fontSize: 8, color: T.dim, letterSpacing: "0.08em" }}>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: currentTheme.textMuted, letterSpacing: "0.08em" }}>
               {new Date(group.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
             </span>
           )}
 
           {group.owner && (
-            <span style={{ fontFamily: T.font, fontSize: 8, color: T.dim, letterSpacing: "0.08em" }}>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: currentTheme.textMuted, letterSpacing: "0.08em" }}>
               By {group.owner.name || group.owner.email} ({group.owner.role})
             </span>
           )}
 
           <button
             onClick={() => setExpanded((v) => !v)}
-            style={{ marginLeft: "auto", fontFamily: T.font, fontSize: 8, letterSpacing: "0.12em", color: T.dim, background: "none", border: "none", cursor: "pointer", textTransform: "uppercase", transition: "color 0.15s", display: "flex", alignItems: "center", gap: 4 }}
-            onMouseEnter={(e) => e.currentTarget.style.color = T.accent}
-            onMouseLeave={(e) => e.currentTarget.style.color = T.dim}
+            style={{ marginLeft: "auto", fontFamily: "'JetBrains Mono', monospace", fontSize: 8, letterSpacing: "0.12em", color: currentTheme.textMuted, background: "none", border: "none", cursor: "pointer", textTransform: "uppercase", transition: "color 0.15s", display: "flex", alignItems: "center", gap: 4 }}
+            onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent}
+            onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.textMuted}
           >
             {expanded ? "Hide" : "Show"} recipients
             <span style={{ transform: expanded ? "rotate(180deg)" : "none", display: "inline-block", transition: "transform 0.2s" }}>▾</span>
@@ -770,102 +761,203 @@ const GroupCard = ({ group, index, onEdit, onDelete, isDeleting }) => {
               transition={{ duration: 0.22 }}
               style={{ overflow: "hidden" }}
             >
-              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 5 }}>
-                <Divider label="Recipients" />
-                <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 5 }}>
-                  {group.emails && group.emails.length > 0 && (
-                    <>
-                      <div style={{ fontFamily: T.font, fontSize: 8, color: "rgba(56,189,248,0.7)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                        <Mail size={8} /> Emails
-                      </div>
-                      {group.emails.map((email, i) => (
-                        <motion.div key={`email-${i}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
-                          <EmailChip email={email} />
-                        </motion.div>
-                      ))}
-                    </>
-                  )}
-                  {group.phoneNumbers && group.phoneNumbers.length > 0 && (
-                    <>
-                      <div style={{ fontFamily: T.font, fontSize: 8, color: "rgba(34,197,94,0.7)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4, marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                        <Phone size={8} /> Phone Numbers
-                      </div>
-                      {group.phoneNumbers.map((phone, i) => (
-                        <motion.div key={`phone-${i}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: (group.emails?.length || 0) * 0.04 + i * 0.04 }}>
-                          <div style={{
-                            display: "flex", alignItems: "center", gap: 6,
-                            padding: "5px 10px", borderRadius: 7,
-                            background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.12)",
-                          }}>
-                            <Phone size={9} style={{ color: "rgba(34,197,94,0.6)", flexShrink: 0 }} />
-                            <span style={{ fontFamily: T.font, fontSize: 10, color: "rgba(34,197,94,0.85)", letterSpacing: "0.02em", wordBreak: "break-all" }}>
-                              {phone}
-                            </span>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </>
-                  )}
-                </div>
+              <Divider label="Recipients" currentTheme={currentTheme} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {group.emails && group.emails.length > 0 && (
+                  <>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: currentTheme.accent, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6, display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
+                      <Mail size={8} /> Emails
+                    </div>
+                    {group.emails.map((email, i) => (
+                      <motion.div key={`email-${i}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+                        <EmailChip email={email} currentTheme={currentTheme} />
+                      </motion.div>
+                    ))}
+                  </>
+                )}
+                {group.phoneNumbers && group.phoneNumbers.length > 0 && (
+                  <>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: currentTheme.success, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6, marginTop: 10, display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
+                      <Phone size={8} /> Phone Numbers
+                    </div>
+                    {group.phoneNumbers.map((phone, i) => (
+                      <motion.div key={`phone-${i}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: (group.emails?.length || 0) * 0.04 + i * 0.04 }}>
+                        <div style={{
+                          display: "flex", alignItems: "center", gap: 6,
+                          padding: "6px 11px", borderRadius: 7,
+                          background: `${currentTheme.success}15`, border: `1px solid ${currentTheme.success}30`,
+                        }}>
+                          <Phone size={10} style={{ color: currentTheme.success, flexShrink: 0 }} />
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: currentTheme.success, letterSpacing: "0.02em", wordBreak: "break-all" }}>
+                            {phone}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </>
+                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${T.accentDim}, transparent)`, opacity: 0.5 }} />
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${currentTheme.accent}40, transparent)`, opacity: 0.5 }} />
     </motion.div>
   );
 };
 
 // ─── Icon action button ───────────────────────────────────────────────────────
-const ActionBtn = ({ icon, label, color, onClick, disabled }) => (
+const ActionBtn = ({ icon, label, color, onClick, disabled, currentTheme }) => (
   <button
     type="button" onClick={onClick} disabled={disabled} title={label}
-    style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "1px solid rgba(56,189,248,0.08)", color: T.dim, cursor: disabled ? "not-allowed" : "pointer", transition: "all 0.15s", opacity: disabled ? 0.5 : 1 }}
-    onMouseEnter={(e) => { if (!disabled) { e.currentTarget.style.background = `${color}14`; e.currentTarget.style.borderColor = `${color}35`; e.currentTarget.style.color = color; } }}
-    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(56,189,248,0.08)"; e.currentTarget.style.color = T.dim; }}
+    style={{ width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: `1px solid ${currentTheme.border}`, color: currentTheme.textMuted, cursor: disabled ? "not-allowed" : "pointer", transition: "all 0.15s", opacity: disabled ? 0.5 : 1 }}
+    onMouseEnter={(e) => { if (!disabled) { e.currentTarget.style.background = `${color}15`; e.currentTarget.style.borderColor = `${color}40`; e.currentTarget.style.color = color; } }}
+    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = currentTheme.border; e.currentTarget.style.color = currentTheme.textMuted; }}
   >
     {icon}
   </button>
 );
 
 // ─── Primary button ───────────────────────────────────────────────────────────
-const PrimaryBtn = ({ children, onClick, type = "button", disabled, loading }) => (
+const PrimaryBtn = ({ children, onClick, type = "button", disabled, loading, currentTheme }) => (
   <button
     type={type} onClick={onClick} disabled={disabled || loading}
     style={{
-      flex: 1, padding: "10px 14px", borderRadius: 10,
+      flex: 1, padding: "11px 14px", borderRadius: 10,
       cursor: (disabled || loading) ? "not-allowed" : "pointer",
-      background: loading || disabled ? "rgba(56,189,248,0.06)" : "rgba(56,189,248,0.12)",
-      border: `1px solid ${loading || disabled ? "rgba(56,189,248,0.13)" : "rgba(56,189,248,0.28)"}`,
-      color: loading || disabled ? "rgba(56,189,248,0.35)" : T.accent,
-      fontFamily: T.font, fontSize: 10, letterSpacing: "0.1em", fontWeight: 600,
+      background: loading || disabled ? `${currentTheme.accent}08` : `${currentTheme.accent}18`,
+      border: `1.5px solid ${loading || disabled ? `${currentTheme.accent}20` : `${currentTheme.accent}40`}`,
+      color: loading || disabled ? `${currentTheme.accent}50` : currentTheme.accent,
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.1em", fontWeight: 600,
       display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-      transition: "all 0.15s", backdropFilter: "blur(12px)",
+      transition: "all 0.2s ease", backdropFilter: "blur(12px)",
     }}
-    onMouseEnter={(e) => { if (!disabled && !loading) e.currentTarget.style.background = "rgba(56,189,248,0.18)"; }}
-    onMouseLeave={(e) => { if (!disabled && !loading) e.currentTarget.style.background = "rgba(56,189,248,0.12)"; }}
+    onMouseEnter={(e) => { if (!disabled && !loading) e.currentTarget.style.background = `${currentTheme.accent}28`; }}
+    onMouseLeave={(e) => { if (!disabled && !loading) e.currentTarget.style.background = `${currentTheme.accent}18`; }}
   >
     {loading ? <><RefreshCw size={10} style={{ animation: "spin 1s linear infinite" }} /> Saving…</> : children}
   </button>
 );
 
-const GhostBtn = ({ children, onClick, type = "button", disabled }) => (
+const GhostBtn = ({ children, onClick, type = "button", disabled, currentTheme }) => (
   <button
     type={type} onClick={onClick} disabled={disabled}
-    style={{ flex: 1, padding: "10px 14px", borderRadius: 10, cursor: "pointer", background: "transparent", border: "1px solid rgba(56,189,248,0.08)", color: T.dim, fontFamily: T.font, fontSize: 10, letterSpacing: "0.08em", transition: "all 0.15s" }}
-    onMouseEnter={(e) => { e.currentTarget.style.color = T.mid; e.currentTarget.style.borderColor = "rgba(56,189,248,0.25)"; }}
-    onMouseLeave={(e) => { e.currentTarget.style.color = T.dim; e.currentTarget.style.borderColor = "rgba(56,189,248,0.08)"; }}
+    style={{ flex: 1, padding: "11px 14px", borderRadius: 10, cursor: "pointer", background: "transparent", border: `1.5px solid ${currentTheme.border}`, color: currentTheme.textMuted, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", transition: "all 0.2s ease" }}
+    onMouseEnter={(e) => { e.currentTarget.style.color = currentTheme.text; e.currentTarget.style.borderColor = `${currentTheme.accent}40`; }}
+    onMouseLeave={(e) => { e.currentTarget.style.color = currentTheme.textMuted; e.currentTarget.style.borderColor = currentTheme.border; }}
   >
     {children}
   </button>
 );
 
+// ─── Ownership Filter ───────────────────────────────────────────────────────
+const OwnershipFilter = ({ filter, onFilterChange, currentTheme }) => {
+  const filters = [
+    { value: "all", label: "All Groups", icon: <Globe size={14} />, description: "View all groups" },
+    { value: "my", label: "My Groups", icon: <Shield size={14} />, description: "Groups I created" },
+    { value: "others", label: "Others' Groups", icon: <Users size={14} />, description: "Groups by others" },
+  ];
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 14, background: `rgba(255,255,255,0.04)`, border: `1px solid ${currentTheme.borderAccent}`, backdropFilter: "blur(20px)", boxShadow: currentTheme.shadow }}>
+      {filters.map((f, index) => (
+        <button
+          key={f.value}
+          onClick={() => onFilterChange(f.value)}
+          style={{
+            flex: 1,
+            padding: "12px 16px",
+            borderRadius: 10,
+            cursor: "pointer",
+            background: filter === f.value
+              ? `linear-gradient(135deg, ${currentTheme.accent}20 0%, ${currentTheme.accent}10 100%)`
+              : "transparent",
+            border: filter === f.value
+              ? `1.5px solid ${currentTheme.accent}50`
+              : `1px solid ${currentTheme.border}40`,
+            color: filter === f.value ? currentTheme.accent : currentTheme.textMuted,
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 11,
+            fontWeight: filter === f.value ? 600 : 500,
+            letterSpacing: "0.02em",
+            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            position: "relative",
+            overflow: "hidden",
+          }}
+          onMouseEnter={(e) => {
+            if (filter !== f.value) {
+              e.currentTarget.style.background = `${currentTheme.accent}08`;
+              e.currentTarget.style.borderColor = `${currentTheme.accent}30`;
+              e.currentTarget.style.transform = "translateY(-1px)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (filter !== f.value) {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.borderColor = `${currentTheme.border}40`;
+              e.currentTarget.style.transform = "translateY(0)";
+            }
+          }}
+        >
+          {filter === f.value && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: `linear-gradient(135deg, ${currentTheme.accent}15 0%, transparent 50%)`,
+                pointerEvents: "none",
+              }}
+            />
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}>
+            <span style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center",
+              padding: "6px",
+              borderRadius: 8,
+              background: filter === f.value ? `${currentTheme.accent}25` : "transparent",
+              transition: "all 0.2s"
+            }}>
+              {f.icon}
+            </span>
+            <span style={{ textTransform: "none" }}>{f.label}</span>
+          </div>
+          <span style={{ 
+            fontSize: 9, 
+            fontWeight: 400, 
+            opacity: 0.7,
+            fontFamily: "'JetBrains Mono', monospace",
+            letterSpacing: "0.05em",
+            textTransform: "uppercase",
+            zIndex: 1
+          }}>
+            {f.description}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 const EscalationGroups = () => {
-  // Tab state
+  const { currentTheme } = useTheme();
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
   const [activeTab, setActiveTab] = useState("escalation");
+
+  // Ownership filter state
+  const [ownershipFilter, setOwnershipFilter] = useState("all"); // "all", "my", "others"
 
   // Escalation Groups state
   const [groups, setGroups] = useState([]);
@@ -892,7 +984,7 @@ const EscalationGroups = () => {
   const [notificationDeleteTarget, setNotificationDeleteTarget] = useState(null);
   const [notificationIsDeleting, setNotificationIsDeleting] = useState(false);
 
-  useEffect(() => { fetchGroups(); fetchNotificationGroups(); }, []);
+  useEffect(() => { fetchGroups(); fetchNotificationGroups(); }, [ownershipFilter]);
 
   useEffect(() => {
     if (success || error) {
@@ -904,7 +996,20 @@ const EscalationGroups = () => {
   const fetchGroups = async () => {
     try {
       setLoading(true);
-      const r = await axios.get("/escalation-groups/my-groups");
+      let endpoint = "/escalation-groups/my-groups";
+      
+      // For SuperAdmin, fetch based on ownership filter
+      if (currentUser.role === "SUPERADMIN") {
+        if (ownershipFilter === "all") {
+          endpoint = "/escalation-groups/all";
+        } else if (ownershipFilter === "my") {
+          endpoint = "/escalation-groups/my-groups";
+        } else if (ownershipFilter === "others") {
+          endpoint = "/escalation-groups/others-groups";
+        }
+      }
+      
+      const r = await axios.get(endpoint);
       if (r.data.success) setGroups(r.data.data);
     } catch (e) {
       setError("Failed to fetch groups");
@@ -916,7 +1021,20 @@ const EscalationGroups = () => {
   const fetchNotificationGroups = async () => {
     try {
       setNotificationLoading(true);
-      const r = await axios.get("/notification-groups/my-groups");
+      let endpoint = "/notification-groups/my-groups";
+      
+      // For SuperAdmin, fetch based on ownership filter
+      if (currentUser.role === "SUPERADMIN") {
+        if (ownershipFilter === "all") {
+          endpoint = "/notification-groups/all";
+        } else if (ownershipFilter === "my") {
+          endpoint = "/notification-groups/my-groups";
+        } else if (ownershipFilter === "others") {
+          endpoint = "/notification-groups/others-groups";
+        }
+      }
+      
+      const r = await axios.get(endpoint);
       if (r.data.success) setNotificationGroups(r.data.data);
     } catch (e) {
       setError("Failed to fetch notification groups");
@@ -989,9 +1107,7 @@ const EscalationGroups = () => {
 
   const handleDelete = async (id) => {
     const group = groups.find((g) => g._id === id);
-    if (group) {
-      handleDeleteClick(group);
-    }
+    if (group) handleDeleteClick(group);
   };
 
   const resetForm = () => {
@@ -1083,9 +1199,7 @@ const EscalationGroups = () => {
 
   const handleNotificationDelete = async (id) => {
     const group = notificationGroups.find((g) => g._id === id);
-    if (group) {
-      handleNotificationDeleteClick(group);
-    }
+    if (group) handleNotificationDeleteClick(group);
   };
 
   const resetNotificationForm = () => {
@@ -1099,30 +1213,40 @@ const EscalationGroups = () => {
   const totalNotificationEmails = notificationGroups.reduce((acc, g) => acc + (g.emails?.length || 0), 0);
   const totalNotificationPhones = notificationGroups.reduce((acc, g) => acc + (g.phoneNumbers?.length || 0), 0);
 
+  // ── Shared panel styles (no scanlines, transparent glass) ──
+  const glassPanelStyle = {
+    borderRadius: 16, overflow: "hidden", position: "relative",
+    background: `rgba(255,255,255,0.03)`,
+    border: `1px solid ${currentTheme.borderAccent}`,
+    backdropFilter: "blur(24px)",
+    WebkitBackdropFilter: "blur(24px)",
+    boxShadow: currentTheme.shadow,
+  };
+
   return (
     <>
       <FontLoader />
-      <Background />
-      <CursorGlow />
+      <Background currentTheme={currentTheme} />
+      <CursorGlow currentTheme={currentTheme} />
 
-      <OrbitRing radius={220} duration={22} dotCount={8} color="#38bdf8" tilt={72} />
-      <OrbitRing radius={290} duration={34} dotCount={12} color="#818cf8" tilt={66} delay={1.2} />
-      <OrbitRing radius={155} duration={15} dotCount={5} color="#34d399" tilt={74} delay={0.5} />
+      <OrbitRing radius={220} duration={22} dotCount={8} color={currentTheme.accent} tilt={72} />
+      <OrbitRing radius={290} duration={34} dotCount={12} color={currentTheme.accentSecondary} tilt={66} delay={1.2} />
+      <OrbitRing radius={155} duration={15} dotCount={5} color={currentTheme.success} tilt={74} delay={0.5} />
 
       {[["tl", 0.10], ["tr", 0.16], ["bl", 0.22], ["br", 0.28]].map(([pos, delay]) => (
-        <HUDCorner key={pos} pos={pos} delay={delay} />
+        <HUDCorner key={pos} pos={pos} delay={delay} currentTheme={currentTheme} />
       ))}
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        input::placeholder, textarea::placeholder { color: rgba(148,163,184,0.3); }
-        input:focus, textarea:focus { border-color: rgba(56,189,248,0.34) !important; box-shadow: 0 0 0 3px rgba(56,189,248,0.06), 0 0 18px rgba(56,189,248,0.035) !important; outline: none; }
+        input::placeholder, textarea::placeholder { color: ${currentTheme.textMuted}; opacity: 0.6; }
+        input:focus, textarea:focus { border-color: ${currentTheme.accent} !important; box-shadow: 0 0 0 3px ${currentTheme.accentGlow}, 0 0 18px ${currentTheme.accent}12 !important; outline: none; }
         ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.15); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: ${currentTheme.borderAccent}; border-radius: 4px; }
         * { box-sizing: border-box; }
       `}</style>
 
-      <div style={{ position: "relative", zIndex: 10, minHeight: "100vh", fontFamily: T.font }}>
+      <div style={{ position: "relative", zIndex: 10, minHeight: "100vh", fontFamily: "'JetBrains Mono', monospace", backgroundColor: "transparent", color: currentTheme.text }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
 
           {/* ── Page header ── */}
@@ -1132,33 +1256,32 @@ const EscalationGroups = () => {
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
             style={{ marginBottom: 36 }}
           >
-            {/* Breadcrumb */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontFamily: T.font, fontSize: 8, letterSpacing: "0.28em", textTransform: "uppercase", color: T.dim }}>
-              <div style={{ height: 1, width: 28, background: "rgba(56,189,248,0.25)" }} />
-              <Shield size={9} style={{ color: T.accentDim }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontFamily: "'JetBrains Mono', monospace", fontSize: 8, letterSpacing: "0.28em", textTransform: "uppercase", color: currentTheme.textMuted }}>
+              <div style={{ height: 1, width: 28, background: `${currentTheme.accent}40` }} />
+              <Shield size={9} style={{ color: `${currentTheme.accent}70` }} />
               <span>Alert System › Groups</span>
-              <div style={{ height: 1, width: 80, background: "rgba(56,189,248,0.1)" }} />
+              <div style={{ height: 1, width: 80, background: `${currentTheme.accent}15` }} />
             </div>
 
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 20 }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.2)" }}>
-                    <Mail size={18} style={{ color: T.accent }} />
+                  <div style={{ width: 42, height: 42, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: `${currentTheme.accent}12`, border: `1px solid ${currentTheme.accent}25` }}>
+                    <Mail size={18} style={{ color: currentTheme.accent }} />
                   </div>
-                  <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "clamp(20px, 4vw, 28px)", fontWeight: 800, color: "white", letterSpacing: "0.05em", margin: 0, textShadow: "0 0 28px rgba(56,189,248,0.08)" }}>
+                  <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "clamp(20px, 4vw, 28px)", fontWeight: 800, color: currentTheme.text, letterSpacing: "0.05em", margin: 0, textShadow: `0 0 28px ${currentTheme.accent}12` }}>
                     GROUPS
                   </h1>
                 </div>
-                <div style={{ fontFamily: T.font, fontSize: "9px", color: T.dim, letterSpacing: "0.05em" }}>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: currentTheme.textMuted, letterSpacing: "0.05em" }}>
                   {new Date().toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </div>
               </div>
 
               <div style={{ display: "flex", gap: 10 }}>
-                <StatBadge value={activeTab === "escalation" ? groups.length : notificationGroups.length} label="Groups" color={T.accent} />
-                <StatBadge value={activeTab === "escalation" ? totalEmails : totalNotificationEmails} label="Emails" color="rgba(167,139,250,0.9)" />
-                <StatBadge value={activeTab === "escalation" ? totalPhones : totalNotificationPhones} label="Phones" color="rgba(34,197,94,0.9)" />
+                <StatBadge value={activeTab === "escalation" ? groups.length : notificationGroups.length} label="Groups" color={currentTheme.accent} currentTheme={currentTheme} />
+                <StatBadge value={activeTab === "escalation" ? totalEmails : totalNotificationEmails} label="Emails" color={currentTheme.accentSecondary} currentTheme={currentTheme} />
+                <StatBadge value={activeTab === "escalation" ? totalPhones : totalNotificationPhones} label="Phones" color={currentTheme.success} currentTheme={currentTheme} />
               </div>
             </div>
           </motion.div>
@@ -1170,18 +1293,18 @@ const EscalationGroups = () => {
             transition={{ delay: 0.1, duration: 0.45 }}
             style={{ marginBottom: 20 }}
           >
-            <div style={{ display: "flex", gap: 8, padding: 4, borderRadius: 12, background: "rgba(3,7,18,0.66)", border: "1px solid rgba(56,189,248,0.08)", backdropFilter: "blur(14px)" }}>
+            <div style={{ display: "flex", gap: 8, padding: 4, borderRadius: 12, background: `rgba(255,255,255,0.03)`, border: `1px solid ${currentTheme.borderAccent}`, backdropFilter: "blur(14px)" }}>
               <button
                 onClick={() => setActiveTab("escalation")}
                 style={{
                   flex: 1, padding: "10px 16px", borderRadius: 10,
-                  cursor: "pointer", background: activeTab === "escalation" ? "rgba(56,189,248,0.12)" : "transparent",
-                  border: activeTab === "escalation" ? "1px solid rgba(56,189,248,0.28)" : "1px solid transparent",
-                  color: activeTab === "escalation" ? T.accent : T.dim,
-                  fontFamily: T.font, fontSize: 10, letterSpacing: "0.1em", fontWeight: 600,
+                  cursor: "pointer", background: activeTab === "escalation" ? `${currentTheme.accent}15` : "transparent",
+                  border: activeTab === "escalation" ? `1px solid ${currentTheme.accent}40` : "1px solid transparent",
+                  color: activeTab === "escalation" ? currentTheme.accent : currentTheme.textMuted,
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.1em", fontWeight: 600,
                   transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 }}
-                onMouseEnter={(e) => { if (activeTab !== "escalation") e.currentTarget.style.background = "rgba(56,189,248,0.06)"; }}
+                onMouseEnter={(e) => { if (activeTab !== "escalation") e.currentTarget.style.background = `${currentTheme.accent}08`; }}
                 onMouseLeave={(e) => { if (activeTab !== "escalation") e.currentTarget.style.background = "transparent"; }}
               >
                 <Mail size={12} /> Escalation Groups
@@ -1190,19 +1313,35 @@ const EscalationGroups = () => {
                 onClick={() => setActiveTab("notification")}
                 style={{
                   flex: 1, padding: "10px 16px", borderRadius: 10,
-                  cursor: "pointer", background: activeTab === "notification" ? "rgba(129,140,248,0.12)" : "transparent",
-                  border: activeTab === "notification" ? "1px solid rgba(129,140,248,0.28)" : "1px solid transparent",
-                  color: activeTab === "notification" ? "#818cf8" : T.dim,
-                  fontFamily: T.font, fontSize: 10, letterSpacing: "0.1em", fontWeight: 600,
+                  cursor: "pointer", background: activeTab === "notification" ? `${currentTheme.accentSecondary}15` : "transparent",
+                  border: activeTab === "notification" ? `1px solid ${currentTheme.accentSecondary}40` : "1px solid transparent",
+                  color: activeTab === "notification" ? currentTheme.accentSecondary : currentTheme.textMuted,
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.1em", fontWeight: 600,
                   transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 }}
-                onMouseEnter={(e) => { if (activeTab !== "notification") e.currentTarget.style.background = "rgba(129,140,248,0.06)"; }}
+                onMouseEnter={(e) => { if (activeTab !== "notification") e.currentTarget.style.background = `${currentTheme.accentSecondary}08`; }}
                 onMouseLeave={(e) => { if (activeTab !== "notification") e.currentTarget.style.background = "transparent"; }}
               >
                 <Phone size={12} /> Notification Groups
               </button>
             </div>
           </motion.div>
+
+          {/* ── Ownership Filter (SuperAdmin only) ── */}
+          {currentUser.role === "SUPERADMIN" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15, duration: 0.45 }}
+              style={{ marginBottom: 20 }}
+            >
+              <OwnershipFilter
+                filter={ownershipFilter}
+                onFilterChange={setOwnershipFilter}
+                currentTheme={currentTheme}
+              />
+            </motion.div>
+          )}
 
           {/* ── Status bar ── */}
           <motion.div
@@ -1211,18 +1350,19 @@ const EscalationGroups = () => {
             transition={{ delay: 0.18, duration: 0.45 }}
             style={{
               marginBottom: 20, padding: "10px 16px", borderRadius: 12,
-              background: "rgba(3,7,18,0.66)", border: "1px solid rgba(56,189,248,0.08)",
-              backdropFilter: "blur(14px)", boxShadow: "0 0 18px rgba(56,189,248,0.02)",
+              background: `rgba(255,255,255,0.03)`,
+              border: `1px solid ${currentTheme.borderAccent}`,
+              backdropFilter: "blur(14px)",
               display: "flex", alignItems: "center", justifyContent: "space-between",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ height: 28, width: 2, borderRadius: 99, background: "linear-gradient(to bottom, rgba(56,189,248,0.6), transparent)" }} />
+              <div style={{ height: 28, width: 2, borderRadius: 99, background: `linear-gradient(to bottom, ${currentTheme.accent}60, transparent)` }} />
               <div>
-                <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: "0.08em", color: "white" }}>
+                <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: "0.08em", color: currentTheme.text }}>
                   {activeTab === "escalation" ? "ALERT ROUTING PANEL" : "NOTIFICATION GROUPS PANEL"}
                 </div>
-                <div style={{ fontFamily: T.font, fontSize: 9, color: T.dim, marginTop: 3 }}>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: currentTheme.textMuted, marginTop: 3 }}>
                   {activeTab === "escalation"
                     ? `${groups.length} group${groups.length !== 1 ? "s" : ""} configured · ${totalEmails} emails · ${totalPhones} phones`
                     : `${notificationGroups.length} group${notificationGroups.length !== 1 ? "s" : ""} configured · ${totalNotificationEmails} emails · ${totalNotificationPhones} phones`
@@ -1230,7 +1370,7 @@ const EscalationGroups = () => {
                 </div>
               </div>
             </div>
-            <StatusDot color="#38bdf8" label="Live" />
+            <StatusDot color={currentTheme.success} label="Live" />
           </motion.div>
 
           {/* ── Global feedback bar ── */}
@@ -1242,10 +1382,10 @@ const EscalationGroups = () => {
                 exit={{ opacity: 0, y: -8, height: 0 }}
                 style={{
                   marginBottom: 20, padding: "10px 16px", borderRadius: 10,
-                  background: error ? T.dangerFaint : T.successFaint,
-                  border: `1px solid ${error ? "rgba(248,113,113,0.22)" : "rgba(134,239,172,0.22)"}`,
-                  color: error ? "rgba(252,165,165,0.9)" : "rgba(134,239,172,0.9)",
-                  fontFamily: T.font, fontSize: 10, letterSpacing: "0.06em",
+                  background: error ? currentTheme.errorBg : currentTheme.successBg,
+                  border: `1px solid ${error ? currentTheme.error : currentTheme.success}`,
+                  color: error ? currentTheme.error : currentTheme.success,
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.06em",
                   display: "flex", alignItems: "center", gap: 8,
                   backdropFilter: "blur(12px)",
                 }}
@@ -1266,31 +1406,25 @@ const EscalationGroups = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.45, delay: 0.1 }}
               >
-                <div style={{
-                  borderRadius: 16, overflow: "hidden", position: "sticky", top: 24,
-                  background: "rgba(3,7,18,0.74)",
-                  border: "1px solid rgba(56,189,248,0.08)",
-                  backdropFilter: "blur(18px)",
-                  boxShadow: "0 0 22px rgba(56,189,248,0.04), inset 0 1px 0 rgba(56,189,248,0.06)",
-                }}>
-                  {/* top accent line */}
-                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.45) 35%, rgba(56,189,248,0.22) 70%, transparent 100%)" }} />
-                  <Scanline />
+                <div style={{ ...glassPanelStyle, position: "sticky", top: 24 }}>
+                  {/* top accent line only — no scanlines */}
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent 0%, ${currentTheme.accent}45 35%, ${currentTheme.accent}22 70%, transparent 100%)` }} />
+
                   <div style={{ position: "relative", zIndex: 1 }}>
                     {/* Form header */}
-                    <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid rgba(56,189,248,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ padding: "16px 20px 14px", borderBottom: `1px solid ${currentTheme.borderAccent}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ width: 26, height: 26, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.18)" }}>
-                          {editingId ? <Edit2 size={11} style={{ color: T.accent }} /> : <Plus size={11} style={{ color: T.accent }} />}
+                        <div style={{ width: 26, height: 26, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", background: `${currentTheme.accent}12`, border: `1px solid ${currentTheme.accent}25` }}>
+                          {editingId ? <Edit2 size={11} style={{ color: currentTheme.accent }} /> : <Plus size={11} style={{ color: currentTheme.accent }} />}
                         </div>
-                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: T.accent, textTransform: "uppercase" }}>
+                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: currentTheme.accent, textTransform: "uppercase" }}>
                           {editingId ? "Edit Group" : "New Group"}
                         </span>
                       </div>
                       {(formOpen || editingId) && (
-                        <button onClick={resetForm} style={{ background: "none", border: "none", cursor: "pointer", color: T.dim, display: "flex", padding: 4, borderRadius: 6, transition: "color 0.15s" }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = T.bright}
-                          onMouseLeave={(e) => e.currentTarget.style.color = T.dim}
+                        <button onClick={resetForm} style={{ background: "none", border: "none", cursor: "pointer", color: currentTheme.textMuted, display: "flex", padding: 4, borderRadius: 6, transition: "color 0.15s" }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.text}
+                          onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.textMuted}
                         >
                           <X size={13} />
                         </button>
@@ -1299,71 +1433,73 @@ const EscalationGroups = () => {
 
                     <div style={{ padding: "20px" }}>
                       <form onSubmit={handleSubmit}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                          <Field label="Group Name *">
+                        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                          <Field label="Group Name *" currentTheme={currentTheme}>
                             <input
                               type="text"
                               placeholder="e.g. Critical Alert Team"
                               value={formData.groupName}
                               onChange={(e) => setFormData({ ...formData, groupName: e.target.value })}
                               disabled={isSubmitting}
-                              style={{ ...inputStyle, opacity: isSubmitting ? 0.6 : 1 }}
+                              style={{ ...getInputStyle(currentTheme), opacity: isSubmitting ? 0.6 : 1 }}
                             />
                           </Field>
 
-                          <Field label="Recipient Emails">
+                          <Field label="Recipient Emails" currentTheme={currentTheme}>
                             <EmailListInput
                               emails={formData.emails}
                               onChange={(arr) => setFormData({ ...formData, emails: arr })}
                               disabled={isSubmitting}
+                              currentTheme={currentTheme}
                             />
                           </Field>
 
-                          <Field label="Phone Numbers">
+                          <Field label="Phone Numbers" currentTheme={currentTheme}>
                             <PhoneListInput
                               phones={formData.phoneNumbers}
                               onChange={(arr) => setFormData({ ...formData, phoneNumbers: arr })}
                               disabled={isSubmitting}
+                              currentTheme={currentTheme}
                             />
                           </Field>
 
-                          <Field label="Description">
+                          <Field label="Description" currentTheme={currentTheme}>
                             <input
                               type="text"
                               placeholder="e.g. 24/7 on-call engineers"
                               value={formData.description}
                               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                               disabled={isSubmitting}
-                              style={{ ...inputStyle, opacity: isSubmitting ? 0.6 : 1 }}
+                              style={{ ...getInputStyle(currentTheme), opacity: isSubmitting ? 0.6 : 1 }}
                             />
                           </Field>
 
-                          <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
-                            <PrimaryBtn type="submit" loading={isSubmitting}>
+                          <div style={{ display: "flex", gap: 8, paddingTop: 6 }}>
+                            <PrimaryBtn type="submit" loading={isSubmitting} currentTheme={currentTheme}>
                               {editingId ? "Update Group" : "Create Group"}
                             </PrimaryBtn>
                             {(formOpen || editingId) && (
-                              <GhostBtn type="button" onClick={resetForm} disabled={isSubmitting}>Cancel</GhostBtn>
+                              <GhostBtn type="button" onClick={resetForm} disabled={isSubmitting} currentTheme={currentTheme}>Cancel</GhostBtn>
                             )}
                           </div>
                         </div>
                       </form>
 
                       {!formOpen && !editingId && (
-                        <div style={{ marginTop: 16 }}>
-                          <Divider />
+                        <div style={{ marginTop: 20 }}>
+                          <Divider currentTheme={currentTheme} />
                           <button
                             onClick={() => setFormOpen(true)}
                             style={{
-                              width: "100%", marginTop: 12, padding: "10px 14px", borderRadius: 10,
-                              cursor: "pointer", background: "rgba(56,189,248,0.06)",
-                              border: "1px dashed rgba(56,189,248,0.22)",
-                              color: "rgba(56,189,248,0.55)", fontFamily: T.font,
+                              width: "100%", marginTop: 14, padding: "10px 14px", borderRadius: 10,
+                              cursor: "pointer", background: `${currentTheme.accent}10`,
+                              border: `1.5px dashed ${currentTheme.accent}35`,
+                              color: `${currentTheme.accent}85`, fontFamily: "'JetBrains Mono', monospace",
                               fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase",
-                              transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                              transition: "all 0.2s ease", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontWeight: 600,
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(56,189,248,0.1)"; e.currentTarget.style.color = T.accent; e.currentTarget.style.borderColor = "rgba(56,189,248,0.35)"; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(56,189,248,0.06)"; e.currentTarget.style.color = "rgba(56,189,248,0.55)"; e.currentTarget.style.borderColor = "rgba(56,189,248,0.22)"; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = `${currentTheme.accent}18`; e.currentTarget.style.color = currentTheme.accent; e.currentTarget.style.borderColor = `${currentTheme.accent}45`; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = `${currentTheme.accent}10`; e.currentTarget.style.color = `${currentTheme.accent}85`; e.currentTarget.style.borderColor = `${currentTheme.accent}35`; }}
                           >
                             <Plus size={12} /> Create new group
                           </button>
@@ -1384,24 +1520,24 @@ const EscalationGroups = () => {
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   marginBottom: 16, padding: "10px 16px", borderRadius: 12,
-                  background: "rgba(3,7,18,0.66)", border: "1px solid rgba(56,189,248,0.08)",
-                  backdropFilter: "blur(14px)", position: "relative", overflow: "hidden",
+                  background: `rgba(255,255,255,0.03)`,
+                  border: `1px solid ${currentTheme.borderAccent}`,
+                  backdropFilter: "blur(14px)",
                 }}>
-                  <Scanline />
-                  <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 8 }}>
-                    <Users size={12} style={{ color: T.accentDim }} />
-                    <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: T.mid, fontWeight: 700 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Users size={12} style={{ color: `${currentTheme.accent}70` }} />
+                    <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: currentTheme.text, fontWeight: 700 }}>
                       Active Groups
                     </span>
                   </div>
-                  <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 8 }}>
-                    {loading && <RefreshCw size={10} style={{ color: T.dim, animation: "spin 1s linear infinite" }} />}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {loading && <RefreshCw size={10} style={{ color: currentTheme.textMuted, animation: "spin 1s linear infinite" }} />}
                     <button
                       onClick={fetchGroups}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: T.dim, display: "flex", padding: 4, borderRadius: 6, transition: "color 0.15s" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: currentTheme.textMuted, display: "flex", padding: 4, borderRadius: 6, transition: "color 0.15s" }}
                       title="Refresh"
-                      onMouseEnter={(e) => e.currentTarget.style.color = T.accent}
-                      onMouseLeave={(e) => e.currentTarget.style.color = T.dim}
+                      onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent}
+                      onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.textMuted}
                     >
                       <RefreshCw size={11} />
                     </button>
@@ -1411,8 +1547,8 @@ const EscalationGroups = () => {
                 {loading ? (
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 0" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                      <RefreshCw size={20} style={{ color: T.accentDim, animation: "spin 1s linear infinite" }} />
-                      <span style={{ fontFamily: T.font, fontSize: 9, color: T.dim, letterSpacing: "0.14em", textTransform: "uppercase" }}>Loading groups…</span>
+                      <RefreshCw size={20} style={{ color: `${currentTheme.accent}70`, animation: "spin 1s linear infinite" }} />
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: currentTheme.textMuted, letterSpacing: "0.14em", textTransform: "uppercase" }}>Loading groups…</span>
                     </div>
                   </div>
                 ) : groups.length === 0 ? (
@@ -1421,36 +1557,38 @@ const EscalationGroups = () => {
                     animate={{ opacity: 1 }}
                     style={{
                       padding: "60px 32px", borderRadius: 16, textAlign: "center",
-                      background: "rgba(3,7,18,0.68)", border: "1px dashed rgba(56,189,248,0.08)",
-                      backdropFilter: "blur(16px)", position: "relative", overflow: "hidden",
+                      background: `rgba(255,255,255,0.02)`,
+                      border: `1px dashed ${currentTheme.borderAccent}`,
+                      backdropFilter: "blur(16px)",
                     }}
                   >
-                    <Scanline />
-                    <div style={{ position: "relative", zIndex: 1 }}>
-                      <div style={{ width: 52, height: 52, borderRadius: 14, margin: "0 auto 16px", background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Mail size={22} style={{ color: T.accentDim }} />
+                    <div>
+                      <div style={{ width: 52, height: 52, borderRadius: 14, margin: "0 auto 16px", background: `${currentTheme.accent}08`, border: `1px solid ${currentTheme.accent}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Mail size={22} style={{ color: `${currentTheme.accent}70` }} />
                       </div>
-                      <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: T.mid, fontWeight: 700, marginBottom: 8, letterSpacing: "0.06em" }}>
-                        NO ESCALATION GROUPS
+                      <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: currentTheme.text, fontWeight: 700, marginBottom: 8, letterSpacing: "0.06em" }}>
+                        {currentUser.role === "SUPERADMIN" && ownershipFilter === "my" ? "NO ESCALATION GROUPS CREATED BY YOU" : currentUser.role === "SUPERADMIN" && ownershipFilter === "others" ? "NO ESCALATION GROUPS FROM OTHER USERS" : "NO ESCALATION GROUPS"}
                       </div>
-                      <div style={{ fontFamily: T.font, fontSize: 9, color: T.dim, letterSpacing: "0.07em", lineHeight: 1.7 }}>
-                        Create your first group to define<br />alert recipients and routing destinations.
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: currentTheme.textMuted, letterSpacing: "0.07em", lineHeight: 1.7 }}>
+                        {currentUser.role === "SUPERADMIN" && ownershipFilter !== "all" ? "Try changing the filter to see more groups." : "Create your first group to define<br />alert recipients and routing destinations."}
                       </div>
-                      <button
-                        onClick={() => setFormOpen(true)}
-                        style={{ marginTop: 20, padding: "9px 20px", borderRadius: 10, cursor: "pointer", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", color: T.accent, fontFamily: T.font, fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", transition: "all 0.15s", display: "inline-flex", alignItems: "center", gap: 6 }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(56,189,248,0.18)"}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "rgba(56,189,248,0.1)"}
-                      >
-                        <Plus size={11} /> Create first group
-                      </button>
+                      {(!currentUser.role || currentUser.role !== "SUPERADMIN" || ownershipFilter === "all") && (
+                        <button
+                          onClick={() => setFormOpen(true)}
+                          style={{ marginTop: 20, padding: "9px 20px", borderRadius: 10, cursor: "pointer", background: `${currentTheme.accent}15`, border: `1px solid ${currentTheme.accent}40`, color: currentTheme.accent, fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", transition: "all 0.15s", display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 600 }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = `${currentTheme.accent}25`}
+                          onMouseLeave={(e) => e.currentTarget.style.background = `${currentTheme.accent}15`}
+                        >
+                          <Plus size={11} /> Create first group
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <AnimatePresence>
                       {groups.map((group, i) => (
-                        <GroupCard key={group._id} group={group} index={i} onEdit={handleEdit} onDelete={handleDelete} isDeleting={deletingId === group._id} />
+                        <GroupCard key={group._id} group={group} index={i} onEdit={handleEdit} onDelete={handleDelete} isDeleting={deletingId === group._id} currentTheme={currentTheme} />
                       ))}
                     </AnimatePresence>
                   </div>
@@ -1459,37 +1597,30 @@ const EscalationGroups = () => {
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: 20, alignItems: "start" }}>
+
               {/* ─── Left: Notification Form panel ─── */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.45, delay: 0.1 }}
               >
-                <div style={{
-                  borderRadius: 16, overflow: "hidden", position: "sticky", top: 24,
-                  background: "rgba(3,7,18,0.74)",
-                  border: "1px solid rgba(129,140,248,0.08)",
-                  backdropFilter: "blur(18px)",
-                  boxShadow: "0 0 22px rgba(129,140,248,0.04), inset 0 1px 0 rgba(129,140,248,0.06)",
-                }}>
-                  {/* top accent line */}
-                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent 0%, rgba(129,140,248,0.45) 35%, rgba(129,140,248,0.22) 70%, transparent 100%)" }} />
-                  <Scanline />
+                <div style={{ ...glassPanelStyle, position: "sticky", top: 24 }}>
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent 0%, ${currentTheme.accentSecondary}45 35%, ${currentTheme.accentSecondary}22 70%, transparent 100%)` }} />
+
                   <div style={{ position: "relative", zIndex: 1 }}>
-                    {/* Form header */}
-                    <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid rgba(129,140,248,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ padding: "16px 20px 14px", borderBottom: `1px solid ${currentTheme.borderAccent}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ width: 26, height: 26, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(129,140,248,0.1)", border: "1px solid rgba(129,140,248,0.18)" }}>
-                          {notificationEditingId ? <Edit2 size={11} style={{ color: "#818cf8" }} /> : <Plus size={11} style={{ color: "#818cf8" }} />}
+                        <div style={{ width: 26, height: 26, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", background: `${currentTheme.accentSecondary}12`, border: `1px solid ${currentTheme.accentSecondary}25` }}>
+                          {notificationEditingId ? <Edit2 size={11} style={{ color: currentTheme.accentSecondary }} /> : <Plus size={11} style={{ color: currentTheme.accentSecondary }} />}
                         </div>
-                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: "#818cf8", textTransform: "uppercase" }}>
+                        <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: currentTheme.accentSecondary, textTransform: "uppercase" }}>
                           {notificationEditingId ? "Edit Group" : "New Group"}
                         </span>
                       </div>
                       {(notificationFormOpen || notificationEditingId) && (
-                        <button onClick={resetNotificationForm} style={{ background: "none", border: "none", cursor: "pointer", color: T.dim, display: "flex", padding: 4, borderRadius: 6, transition: "color 0.15s" }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = T.bright}
-                          onMouseLeave={(e) => e.currentTarget.style.color = T.dim}
+                        <button onClick={resetNotificationForm} style={{ background: "none", border: "none", cursor: "pointer", color: currentTheme.textMuted, display: "flex", padding: 4, borderRadius: 6, transition: "color 0.15s" }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.text}
+                          onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.textMuted}
                         >
                           <X size={13} />
                         </button>
@@ -1498,71 +1629,73 @@ const EscalationGroups = () => {
 
                     <div style={{ padding: "20px" }}>
                       <form onSubmit={handleNotificationSubmit}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                          <Field label="Group Name *">
+                        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                          <Field label="Group Name *" currentTheme={currentTheme}>
                             <input
                               type="text"
                               placeholder="e.g. Critical Alert Team"
                               value={notificationFormData.groupName}
                               onChange={(e) => setNotificationFormData({ ...notificationFormData, groupName: e.target.value })}
                               disabled={isSubmitting}
-                              style={{ ...inputStyle, opacity: isSubmitting ? 0.6 : 1 }}
+                              style={{ ...getInputStyle(currentTheme), opacity: isSubmitting ? 0.6 : 1 }}
                             />
                           </Field>
 
-                          <Field label="Email Addresses">
+                          <Field label="Email Addresses" currentTheme={currentTheme}>
                             <EmailListInput
                               emails={notificationFormData.emails}
                               onChange={(arr) => setNotificationFormData({ ...notificationFormData, emails: arr })}
                               disabled={isSubmitting}
+                              currentTheme={currentTheme}
                             />
                           </Field>
 
-                          <Field label="Phone Numbers">
+                          <Field label="Phone Numbers" currentTheme={currentTheme}>
                             <PhoneListInput
                               phones={notificationFormData.phoneNumbers}
                               onChange={(arr) => setNotificationFormData({ ...notificationFormData, phoneNumbers: arr })}
                               disabled={isSubmitting}
+                              currentTheme={currentTheme}
                             />
                           </Field>
 
-                          <Field label="Description">
+                          <Field label="Description" currentTheme={currentTheme}>
                             <input
                               type="text"
                               placeholder="e.g. 24/7 on-call engineers"
                               value={notificationFormData.description}
                               onChange={(e) => setNotificationFormData({ ...notificationFormData, description: e.target.value })}
                               disabled={isSubmitting}
-                              style={{ ...inputStyle, opacity: isSubmitting ? 0.6 : 1 }}
+                              style={{ ...getInputStyle(currentTheme), opacity: isSubmitting ? 0.6 : 1 }}
                             />
                           </Field>
 
-                          <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
-                            <PrimaryBtn type="submit" loading={isSubmitting}>
+                          <div style={{ display: "flex", gap: 8, paddingTop: 6 }}>
+                            <PrimaryBtn type="submit" loading={isSubmitting} currentTheme={currentTheme}>
                               {notificationEditingId ? "Update Group" : "Create Group"}
                             </PrimaryBtn>
                             {(notificationFormOpen || notificationEditingId) && (
-                              <GhostBtn type="button" onClick={resetNotificationForm} disabled={isSubmitting}>Cancel</GhostBtn>
+                              <GhostBtn type="button" onClick={resetNotificationForm} disabled={isSubmitting} currentTheme={currentTheme}>Cancel</GhostBtn>
                             )}
                           </div>
                         </div>
                       </form>
 
                       {!notificationFormOpen && !notificationEditingId && (
-                        <div style={{ marginTop: 16 }}>
-                          <Divider />
+                        <div style={{ marginTop: 20 }}>
+                          <Divider currentTheme={currentTheme} />
                           <button
                             onClick={() => setNotificationFormOpen(true)}
                             style={{
-                              width: "100%", marginTop: 12, padding: "10px 14px", borderRadius: 10,
-                              cursor: "pointer", background: "rgba(129,140,248,0.06)",
-                              border: "1px dashed rgba(129,140,248,0.22)",
-                              color: "rgba(129,140,248,0.55)", fontFamily: T.font,
+                              width: "100%", marginTop: 14, padding: "10px 14px", borderRadius: 10,
+                              cursor: "pointer", background: `${currentTheme.accentSecondary}10`,
+                              border: `1.5px dashed ${currentTheme.accentSecondary}35`,
+                              color: `${currentTheme.accentSecondary}85`, fontFamily: "'JetBrains Mono', monospace",
                               fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase",
-                              transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                              transition: "all 0.2s ease", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontWeight: 600,
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(129,140,248,0.1)"; e.currentTarget.style.color = "#818cf8"; e.currentTarget.style.borderColor = "rgba(129,140,248,0.35)"; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(129,140,248,0.06)"; e.currentTarget.style.color = "rgba(129,140,248,0.55)"; e.currentTarget.style.borderColor = "rgba(129,140,248,0.22)"; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = `${currentTheme.accentSecondary}18`; e.currentTarget.style.color = currentTheme.accentSecondary; e.currentTarget.style.borderColor = `${currentTheme.accentSecondary}45`; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = `${currentTheme.accentSecondary}10`; e.currentTarget.style.color = `${currentTheme.accentSecondary}85`; e.currentTarget.style.borderColor = `${currentTheme.accentSecondary}35`; }}
                           >
                             <Plus size={12} /> Create new group
                           </button>
@@ -1579,28 +1712,27 @@ const EscalationGroups = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.45, delay: 0.15 }}
               >
-                {/* List header */}
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   marginBottom: 16, padding: "10px 16px", borderRadius: 12,
-                  background: "rgba(3,7,18,0.66)", border: "1px solid rgba(129,140,248,0.08)",
-                  backdropFilter: "blur(14px)", position: "relative", overflow: "hidden",
+                  background: `rgba(255,255,255,0.03)`,
+                  border: `1px solid ${currentTheme.borderAccent}`,
+                  backdropFilter: "blur(14px)",
                 }}>
-                  <Scanline />
-                  <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 8 }}>
-                    <Users size={12} style={{ color: "rgba(129,140,248,0.5)" }} />
-                    <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: T.mid, fontWeight: 700 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Users size={12} style={{ color: `${currentTheme.accentSecondary}70` }} />
+                    <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: currentTheme.text, fontWeight: 700 }}>
                       Active Groups
                     </span>
                   </div>
-                  <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 8 }}>
-                    {notificationLoading && <RefreshCw size={10} style={{ color: T.dim, animation: "spin 1s linear infinite" }} />}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {notificationLoading && <RefreshCw size={10} style={{ color: currentTheme.textMuted, animation: "spin 1s linear infinite" }} />}
                     <button
                       onClick={fetchNotificationGroups}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: T.dim, display: "flex", padding: 4, borderRadius: 6, transition: "color 0.15s" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: currentTheme.textMuted, display: "flex", padding: 4, borderRadius: 6, transition: "color 0.15s" }}
                       title="Refresh"
-                      onMouseEnter={(e) => e.currentTarget.style.color = "#818cf8"}
-                      onMouseLeave={(e) => e.currentTarget.style.color = T.dim}
+                      onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accentSecondary}
+                      onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.textMuted}
                     >
                       <RefreshCw size={11} />
                     </button>
@@ -1610,8 +1742,8 @@ const EscalationGroups = () => {
                 {notificationLoading ? (
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 0" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                      <RefreshCw size={20} style={{ color: "rgba(129,140,248,0.5)", animation: "spin 1s linear infinite" }} />
-                      <span style={{ fontFamily: T.font, fontSize: 9, color: T.dim, letterSpacing: "0.14em", textTransform: "uppercase" }}>Loading groups…</span>
+                      <RefreshCw size={20} style={{ color: `${currentTheme.accentSecondary}70`, animation: "spin 1s linear infinite" }} />
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: currentTheme.textMuted, letterSpacing: "0.14em", textTransform: "uppercase" }}>Loading groups…</span>
                     </div>
                   </div>
                 ) : notificationGroups.length === 0 ? (
@@ -1620,36 +1752,38 @@ const EscalationGroups = () => {
                     animate={{ opacity: 1 }}
                     style={{
                       padding: "60px 32px", borderRadius: 16, textAlign: "center",
-                      background: "rgba(3,7,18,0.68)", border: "1px dashed rgba(129,140,248,0.08)",
-                      backdropFilter: "blur(16px)", position: "relative", overflow: "hidden",
+                      background: `rgba(255,255,255,0.02)`,
+                      border: `1px dashed ${currentTheme.borderAccent}`,
+                      backdropFilter: "blur(16px)",
                     }}
                   >
-                    <Scanline />
-                    <div style={{ position: "relative", zIndex: 1 }}>
-                      <div style={{ width: 52, height: 52, borderRadius: 14, margin: "0 auto 16px", background: "rgba(129,140,248,0.06)", border: "1px solid rgba(129,140,248,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Phone size={22} style={{ color: "rgba(129,140,248,0.5)" }} />
+                    <div>
+                      <div style={{ width: 52, height: 52, borderRadius: 14, margin: "0 auto 16px", background: `${currentTheme.accentSecondary}08`, border: `1px solid ${currentTheme.accentSecondary}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Phone size={22} style={{ color: `${currentTheme.accentSecondary}70` }} />
                       </div>
-                      <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: T.mid, fontWeight: 700, marginBottom: 8, letterSpacing: "0.06em" }}>
-                        NO NOTIFICATION GROUPS
+                      <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color: currentTheme.text, fontWeight: 700, marginBottom: 8, letterSpacing: "0.06em" }}>
+                        {currentUser.role === "SUPERADMIN" && ownershipFilter === "my" ? "NO NOTIFICATION GROUPS CREATED BY YOU" : currentUser.role === "SUPERADMIN" && ownershipFilter === "others" ? "NO NOTIFICATION GROUPS FROM OTHER USERS" : "NO NOTIFICATION GROUPS"}
                       </div>
-                      <div style={{ fontFamily: T.font, fontSize: 9, color: T.dim, letterSpacing: "0.07em", lineHeight: 1.7 }}>
-                        Create your first group to define<br />notification recipients for alerts.
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: currentTheme.textMuted, letterSpacing: "0.07em", lineHeight: 1.7 }}>
+                        {currentUser.role === "SUPERADMIN" && ownershipFilter !== "all" ? "Try changing the filter to see more groups." : "Create your first group to define<br />notification recipients for alerts."}
                       </div>
-                      <button
-                        onClick={() => setNotificationFormOpen(true)}
-                        style={{ marginTop: 20, padding: "9px 20px", borderRadius: 10, cursor: "pointer", background: "rgba(129,140,248,0.1)", border: "1px solid rgba(129,140,248,0.25)", color: "#818cf8", fontFamily: T.font, fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", transition: "all 0.15s", display: "inline-flex", alignItems: "center", gap: 6 }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(129,140,248,0.18)"}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "rgba(129,140,248,0.1)"}
-                      >
-                        <Plus size={11} /> Create first group
-                      </button>
+                      {(!currentUser.role || currentUser.role !== "SUPERADMIN" || ownershipFilter === "all") && (
+                        <button
+                          onClick={() => setNotificationFormOpen(true)}
+                          style={{ marginTop: 20, padding: "9px 20px", borderRadius: 10, cursor: "pointer", background: `${currentTheme.accentSecondary}15`, border: `1px solid ${currentTheme.accentSecondary}40`, color: currentTheme.accentSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", transition: "all 0.15s", display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 600 }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = `${currentTheme.accentSecondary}25`}
+                          onMouseLeave={(e) => e.currentTarget.style.background = `${currentTheme.accentSecondary}15`}
+                        >
+                          <Plus size={11} /> Create first group
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <AnimatePresence>
                       {notificationGroups.map((group, i) => (
-                        <NotificationGroupCard key={group._id} group={group} index={i} onEdit={handleNotificationEdit} onDelete={handleNotificationDelete} isDeleting={notificationDeletingId === group._id} />
+                        <NotificationGroupCard key={group._id} group={group} index={i} onEdit={handleNotificationEdit} onDelete={handleNotificationDelete} isDeleting={notificationDeletingId === group._id} currentTheme={currentTheme} />
                       ))}
                     </AnimatePresence>
                   </div>
@@ -1660,7 +1794,6 @@ const EscalationGroups = () => {
         </div>
       </div>
 
-      {/* ─── Delete Confirmation Modal ─── */}
       <DeleteConfirmationModal
         isOpen={deleteModalOpen}
         onClose={handleDeleteCancel}
@@ -1671,7 +1804,6 @@ const EscalationGroups = () => {
         loading={isDeleting}
       />
 
-      {/* ─── Notification Delete Confirmation Modal ─── */}
       <DeleteConfirmationModal
         isOpen={notificationDeleteModalOpen}
         onClose={handleNotificationDeleteCancel}

@@ -8,6 +8,7 @@ import {
   TrendingUp,
   AlertTriangle,
 } from "lucide-react";
+import { useTheme } from "../contexts/ThemeContext";
 
 const monoLabel = {
   fontFamily: "'JetBrains Mono', monospace",
@@ -16,7 +17,7 @@ const monoLabel = {
   textTransform: "uppercase",
 };
 
-const StatCard = ({ icon: Icon, label, value, color, delay = 0 }) => {
+const StatCard = ({ icon: Icon, label, value, color, delay = 0, currentTheme }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -25,15 +26,15 @@ const StatCard = ({ icon: Icon, label, value, color, delay = 0 }) => {
       whileHover={{ y: -2 }}
       className="relative rounded-xl p-3 overflow-hidden"
       style={{
-        background: "rgba(3,7,18,0.75)",
-        border: `1px solid ${color}12`,
+        background: currentTheme.bgCard,
+        border: `1px solid ${color}30`,
         backdropFilter: "blur(12px)",
       }}
     >
       <div
         className="absolute top-0 left-0 right-0 h-[1px]"
         style={{
-          background: `linear-gradient(90deg, transparent, ${color}40, transparent)`,
+          background: `linear-gradient(90deg, transparent, ${color}60, transparent)`,
         }}
       />
 
@@ -41,8 +42,8 @@ const StatCard = ({ icon: Icon, label, value, color, delay = 0 }) => {
         <div
           className="w-7 h-7 rounded-lg flex items-center justify-center"
           style={{
-            background: `${color}10`,
-            border: `1px solid ${color}20`,
+            background: `${color}20`,
+            border: `1px solid ${color}30`,
           }}
         >
           <Icon size={13} style={{ color }} />
@@ -59,7 +60,7 @@ const StatCard = ({ icon: Icon, label, value, color, delay = 0 }) => {
         </div>
       </div>
 
-      <div style={{ ...monoLabel, fontSize: "8px", color: "rgba(248,250,252,0.78)" }}>
+      <div style={{ ...monoLabel, fontSize: "8px", color: currentTheme.textMuted }}>
         {label}
       </div>
 
@@ -69,7 +70,7 @@ const StatCard = ({ icon: Icon, label, value, color, delay = 0 }) => {
           fontFamily: "'Orbitron', sans-serif",
           fontSize: "16px",
           fontWeight: 700,
-          color: "white",
+          color: currentTheme.text,
           textShadow: `0 0 10px ${color}20`,
         }}
       >
@@ -80,7 +81,7 @@ const StatCard = ({ icon: Icon, label, value, color, delay = 0 }) => {
 };
 
 // ─── HUD-style Range Dropdown ─────────────────────────────────────────────────
-const RangeDropdown = ({ anchorRef, open, value, onChange, onClose }) => {
+const RangeDropdown = ({ anchorRef, open, value, onChange, onClose, currentTheme }) => {
   const options = [
     { value: "24h", label: "Last 24 Hours" },
     { value: "7d", label: "Last 7 Days" },
@@ -126,19 +127,17 @@ const RangeDropdown = ({ anchorRef, open, value, onChange, onClose }) => {
         width: "210px",
         borderRadius: "18px",
         overflow: "hidden",
-        background: "rgba(3,7,18,0.96)",
-        border: "1px solid rgba(56,189,248,0.15)",
+        background: currentTheme.bgCard,
+        border: `1px solid ${currentTheme.borderAccent}`,
         backdropFilter: "blur(30px)",
-        boxShadow:
-          "0 20px 60px rgba(0,0,0,0.6), 0 0 30px rgba(56,189,248,0.08)",
+        boxShadow: currentTheme.shadow,
       }}
     >
       {/* Top Glow Line */}
       <div
         style={{
           height: "1px",
-          background:
-            "linear-gradient(90deg, transparent, rgba(56,189,248,0.5), transparent)",
+          background: `linear-gradient(90deg, transparent, ${currentTheme.accent}60, transparent)`,
         }}
       />
 
@@ -146,7 +145,7 @@ const RangeDropdown = ({ anchorRef, open, value, onChange, onClose }) => {
       <div
         className="px-4 py-2"
         style={{
-          borderBottom: "1px solid rgba(56,189,248,0.08)",
+          borderBottom: `1px solid ${currentTheme.borderAccent}`,
         }}
       >
         <span
@@ -155,7 +154,7 @@ const RangeDropdown = ({ anchorRef, open, value, onChange, onClose }) => {
             fontSize: "10px",
             fontWeight: 700,
             letterSpacing: "0.06em",
-            color: "white",
+            color: currentTheme.text,
           }}
         >
           SELECT RANGE
@@ -178,12 +177,12 @@ const RangeDropdown = ({ anchorRef, open, value, onChange, onClose }) => {
             style={{
               ...monoLabel,
               fontSize: "10px",
-              color: active ? "#38bdf8" : "rgba(148,163,184,0.7)",
+              color: active ? currentTheme.accent : currentTheme.textMuted,
               background: active
-                ? "linear-gradient(90deg, rgba(56,189,248,0.08), transparent)"
+                ? `linear-gradient(90deg, ${currentTheme.accent}12, transparent)`
                 : "transparent",
               borderLeft: active
-                ? "2px solid rgba(56,189,248,0.5)"
+                ? `2px solid ${currentTheme.accent}60`
                 : "2px solid transparent",
             }}
           >
@@ -208,8 +207,12 @@ const RangeDropdown = ({ anchorRef, open, value, onChange, onClose }) => {
     document.body
   );
 };
-const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
+const UptimePopup = ({ data, filter, setFilter, onClose, userRole, currentTheme: currentThemeProp }) => {
+  const { currentTheme: currentThemeFromContext } = useTheme();
+  const currentTheme = currentThemeProp || currentThemeFromContext;
+
   if (userRole !== "superadmin") return null;
+  if (!currentTheme) return null;
   const [showRangeDropdown, setShowRangeDropdown] = useState(false);
   const rangeBtnRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -247,7 +250,7 @@ const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         style={{
-          background: "rgba(0,0,0,0.75)",
+          background: currentTheme.bg,
           backdropFilter: "blur(8px)",
         }}
       >
@@ -258,15 +261,15 @@ const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
           transition={{ duration: 0.3 }}
           className="w-full max-w-[500px] rounded-2xl overflow-hidden"
           style={{
-            background: "rgba(3,7,18,0.95)",
-            border: "1px solid rgba(56,189,248,0.1)",
+            background: currentTheme.bgCard,
+            border: `1px solid ${currentTheme.borderAccent}`,
           }}
         >
           {/* Header */}
-          <div className="h-[1px]" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.4) 30%, rgba(129,140,248,0.32) 70%, transparent 100%)" }} />
+          <div className="h-[1px]" style={{ background: `linear-gradient(90deg, transparent 0%, ${currentTheme.accent}50 30%, ${currentTheme.accent}40 70%, transparent 100%)` }} />
           <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
             <div>
-              <div style={{ ...monoLabel, fontSize: "8px", color: "rgba(56,189,248,0.78)" }}>
+              <div style={{ ...monoLabel, fontSize: "8px", color: currentTheme.accent }}>
                 ANALYTICS
               </div>
               <div
@@ -274,7 +277,7 @@ const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
                   fontFamily: "'Orbitron', sans-serif",
                   fontSize: "16px",
                   fontWeight: 700,
-                  color: "white",
+                  color: currentTheme.text,
                 }}
               >
                 Uptime
@@ -285,9 +288,9 @@ const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
               onClick={onClose}
               className="px-3 py-1.5 rounded-lg text-xs"
               style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "rgba(255,255,255,0.6)",
+                background: currentTheme.bgInput,
+                border: `1px solid ${currentTheme.borderLight}`,
+                color: currentTheme.textMuted,
               }}
             >
               ✕
@@ -305,22 +308,22 @@ const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
     className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-200"
     style={{
       background: showRangeDropdown
-        ? "linear-gradient(135deg, rgba(56,189,248,0.15), rgba(129,140,248,0.12))"
-        : "rgba(255,255,255,0.035)",
+        ? `linear-gradient(135deg, ${currentTheme.accentGlow}, ${currentTheme.bgInput})`
+        : currentTheme.bgInput,
       border: showRangeDropdown
-        ? "1px solid rgba(56,189,248,0.35)"
-        : "1px solid rgba(56,189,248,0.12)",
-      color: "#38bdf8",
+        ? `1px solid ${currentTheme.accent}`
+        : `1px solid ${currentTheme.borderAccent}`,
+      color: currentTheme.accent,
       boxShadow: showRangeDropdown
-        ? "0 0 18px rgba(56,189,248,0.15)"
-        : "inset 0 1px 0 rgba(255,255,255,0.05)",
+        ? `0 0 18px ${currentTheme.accent}20`
+        : "none",
     }}
   >
     <span
       style={{
         ...monoLabel,
         fontSize: "10px",
-        color: "#38bdf8",
+        color: currentTheme.accent,
       }}
     >
       {rangeLabels[filter] || filter}
@@ -331,7 +334,7 @@ const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
       transition={{ duration: 0.25 }}
       style={{
         fontSize: "8px",
-        color: "rgba(56,189,248,0.7)",
+        color: currentTheme.accent,
       }}
     >
       ▼
@@ -346,6 +349,7 @@ const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
         value={filter}
         onChange={setFilter}
         onClose={() => setShowRangeDropdown(false)}
+        currentTheme={currentTheme}
       />
     )}
   </AnimatePresence>
@@ -361,8 +365,8 @@ const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
                     key={i}
                     className="h-[70px] rounded-xl animate-pulse"
                     style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.06)",
+                      background: currentTheme.bgInput,
+                      border: `1px solid ${currentTheme.borderLight}`,
                     }}
                   />
                 ))}
@@ -370,7 +374,7 @@ const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 {stats.map((s, i) => (
-                  <StatCard key={s.label} {...s} delay={i * 0.04} />
+                  <StatCard key={s.label} {...s} delay={i * 0.04} currentTheme={currentTheme} />
                 ))}
               </div>
             )}
@@ -382,9 +386,9 @@ const UptimePopup = ({ data, filter, setFilter, onClose, userRole }) => {
               onClick={onClose}
               className="w-full py-2 rounded-lg text-xs font-semibold"
               style={{
-                background: "rgba(56,189,248,0.12)",
-                border: "1px solid rgba(56,189,248,0.25)",
-                color: "#38bdf8",
+                background: currentTheme.accentGlow,
+                border: `1px solid ${currentTheme.accent}`,
+                color: currentTheme.accent,
               }}
             >
               Close

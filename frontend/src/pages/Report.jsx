@@ -14,11 +14,10 @@ import {
 
 import SiteReport from "../components/SiteReport";
 import ExportButtons from "../components/ExportButtons";
-
+import { useTheme } from "../contexts/ThemeContext";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const SITE_PER_PAGE = 5;
-
 
 // ─── Font Loader ──────────────────────────────────────────────────────────────
 const FontLoader = () => {
@@ -35,7 +34,7 @@ const FontLoader = () => {
 };
 
 // ─── Cursor Glow ──────────────────────────────────────────────────────────────
-const CursorGlow = () => {
+const CursorGlow = ({ currentTheme }) => {
   const x = useMotionValue(-400);
   const y = useMotionValue(-400);
   const sx = useSpring(x, { stiffness: 90, damping: 24 });
@@ -51,23 +50,50 @@ const CursorGlow = () => {
       style={{
         left: sx, top: sy, translateX: "-50%", translateY: "-50%",
         width: 260, height: 260, borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(56,189,248,0.035) 0%, transparent 72%)",
+        background: `radial-gradient(circle, ${currentTheme.accent}15 0%, transparent 72%)`,
       }}
     />
   );
 };
 
 // ─── Background ───────────────────────────────────────────────────────────────
-const Background = () => (
+const Background = ({ currentTheme }) => (
   <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-    <div className="absolute inset-0 bg-[#030712]" />
-    <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 60% 40% at 50% 20%, rgba(56,189,248,0.035) 0%, transparent 100%)" }} />
-    <div className="absolute" style={{ top: "62%", left: "16%", width: 260, height: 260, background: "radial-gradient(circle, rgba(129,140,248,0.025) 0%, transparent 68%)", filter: "blur(90px)" }} />
-    <div className="absolute" style={{ top: "18%", right: "12%", width: 220, height: 220, background: "radial-gradient(circle, rgba(16,185,129,0.02) 0%, transparent 68%)", filter: "blur(80px)" }} />
-    <div className="absolute inset-0" style={{ backgroundImage: "linear-gradient(rgba(148,163,184,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.02) 1px, transparent 1px)", backgroundSize: "42px 42px" }} />
+    <div className="absolute inset-0" style={{ background: currentTheme.bg }} />
+    <div
+      className="absolute inset-0"
+      style={{
+        background: `radial-gradient(ellipse 60% 40% at 50% 20%, ${currentTheme.accent}18 0%, transparent 100%)`,
+      }}
+    />
+    <div
+      className="absolute"
+      style={{
+        top: "62%", left: "16%", width: 260, height: 260,
+        background: `radial-gradient(circle, ${currentTheme.accentSecondary}12 0%, transparent 68%)`,
+        filter: "blur(90px)",
+      }}
+    />
+    <div
+      className="absolute"
+      style={{
+        top: "18%", right: "12%", width: 220, height: 220,
+        background: `radial-gradient(circle, ${currentTheme.success}10 0%, transparent 68%)`,
+        filter: "blur(80px)",
+      }}
+    />
+    <div
+      className="absolute inset-0"
+      style={{
+        backgroundImage: `linear-gradient(${currentTheme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${currentTheme.gridColor} 1px, transparent 1px)`,
+        backgroundSize: "42px 42px",
+      }}
+    />
     <motion.div
       className="absolute inset-0"
-      style={{ background: "linear-gradient(to bottom, transparent 48%, rgba(56,189,248,0.01) 50%, transparent 52%)" }}
+      style={{
+        background: `linear-gradient(to bottom, transparent 48%, ${currentTheme.accent}08 50%, transparent 52%)`,
+      }}
       animate={{ y: ["-100%", "100%"] }}
       transition={{ duration: 6, repeat: Infinity, ease: "linear", repeatDelay: 2.5 }}
     />
@@ -75,7 +101,7 @@ const Background = () => (
 );
 
 // ─── HUD Corner ───────────────────────────────────────────────────────────────
-const HUDCorner = ({ pos, delay = 0 }) => {
+const HUDCorner = ({ pos, delay = 0, currentTheme }) => {
   const cls = { tl: "top-4 left-4", tr: "top-4 right-4", bl: "bottom-4 left-4", br: "bottom-4 right-4" };
   const rot = { tl: "0deg", tr: "90deg", bl: "-90deg", br: "180deg" };
   return (
@@ -86,8 +112,20 @@ const HUDCorner = ({ pos, delay = 0 }) => {
       animate={{ opacity: 0.65, scale: 1 }}
       transition={{ delay, duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}
     >
-      <motion.div className="absolute top-0 left-0 h-[1px] bg-sky-400/70" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ delay: delay + 0.15, duration: 0.35 }} />
-      <motion.div className="absolute top-0 left-0 w-[1px] bg-sky-400/70" initial={{ height: 0 }} animate={{ height: "100%" }} transition={{ delay: delay + 0.15, duration: 0.35 }} />
+      <motion.div
+        className="absolute top-0 left-0 h-[1px]"
+        style={{ background: `${currentTheme.accent}70` }}
+        initial={{ width: 0 }}
+        animate={{ width: "100%" }}
+        transition={{ delay: delay + 0.15, duration: 0.35 }}
+      />
+      <motion.div
+        className="absolute top-0 left-0 w-[1px]"
+        style={{ background: `${currentTheme.accent}70` }}
+        initial={{ height: 0 }}
+        animate={{ height: "100%" }}
+        transition={{ delay: delay + 0.15, duration: 0.35 }}
+      />
     </motion.div>
   );
 };
@@ -96,7 +134,13 @@ const HUDCorner = ({ pos, delay = 0 }) => {
 const OrbitRing = ({ radius, duration, dotCount, color, delay = 0, tilt = 70 }) => (
   <motion.div
     className="fixed pointer-events-none z-[1]"
-    style={{ width: radius * 2, height: radius * 2, top: "50%", left: "50%", marginTop: -radius, marginLeft: -radius, transform: `perspective(900px) rotateX(${tilt}deg)`, opacity: 0.25 }}
+    style={{
+      width: radius * 2, height: radius * 2,
+      top: "50%", left: "50%",
+      marginTop: -radius, marginLeft: -radius,
+      transform: `perspective(900px) rotateX(${tilt}deg)`,
+      opacity: 0.25,
+    }}
     animate={{ rotate: 360 }}
     transition={{ duration, repeat: Infinity, ease: "linear", delay }}
   >
@@ -109,7 +153,12 @@ const OrbitRing = ({ radius, duration, dotCount, color, delay = 0, tilt = 70 }) 
         <motion.div
           key={i}
           className="absolute rounded-full"
-          style={{ width: i === 0 ? 4 : 2, height: i === 0 ? 4 : 2, background: i === 0 ? color : `${color}30`, left: cx - (i === 0 ? 2 : 1), top: cy - (i === 0 ? 2 : 1), boxShadow: i === 0 ? `0 0 8px ${color}` : "none" }}
+          style={{
+            width: i === 0 ? 4 : 2, height: i === 0 ? 4 : 2,
+            background: i === 0 ? color : `${color}30`,
+            left: cx - (i === 0 ? 2 : 1), top: cy - (i === 0 ? 2 : 1),
+            boxShadow: i === 0 ? `0 0 8px ${color}` : "none",
+          }}
           animate={i === 0 ? { opacity: [1, 0.35, 1] } : {}}
           transition={{ duration: 1.8, repeat: Infinity }}
         />
@@ -122,11 +171,19 @@ const OrbitRing = ({ radius, duration, dotCount, color, delay = 0, tilt = 70 }) 
 const StatusDot = ({ color = "#34d399", label }) => (
   <div className="flex items-center gap-2">
     <div className="relative w-2 h-2">
-      <motion.div className="absolute inset-0 rounded-full" style={{ background: color }} animate={{ scale: [1, 2], opacity: [0.45, 0] }} transition={{ duration: 1.5, repeat: Infinity }} />
+      <motion.div
+        className="absolute inset-0 rounded-full"
+        style={{ background: color }}
+        animate={{ scale: [1, 2], opacity: [0.45, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity }}
+      />
       <div className="absolute inset-0 rounded-full" style={{ background: color }} />
     </div>
     {label && (
-      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", letterSpacing: "0.14em", color: `${color}88`, textTransform: "uppercase" }}>
+      <span style={{
+        fontFamily: "'JetBrains Mono', monospace", fontSize: "8px",
+        letterSpacing: "0.14em", color: `${color}88`, textTransform: "uppercase",
+      }}>
         {label}
       </span>
     )}
@@ -134,36 +191,64 @@ const StatusDot = ({ color = "#34d399", label }) => (
 );
 
 // ─── Skeleton Loader Card ─────────────────────────────────────────────────────
-const SkeletonCard = ({ index = 0 }) => (
+const SkeletonCard = ({ index = 0, currentTheme }) => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     transition={{ delay: index * 0.06 }}
     className="rounded-xl overflow-hidden relative"
-    style={{ background: "rgba(3,7,18,0.74)", border: "1px solid rgba(56,189,248,0.08)", backdropFilter: "blur(16px)" }}
+    style={{
+      background: currentTheme.bgCard,
+      border: `1px solid ${currentTheme.borderAccent}`,
+      backdropFilter: "blur(16px)",
+    }}
   >
-    <div className="absolute top-0 left-0 right-0 h-[1px]" style={{ background: "rgba(56,189,248,0.18)" }} />
+    <div
+      className="absolute top-0 left-0 right-0 h-[1px]"
+      style={{ background: `${currentTheme.accent}30` }}
+    />
     <div className="p-4 sm:p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <div className="h-4 w-24 rounded-full animate-pulse" style={{ background: "rgba(56,189,248,0.07)", animationDelay: `${index * 80}ms` }} />
-          <div className="h-5 w-48 rounded animate-pulse" style={{ background: "rgba(56,189,248,0.05)", animationDelay: `${index * 80 + 60}ms` }} />
-          <div className="h-3 w-64 rounded animate-pulse" style={{ background: "rgba(56,189,248,0.04)", animationDelay: `${index * 80 + 120}ms` }} />
+          <div
+            className="h-4 w-24 rounded-full animate-pulse"
+            style={{ background: `${currentTheme.accent}10`, animationDelay: `${index * 80}ms` }}
+          />
+          <div
+            className="h-5 w-48 rounded animate-pulse"
+            style={{ background: `${currentTheme.accent}08`, animationDelay: `${index * 80 + 60}ms` }}
+          />
+          <div
+            className="h-3 w-64 rounded animate-pulse"
+            style={{ background: `${currentTheme.accent}06`, animationDelay: `${index * 80 + 120}ms` }}
+          />
         </div>
-        <div className="h-7 w-16 rounded-full animate-pulse" style={{ background: "rgba(56,189,248,0.06)" }} />
+        <div
+          className="h-7 w-16 rounded-full animate-pulse"
+          style={{ background: `${currentTheme.accent}08` }}
+        />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-16 rounded-lg animate-pulse" style={{ background: "rgba(56,189,248,0.04)", animationDelay: `${i * 60}ms` }} />
+          <div
+            key={i}
+            className="h-16 rounded-lg animate-pulse"
+            style={{ background: `${currentTheme.accent}06`, animationDelay: `${i * 60}ms` }}
+          />
         ))}
       </div>
-      <div className="h-40 rounded-xl animate-pulse" style={{ background: "rgba(56,189,248,0.03)" }} />
+      <div
+        className="h-40 rounded-xl animate-pulse"
+        style={{ background: `${currentTheme.accent}04` }}
+      />
     </div>
   </motion.div>
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Report({ urls, reportSearch, setReportSearch }) {
+  const { currentTheme } = useTheme();
+
   const [page, setPage] = useState(1);
   const [logsBySite, setLogsBySite] = useState({});
   const [statsMap, setStatsMap] = useState({});
@@ -175,18 +260,12 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
   const [tempFrom, setTempFrom] = useState("");
   const [tempTo, setTempTo] = useState("");
 
-  // ─── Navigation state from "View Detail" button ───────────────────────────
   const location = useLocation();
   const navigate = useNavigate();
   const preSelectedSiteId = location.state?.selectedSiteId ?? null;
 
-  // ─── Highlight state: which card is currently glowing ─────────────────────
   const [highlightedSiteId, setHighlightedSiteId] = useState(null);
-
-  // ─── Per-card refs map: siteId → DOM element ──────────────────────────────
   const cardRefs = useRef({});
-
-  // Abort in-flight requests when deps change
   const abortRef = useRef(null);
 
   // ─── 1. Filtered sites ────────────────────────────────────────────────────
@@ -219,9 +298,7 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
   );
 
   // ─── 5. Reset page to 1 when filter/range changes ─────────────────────────
-  useEffect(() => {
-    setPage(1);
-  }, [reportSearch, range, customFrom, customTo]);
+  useEffect(() => { setPage(1); }, [reportSearch, range, customFrom, customTo]);
 
   // ─── 6. Clamp page if filteredSites shrinks ───────────────────────────────
   useEffect(() => {
@@ -229,51 +306,30 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
   }, [totalPages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── 7. Jump to pre-selected site's page + set highlight ─────────────────
-  // Runs when preSelectedSiteId arrives and filteredSites is populated.
-  // Finds which page the site lives on, jumps to it, and arms the highlight.
-  // Then clears location.state so back-navigation doesn't re-trigger.
   useEffect(() => {
     if (!preSelectedSiteId || filteredSites.length === 0) return;
-
     const siteIndex = filteredSites.findIndex((s) => s._id === preSelectedSiteId);
     if (siteIndex === -1) return;
-
     const targetPage = Math.floor(siteIndex / SITE_PER_PAGE) + 1;
     setPage(targetPage);
     setHighlightedSiteId(preSelectedSiteId);
-
-    // Clear nav state so refresh / back-nav doesn't re-highlight
     navigate(location.pathname, { replace: true, state: {} });
   }, [preSelectedSiteId, filteredSites]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── 8. Scroll to card + auto-clear highlight ─────────────────────────────
-  // Waits for the correct page to render, then scrolls the target card into
-  // view and fades the highlight ring out after 2.8 s.
   useEffect(() => {
     if (!highlightedSiteId) return;
-
     const scrollTimer = setTimeout(() => {
       const el = cardRefs.current[highlightedSiteId];
       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 120);
-
-    const clearTimer = setTimeout(() => {
-      setHighlightedSiteId(null);
-    }, 2800);
-
-    return () => {
-      clearTimeout(scrollTimer);
-      clearTimeout(clearTimer);
-    };
+    const clearTimer = setTimeout(() => { setHighlightedSiteId(null); }, 2800);
+    return () => { clearTimeout(scrollTimer); clearTimeout(clearTimer); };
   }, [highlightedSiteId, page]);
 
   // ─── 9. Fetch page data ───────────────────────────────────────────────────
   const fetchPageData = useCallback(async () => {
-    if (!siteIdsKey) {
-      setLogsBySite({});
-      setStatsMap({});
-      return;
-    }
+    if (!siteIdsKey) { setLogsBySite({}); setStatsMap({}); return; }
 
     if (range === "custom") {
       if (!customFrom || !customTo) {
@@ -281,7 +337,6 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
         setLoading(false);
         return;
       }
-
       const fromDate = new Date(customFrom);
       const toDate = new Date(customTo);
       if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
@@ -289,7 +344,6 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
         setLoading(false);
         return;
       }
-
       if (fromDate > toDate) {
         setError("'From' date cannot be after 'To' date");
         setLoading(false);
@@ -349,29 +403,24 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
       setTimeout(() => setError(null), 4000);
       return;
     }
-
     const fromDate = new Date(tempFrom);
     const toDate = new Date(tempTo);
-
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
       setError("Invalid date format. Please use YYYY-MM-DD");
       setTimeout(() => setError(null), 4000);
       return;
     }
-
     if (fromDate > toDate) {
       setError("'From' date cannot be after 'To' date");
       setTimeout(() => setError(null), 4000);
       return;
     }
-
     const oneYear = 365 * 24 * 60 * 60 * 1000;
     if (toDate.getTime() - fromDate.getTime() > oneYear) {
       setError("Date range cannot exceed 1 year");
       setTimeout(() => setError(null), 4000);
       return;
     }
-
     setCustomFrom(tempFrom);
     setCustomTo(tempTo);
     setError(null);
@@ -380,26 +429,30 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
   const handleRangeChange = (val) => {
     setRange(val);
     if (val !== "custom") {
-      setCustomFrom("");
-      setCustomTo("");
-      setTempFrom("");
-      setTempTo("");
+      setCustomFrom(""); setCustomTo("");
+      setTempFrom(""); setTempTo("");
     }
   };
 
   const startItem = filteredSites.length === 0 ? 0 : (page - 1) * SITE_PER_PAGE + 1;
   const endItem = Math.min(page * SITE_PER_PAGE, filteredSites.length);
 
+  // ─── Derived theme values ─────────────────────────────────────────────────
+  const accentColor = currentTheme.accent;
+
   return (
     <>
       <FontLoader />
-      <div className="relative min-h-screen w-full overflow-hidden px-3 sm:px-4 lg:px-6 py-4 text-white" style={{ background: "transparent" }}>
-        <Background />
-        <CursorGlow />
-        <OrbitRing radius={210} duration={20} dotCount={8} color="#38bdf8" tilt={72} />
-        <OrbitRing radius={280} duration={30} dotCount={10} color="#818cf8" tilt={68} delay={1} />
+      <div
+        className="relative min-h-screen w-full overflow-hidden px-3 sm:px-4 lg:px-6 py-4"
+        style={{ background: "transparent", color: currentTheme.text }}
+      >
+        <Background currentTheme={currentTheme} />
+        <CursorGlow currentTheme={currentTheme} />
+        <OrbitRing radius={210} duration={20} dotCount={8} color={accentColor} tilt={72} />
+        <OrbitRing radius={280} duration={30} dotCount={10} color={currentTheme.accentSecondary} tilt={68} delay={1} />
         {["tl", "tr", "bl", "br"].map((p, i) => (
-          <HUDCorner key={p} pos={p} delay={0.1 + i * 0.05} />
+          <HUDCorner key={p} pos={p} delay={0.1 + i * 0.05} currentTheme={currentTheme} />
         ))}
 
         <div className="relative z-10 w-full">
@@ -411,40 +464,64 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
           >
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <div className="h-[1px] w-6 bg-sky-400/20" />
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", letterSpacing: "0.22em", color: "rgba(56,189,248,0.42)", textTransform: "uppercase" }}>
+                <div className="h-[1px] w-6" style={{ background: `${accentColor}40` }} />
+                <span style={{
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: "8px",
+                  letterSpacing: "0.22em", color: `${accentColor}80`,
+                  textTransform: "uppercase",
+                }}>
                   Uptime Reports
                 </span>
-                <div className="h-[1px] w-14 bg-sky-400/10" />
+                <div className="h-[1px] w-14" style={{ background: `${accentColor}20` }} />
               </div>
-              <h1 className="text-xl sm:text-2xl lg:text-2xl mb-1" style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 800, letterSpacing: "0.04em", textShadow: "0 0 18px rgba(56,189,248,0.05)" }}>
+              <h1
+                className="text-xl sm:text-2xl lg:text-2xl mb-1"
+                style={{
+                  fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
+                  letterSpacing: "0.04em", color: currentTheme.text,
+                  textShadow: `0 0 18px ${accentColor}15`,
+                }}
+              >
                 REPORT ANALYTICS
               </h1>
-              <p className="max-w-2xl" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(148,163,184,0.5)", letterSpacing: "0.02em" }}>
+              <p style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: "10px",
+                color: currentTheme.textMuted, letterSpacing: "0.02em",
+              }}>
                 Monitoring reports, response metrics and failures for configured websites.
               </p>
             </div>
-            <StatusDot color="#34d399" label="Analytics Active" />
+            <StatusDot color={currentTheme.success} label="Analytics Active" />
           </motion.div>
 
           {/* ── Controls ───────────────────────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08, duration: 0.4 }}
             className="mb-4 rounded-xl p-3 sm:p-4 relative z-50 overflow-visible"
-            style={{ background: "rgba(3,7,18,0.72)", border: "1px solid rgba(56,189,248,0.07)", backdropFilter: "blur(14px)", boxShadow: "0 0 14px rgba(56,189,248,0.02)" }}
+            style={{
+              background: currentTheme.bgCard,
+              border: `1px solid ${currentTheme.borderAccent}`,
+              backdropFilter: "blur(14px)",
+              boxShadow: currentTheme.shadow,
+            }}
           >
             {/* ── Desktop layout (xl+) ── */}
             <div className="hidden xl:flex xl:items-start xl:justify-between gap-4 overflow-visible">
               <div className="flex flex-row gap-3">
                 {/* Search */}
                 <div className="relative w-72">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-400/60" />
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: `${accentColor}80` }} />
                   <input
                     value={reportSearch}
                     onChange={(e) => setReportSearch(e.target.value)}
                     placeholder="Search domain or URL"
                     className="w-full pl-9 pr-3 py-2.5 rounded-lg outline-none text-sm"
-                    style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", color: "white", fontFamily: "'JetBrains Mono', monospace" }}
+                    style={{
+                      background: currentTheme.bgInput,
+                      border: `1px solid ${currentTheme.border}`,
+                      color: currentTheme.text,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
                   />
                 </div>
 
@@ -466,12 +543,15 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                         className="relative px-4 py-2 rounded-lg overflow-hidden"
                         style={{
                           fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: "11px",
-                          letterSpacing: "0.08em",
+                          fontSize: "11px", letterSpacing: "0.08em",
                           textTransform: "uppercase",
-                          color: active ? "#38bdf8" : "rgba(148,163,184,0.6)",
-                          border: active ? "1px solid rgba(56,189,248,0.3)" : "1px solid rgba(56,189,248,0.07)",
-                          background: active ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.02)",
+                          color: active ? accentColor : currentTheme.textMuted,
+                          border: active
+                            ? `1px solid ${accentColor}50`
+                            : `1px solid ${currentTheme.border}`,
+                          background: active
+                            ? `${accentColor}18`
+                            : currentTheme.bgInput,
                         }}
                       >
                         {active && (
@@ -479,14 +559,13 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                             layoutId="rangeGlow-desktop"
                             className="absolute inset-0 rounded-lg"
                             style={{
-                              background: "linear-gradient(90deg, rgba(56,189,248,0.15), rgba(129,140,248,0.15))",
-                              filter: "blur(8px)",
-                              zIndex: 0,
+                              background: `linear-gradient(90deg, ${accentColor}20, ${currentTheme.accentSecondary}20)`,
+                              filter: "blur(8px)", zIndex: 0,
                             }}
                           />
                         )}
                         <span className="relative z-10 flex items-center gap-2">
-                          <CalendarRange size={12} className={active ? "text-sky-400" : "text-slate-400"} />
+                          <CalendarRange size={12} style={{ color: active ? accentColor : currentTheme.textMuted }} />
                           {item.label}
                         </span>
                       </motion.button>
@@ -497,8 +576,22 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
 
               {/* Export */}
               <div className="relative z-[9999] overflow-visible self-start">
-                <div className="rounded-lg px-3 py-2 overflow-visible" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", backdropFilter: "blur(12px)" }}>
-                  <div className="mb-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.12em", color: "rgba(56,189,248,0.58)", textTransform: "uppercase" }}>
+                <div
+                  className="rounded-lg px-3 py-2 overflow-visible"
+                  style={{
+                    background: currentTheme.bgInput,
+                    border: `1px solid ${currentTheme.border}`,
+                    backdropFilter: "blur(12px)",
+                  }}
+                >
+                  <div
+                    className="mb-2"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+                      letterSpacing: "0.12em", color: `${accentColor}80`,
+                      textTransform: "uppercase",
+                    }}
+                  >
                     Export Data
                   </div>
                   <div className="relative z-[9999] overflow-visible">
@@ -512,18 +605,37 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
             <div className="flex xl:hidden flex-col gap-3 overflow-visible">
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-400/60" />
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: `${accentColor}80` }} />
                   <input
                     value={reportSearch}
                     onChange={(e) => setReportSearch(e.target.value)}
                     placeholder="Search domain or URL"
                     className="w-full pl-9 pr-3 py-2.5 rounded-lg outline-none text-sm"
-                    style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", color: "white", fontFamily: "'JetBrains Mono', monospace" }}
+                    style={{
+                      background: currentTheme.bgInput,
+                      border: `1px solid ${currentTheme.border}`,
+                      color: currentTheme.text,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
                   />
                 </div>
                 <div className="relative z-[9999] overflow-visible flex-shrink-0 self-start">
-                  <div className="rounded-lg px-3 py-2 overflow-visible" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(56,189,248,0.07)", backdropFilter: "blur(12px)" }}>
-                    <div className="mb-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", letterSpacing: "0.12em", color: "rgba(56,189,248,0.58)", textTransform: "uppercase" }}>
+                  <div
+                    className="rounded-lg px-3 py-2 overflow-visible"
+                    style={{
+                      background: currentTheme.bgInput,
+                      border: `1px solid ${currentTheme.border}`,
+                      backdropFilter: "blur(12px)",
+                    }}
+                  >
+                    <div
+                      className="mb-2"
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+                        letterSpacing: "0.12em", color: `${accentColor}80`,
+                        textTransform: "uppercase",
+                      }}
+                    >
                       Export Data
                     </div>
                     <div className="relative z-[9999] overflow-visible">
@@ -550,12 +662,13 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                       className="relative px-4 py-2 rounded-lg overflow-hidden"
                       style={{
                         fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: "11px",
-                        letterSpacing: "0.08em",
+                        fontSize: "11px", letterSpacing: "0.08em",
                         textTransform: "uppercase",
-                        color: active ? "#38bdf8" : "rgba(148,163,184,0.6)",
-                        border: active ? "1px solid rgba(56,189,248,0.3)" : "1px solid rgba(56,189,248,0.07)",
-                        background: active ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.02)",
+                        color: active ? accentColor : currentTheme.textMuted,
+                        border: active
+                          ? `1px solid ${accentColor}50`
+                          : `1px solid ${currentTheme.border}`,
+                        background: active ? `${accentColor}18` : currentTheme.bgInput,
                       }}
                     >
                       {active && (
@@ -563,14 +676,13 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                           layoutId="rangeGlow-mobile"
                           className="absolute inset-0 rounded-lg"
                           style={{
-                            background: "linear-gradient(90deg, rgba(56,189,248,0.15), rgba(129,140,248,0.15))",
-                            filter: "blur(8px)",
-                            zIndex: 0,
+                            background: `linear-gradient(90deg, ${accentColor}20, ${currentTheme.accentSecondary}20)`,
+                            filter: "blur(8px)", zIndex: 0,
                           }}
                         />
                       )}
                       <span className="relative z-10 flex items-center gap-2">
-                        <CalendarRange size={12} className={active ? "text-sky-400" : "text-slate-400"} />
+                        <CalendarRange size={12} style={{ color: active ? accentColor : currentTheme.textMuted }} />
                         {item.label}
                       </span>
                     </motion.button>
@@ -585,7 +697,11 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-3 rounded-lg px-3 py-3"
-                style={{ background: "rgba(3,7,18,0.65)", border: "1px solid rgba(56,189,248,0.06)", backdropFilter: "blur(14px)" }}
+                style={{
+                  background: currentTheme.bgInput,
+                  border: `1px solid ${currentTheme.border}`,
+                  backdropFilter: "blur(14px)",
+                }}
               >
                 <div className="flex flex-col sm:flex-row items-end gap-2.5">
                   {[
@@ -593,35 +709,24 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                     { label: "TO",   val: tempTo,   set: setTempTo   },
                   ].map((f) => (
                     <div key={f.label} className="flex flex-col flex-1 min-w-[120px]">
-                      <label
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: "8px",
-                          color: "rgba(148,163,184,0.45)",
-                          letterSpacing: "0.14em",
-                          marginBottom: "4px",
-                        }}
-                      >
+                      <label style={{
+                        fontFamily: "'JetBrains Mono', monospace", fontSize: "8px",
+                        color: currentTheme.textDim, letterSpacing: "0.14em", marginBottom: "4px",
+                      }}>
                         {f.label}
                       </label>
-                      <div className="relative">
-                        <input
-                          type="date"
-                          value={f.val}
-                          onChange={(e) => f.set(e.target.value)}
-                          className="w-full px-2.5 py-2 rounded-md outline-none text-[11px]"
-                          style={{
-                            background: "rgba(255,255,255,0.015)",
-                            border: "1px solid rgba(56,189,248,0.06)",
-                            color: "rgba(226,232,240,0.9)",
-                            fontFamily: "'JetBrains Mono', monospace",
-                          }}
-                        />
-                        <div
-                          className="pointer-events-none absolute inset-0 rounded-md opacity-0 focus-within:opacity-100 transition"
-                          style={{ boxShadow: "0 0 0 1px rgba(56,189,248,0.25), 0 0 8px rgba(56,189,248,0.12)" }}
-                        />
-                      </div>
+                      <input
+                        type="date"
+                        value={f.val}
+                        onChange={(e) => f.set(e.target.value)}
+                        className="w-full px-2.5 py-2 rounded-md outline-none text-[11px]"
+                        style={{
+                          background: currentTheme.bgCard,
+                          border: `1px solid ${currentTheme.borderLight}`,
+                          color: currentTheme.textSecondary,
+                          fontFamily: "'JetBrains Mono', monospace",
+                        }}
+                      />
                     </div>
                   ))}
 
@@ -631,13 +736,11 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                     onClick={applyCustomRange}
                     className="h-[34px] px-4 rounded-md flex items-center justify-center"
                     style={{
-                      background: "linear-gradient(135deg, rgba(56,189,248,0.18), rgba(129,140,248,0.18))",
-                      border: "1px solid rgba(56,189,248,0.22)",
-                      color: "#38bdf8",
+                      background: `linear-gradient(135deg, ${accentColor}25, ${currentTheme.accentSecondary}20)`,
+                      border: `1px solid ${accentColor}35`,
+                      color: accentColor,
                       fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: "10px",
-                      letterSpacing: "0.12em",
-                      whiteSpace: "nowrap",
+                      fontSize: "10px", letterSpacing: "0.12em", whiteSpace: "nowrap",
                     }}
                   >
                     APPLY
@@ -650,11 +753,17 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
           {/* ── Page Info Bar ───────────────────────────────────────────────── */}
           {filteredSites.length > 0 && (
             <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(148,163,184,0.4)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+              <span style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+                color: currentTheme.textMuted, letterSpacing: "0.1em", textTransform: "uppercase",
+              }}>
                 Showing {startItem}–{endItem} of {filteredSites.length} sites
               </span>
               {loading && (
-                <span className="flex items-center gap-1.5" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "rgba(56,189,248,0.6)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                <span className="flex items-center gap-1.5" style={{
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: "9px",
+                  color: `${accentColor}90`, letterSpacing: "0.1em", textTransform: "uppercase",
+                }}>
                   <Loader2 size={11} className="animate-spin" /> Fetching page {page}…
                 </span>
               )}
@@ -666,10 +775,28 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
             <motion.div
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
               className="mb-4 rounded-xl px-4 py-3 flex items-center gap-3"
-              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.15)" }}
+              style={{
+                background: currentTheme.errorBg,
+                border: `1px solid ${currentTheme.error}30`,
+              }}
             >
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(252,165,165,0.85)" }}>{error}</span>
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={fetchPageData} className="ml-auto text-xs px-3 py-1 rounded-lg" style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.2)", color: "rgba(252,165,165,0.9)", fontFamily: "'JetBrains Mono', monospace" }}>
+              <span style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: "11px",
+                color: currentTheme.error,
+              }}>
+                {error}
+              </span>
+              <motion.button
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                onClick={fetchPageData}
+                className="ml-auto text-xs px-3 py-1 rounded-lg"
+                style={{
+                  background: `${currentTheme.error}18`,
+                  border: `1px solid ${currentTheme.error}30`,
+                  color: currentTheme.error,
+                  fontFamily: "'JetBrains Mono', monospace",
+                }}
+              >
                 Retry
               </motion.button>
             </motion.div>
@@ -679,7 +806,7 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
           <div className="space-y-4">
             {loading
               ? [...Array(paginatedSites.length || SITE_PER_PAGE)].map((_, i) => (
-                  <SkeletonCard key={i} index={i} />
+                  <SkeletonCard key={i} index={i} currentTheme={currentTheme} />
                 ))
               : paginatedSites.map((site, index) => {
                   const logs    = logsBySite[site._id] || [];
@@ -692,25 +819,22 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                   return (
                     <motion.div
                       key={`${site._id}-${page}`}
-                      // ── Attach ref so we can scrollIntoView this card ─────
                       ref={(el) => {
                         if (el) cardRefs.current[site._id] = el;
                         else delete cardRefs.current[site._id];
                       }}
                       initial={{ opacity: 0, y: 12 }}
                       animate={{
-                        opacity: 1,
-                        y: 0,
-                        // ── Pulse the glow when highlighted ─────────────────
+                        opacity: 1, y: 0,
                         boxShadow: isHighlighted
                           ? [
-                              "0 0 0px rgba(56,189,248,0)",
-                              "0 0 28px rgba(56,189,248,0.45)",
-                              "0 0 18px rgba(56,189,248,0.28)",
-                              "0 0 28px rgba(56,189,248,0.45)",
-                              "0 0 0px rgba(56,189,248,0)",
+                              `0 0 0px ${accentColor}00`,
+                              `0 0 28px ${accentColor}55`,
+                              `0 0 18px ${accentColor}35`,
+                              `0 0 28px ${accentColor}55`,
+                              `0 0 0px ${accentColor}00`,
                             ]
-                          : "0 0 18px rgba(56,189,248,0.025)",
+                          : currentTheme.shadow,
                       }}
                       transition={{
                         opacity:   { delay: index * 0.04, duration: 0.4 },
@@ -722,27 +846,26 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                       whileHover={!isHighlighted ? { y: -2 } : {}}
                       className="group relative overflow-hidden rounded-xl"
                       style={{
-                        background: "rgba(3,7,18,0.74)",
-                        // ── Border lights up sky-blue while highlighted ──────
+                        background: currentTheme.bgCard,
                         border: isHighlighted
-                          ? "1px solid rgba(56,189,248,0.55)"
-                          : "1px solid rgba(56,189,248,0.08)",
+                          ? `1px solid ${accentColor}70`
+                          : `1px solid ${currentTheme.borderAccent}`,
                         backdropFilter: "blur(16px)",
                         transition: "border-color 0.4s ease",
                       }}
                     >
-                      {/* Top accent line — brighter when highlighted */}
+                      {/* Top accent line */}
                       <div
                         className="absolute top-0 left-0 right-0 h-[1px]"
                         style={{
                           background: isHighlighted
-                            ? "rgba(56,189,248,0.7)"
-                            : "rgba(56,189,248,0.18)",
+                            ? `${accentColor}90`
+                            : `${accentColor}30`,
                           transition: "background 0.4s ease",
                         }}
                       />
 
-                      {/* Left accent bar — animates in while highlighted */}
+                      {/* Left accent bar */}
                       {isHighlighted && (
                         <motion.div
                           initial={{ height: 0 }}
@@ -750,8 +873,8 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                           transition={{ duration: 0.35, ease: "easeOut" }}
                           className="absolute left-0 top-0 w-[3px] rounded-r"
                           style={{
-                            background: "linear-gradient(to bottom, #38bdf8, rgba(56,189,248,0.1))",
-                            boxShadow: "2px 0 12px rgba(56,189,248,0.4)",
+                            background: `linear-gradient(to bottom, ${accentColor}, ${accentColor}15)`,
+                            boxShadow: `2px 0 12px ${accentColor}50`,
                           }}
                         />
                       )}
@@ -762,23 +885,42 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <div className="inline-flex items-center gap-2 px-2 py-1 rounded-full border" style={{ borderColor: "rgba(56,189,248,0.08)", background: "rgba(56,189,248,0.03)" }}>
-                                <Server size={11} className="text-sky-400" />
-                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", letterSpacing: "0.12em", color: "rgba(56,189,248,0.58)", textTransform: "uppercase" }}>
+                              <div
+                                className="inline-flex items-center gap-2 px-2 py-1 rounded-full border"
+                                style={{
+                                  borderColor: `${accentColor}18`,
+                                  background: `${accentColor}06`,
+                                }}
+                              >
+                                <Server size={11} style={{ color: accentColor }} />
+                                <span style={{
+                                  fontFamily: "'JetBrains Mono', monospace", fontSize: "8px",
+                                  letterSpacing: "0.12em", color: `${accentColor}80`,
+                                  textTransform: "uppercase",
+                                }}>
                                   Monitored Report
                                 </span>
                               </div>
                             </div>
                             <a
                               href={site.url} target="_blank" rel="noopener noreferrer"
-                              className="text-white text-sm sm:text-base break-all hover:text-sky-300 transition"
-                              style={{ fontFamily: "'Orbitron', sans-serif", letterSpacing: "0.02em", fontWeight: 700 }}
+                              className="text-sm sm:text-base break-all transition"
+                              style={{
+                                fontFamily: "'Orbitron', sans-serif",
+                                letterSpacing: "0.02em", fontWeight: 700,
+                                color: currentTheme.text,
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.color = accentColor}
+                              onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.text}
                             >
                               {site.domain}
                             </a>
                             <div className="mt-2 flex items-start gap-2">
-                              <Link2 size={13} className="text-sky-400 mt-0.5 shrink-0" />
-                              <p className="break-all" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(148,163,184,0.6)", letterSpacing: "0.02em" }}>
+                              <Link2 size={13} className="mt-0.5 shrink-0" style={{ color: accentColor }} />
+                              <p className="break-all" style={{
+                                fontFamily: "'JetBrains Mono', monospace", fontSize: "10px",
+                                color: currentTheme.textMuted, letterSpacing: "0.02em",
+                              }}>
                                 {site.url}
                               </p>
                             </div>
@@ -786,14 +928,17 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
 
                           {/* Status Badge */}
                           <span
-                            className={`px-3 py-1.5 text-[10px] font-bold rounded-full inline-flex items-center gap-2 ${
-                              !hasData
-                                ? "bg-slate-500/20 text-slate-400 border border-slate-500/20"
-                                : isDown
-                                ? "bg-red-500/20 text-red-300 border border-red-500/20"
-                                : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/20"
-                            }`}
-                            style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.08em" }}
+                            className="px-3 py-1.5 text-[10px] font-bold rounded-full inline-flex items-center gap-2"
+                            style={{
+                              fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.08em",
+                              ...(
+                                !hasData
+                                  ? { background: `${currentTheme.textMuted}20`, color: currentTheme.textMuted, border: `1px solid ${currentTheme.textMuted}30` }
+                                  : isDown
+                                  ? { background: currentTheme.errorBg, color: currentTheme.error, border: `1px solid ${currentTheme.error}30` }
+                                  : { background: currentTheme.successBg, color: currentTheme.success, border: `1px solid ${currentTheme.success}30` }
+                              ),
+                            }}
                           >
                             <span className="w-2 h-2 rounded-full bg-current inline-block" />
                             {!hasData ? "NO DATA" : isDown ? "DOWN" : "UP"}
@@ -808,11 +953,28 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                             { label: "Avg Response", value: hasData ? `${stats.avgResponse ?? 0} ms` : "—" },
                             { label: "Fast / Slow",  value: hasData ? `${stats.minResponse ?? 0} / ${stats.maxResponse ?? 0} ms` : "—" },
                           ].map((item, i) => (
-                            <div key={i} className="rounded-lg px-3 py-3" style={{ background: "rgba(255,255,255,0.016)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "8px", color: "rgba(148,163,184,0.45)", textTransform: "uppercase", letterSpacing: "0.12em" }}>
+                            <div
+                              key={i}
+                              className="rounded-lg px-3 py-3"
+                              style={{
+                                background: currentTheme.bgInput,
+                                border: `1px solid ${currentTheme.borderLight}`,
+                              }}
+                            >
+                              <div style={{
+                                fontFamily: "'JetBrains Mono', monospace", fontSize: "8px",
+                                color: currentTheme.textMuted, textTransform: "uppercase",
+                                letterSpacing: "0.12em",
+                              }}>
                                 {item.label}
                               </div>
-                              <div className="mt-1 text-white break-words" style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "14px" }}>
+                              <div
+                                className="mt-1 break-words"
+                                style={{
+                                  fontFamily: "'Orbitron', sans-serif", fontWeight: 700,
+                                  fontSize: "14px", color: currentTheme.text,
+                                }}
+                              >
                                 {item.value}
                               </div>
                             </div>
@@ -820,7 +982,13 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                         </div>
 
                         {/* Chart Area */}
-                        <div className="rounded-xl p-3 sm:p-4" style={{ background: "rgba(255,255,255,0.014)", border: "1px solid rgba(56,189,248,0.045)" }}>
+                        <div
+                          className="rounded-xl p-3 sm:p-4"
+                          style={{
+                            background: currentTheme.bgInput,
+                            border: `1px solid ${accentColor}18`,
+                          }}
+                        >
                           <SiteReport
                             site={site}
                             logs={logs}
@@ -841,15 +1009,25 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
             <motion.div
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               className="rounded-xl p-6 text-center mt-4"
-              style={{ background: "rgba(3,7,18,0.66)", border: "1px solid rgba(56,189,248,0.07)", backdropFilter: "blur(14px)" }}
+              style={{
+                background: currentTheme.bgCard,
+                border: `1px solid ${currentTheme.borderAccent}`,
+                backdropFilter: "blur(14px)",
+              }}
             >
-              <div className="mx-auto mb-3 w-12 h-12 rounded-xl flex items-center justify-center border" style={{ borderColor: "rgba(56,189,248,0.08)", background: "rgba(255,255,255,0.02)" }}>
-                <Search size={18} className="text-sky-400" />
+              <div
+                className="mx-auto mb-3 w-12 h-12 rounded-xl flex items-center justify-center border"
+                style={{ borderColor: currentTheme.borderAccent, background: currentTheme.bgInput }}
+              >
+                <Search size={18} style={{ color: accentColor }} />
               </div>
-              <h3 className="text-white text-sm mb-2" style={{ fontFamily: "'Orbitron', sans-serif", letterSpacing: "0.03em", fontWeight: 700 }}>
+              <h3
+                className="text-sm mb-2"
+                style={{ fontFamily: "'Orbitron', sans-serif", letterSpacing: "0.03em", fontWeight: 700, color: currentTheme.text }}
+              >
                 NO WEBSITES FOUND
               </h3>
-              <p className="max-w-xl mx-auto" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "rgba(148,163,184,0.48)" }}>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: currentTheme.textMuted }}>
                 No websites match your current search or selected filters.
               </p>
             </motion.div>
@@ -867,7 +1045,12 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                 disabled={page === 1 || loading}
                 onClick={() => setPage((p) => p - 1)}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition"
-                style={{ background: "rgba(3,7,18,0.72)", border: "1px solid rgba(56,189,248,0.07)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px" }}
+                style={{
+                  background: currentTheme.bgCard,
+                  border: `1px solid ${currentTheme.borderAccent}`,
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: "12px",
+                  color: currentTheme.textSecondary,
+                }}
               >
                 <ChevronLeft size={15} /> Prev
               </motion.button>
@@ -882,7 +1065,7 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                   }, [])
                   .map((item) =>
                     typeof item === "string" ? (
-                      <span key={item} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "rgba(148,163,184,0.3)", padding: "0 2px" }}>…</span>
+                      <span key={item} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: currentTheme.textDim, padding: "0 2px" }}>…</span>
                     ) : (
                       <motion.button
                         key={item}
@@ -891,11 +1074,11 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                         disabled={loading}
                         className="w-9 h-9 rounded-lg flex items-center justify-center transition-all disabled:opacity-40"
                         style={{
-                          background: item === page ? "rgba(14,165,233,0.2)" : "rgba(3,7,18,0.72)",
-                          border: `1px solid ${item === page ? "rgba(56,189,248,0.32)" : "rgba(56,189,248,0.07)"}`,
+                          background: item === page ? `${accentColor}25` : currentTheme.bgCard,
+                          border: `1px solid ${item === page ? `${accentColor}45` : currentTheme.borderAccent}`,
                           fontFamily: "'Orbitron', sans-serif", fontSize: "11px",
-                          color: item === page ? "rgba(56,189,248,0.95)" : "rgba(148,163,184,0.55)",
-                          boxShadow: item === page ? "0 0 12px rgba(56,189,248,0.1)" : "none",
+                          color: item === page ? accentColor : currentTheme.textMuted,
+                          boxShadow: item === page ? `0 0 12px ${accentColor}18` : "none",
                         }}
                       >
                         {item}
@@ -910,7 +1093,12 @@ export default function Report({ urls, reportSearch, setReportSearch }) {
                 disabled={page === totalPages || loading}
                 onClick={() => setPage((p) => p + 1)}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition"
-                style={{ background: "rgba(3,7,18,0.72)", border: "1px solid rgba(56,189,248,0.07)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px" }}
+                style={{
+                  background: currentTheme.bgCard,
+                  border: `1px solid ${currentTheme.borderAccent}`,
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: "12px",
+                  color: currentTheme.textSecondary,
+                }}
               >
                 Next <ChevronRight size={15} />
               </motion.button>

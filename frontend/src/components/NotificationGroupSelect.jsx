@@ -4,18 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Plus, X, Mail, Phone, Users, RefreshCw, Check } from "lucide-react";
 import axios from "axios";
 import { createNotificationGroup } from "../api/notificationGroupApi";
+import { useTheme } from "../contexts/ThemeContext";
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
   font: "'IBM Plex Mono', 'Fira Code', monospace",
-  bg: "rgba(8, 10, 18, 1)",
-  surface: "rgba(255,255,255,0.028)",
-  surfaceHover: "rgba(255,255,255,0.05)",
-  border: "rgba(255,255,255,0.07)",
-  borderStrong: "rgba(255,255,255,0.13)",
-  dim: "rgba(255,255,255,0.28)",
-  mid: "rgba(255,255,255,0.55)",
-  bright: "rgba(255,255,255,0.9)",
 };
 
 // ─── Status badge pill ─────────────────────────────────────────────────────────
@@ -28,17 +21,18 @@ const StatusDot = ({ color }) => (
 );
 
 // ─── Notification Group Multi-Select Dropdown ─────────────────────────────────
-const NotificationGroupSelect = ({ 
-  label, 
-  value = [], 
-  onChange, 
-  groups, 
-  color, 
-  icon: Icon, 
+const NotificationGroupSelect = ({
+  label,
+  value = [],
+  onChange,
+  groups,
+  color,
+  icon: Icon,
   loading,
-  type = "email", // "email" or "phone"
-  onGroupCreated 
+  type = "email",
+  onGroupCreated
 }) => {
+  const { currentTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
@@ -49,7 +43,7 @@ const NotificationGroupSelect = ({
   const [newGroupDescription, setNewGroupDescription] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
-  
+
   const triggerRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -97,7 +91,7 @@ const NotificationGroupSelect = ({
       g.groupName.toLowerCase().includes(search.toLowerCase()) ||
       g.description?.toLowerCase().includes(search.toLowerCase())
   );
-  
+
   const selectedGroups = groups.filter((g) => value.includes(g._id));
   const hasSelected = selectedGroups.length > 0;
 
@@ -152,7 +146,7 @@ const NotificationGroupSelect = ({
           <StatusDot color={color} />
           <span style={{
             fontFamily: T.font, fontSize: 9, letterSpacing: "0.2em",
-            color, textTransform: "uppercase", fontWeight: 600,
+            color: currentTheme.accent, textTransform: "uppercase", fontWeight: 600,
           }}>
             {label} Notification Group
           </span>
@@ -162,8 +156,8 @@ const NotificationGroupSelect = ({
           {hasSelected && (
             <span style={{
               marginLeft: "auto", fontFamily: T.font, fontSize: 8,
-              color: `${color}99`, letterSpacing: "0.1em",
-              background: `${color}12`, border: `1px solid ${color}22`,
+              color: currentTheme.textSecondary, letterSpacing: "0.1em",
+              background: `rgba(255,255,255,0.05)`, border: `1px solid ${currentTheme.borderAccent}`,
               padding: "2px 7px", borderRadius: 99,
             }}>
               {selectedGroups.length} group{selectedGroups.length !== 1 ? "s" : ""}
@@ -172,7 +166,7 @@ const NotificationGroupSelect = ({
         </div>
       )}
 
-      {/* Trigger button */}
+      {/* Trigger button — clean glass, no scanlines */}
       <button
         ref={triggerRef}
         type="button"
@@ -181,23 +175,23 @@ const NotificationGroupSelect = ({
           width: "100%", padding: "0 14px", minHeight: 52, borderRadius: 12,
           outline: "none", cursor: "pointer", display: "flex",
           alignItems: "center", justifyContent: "space-between", gap: 8,
-          background: open ? `${color}08` : T.surface,
-          border: `1px solid ${open ? `${color}35` : T.border}`,
-          color: hasSelected ? T.bright : T.dim,
+          background: open ? `rgba(255,255,255,0.06)` : `rgba(255,255,255,0.03)`,
+          border: `1px solid ${open ? currentTheme.accent : currentTheme.borderAccent}`,
+          color: hasSelected ? currentTheme.text : currentTheme.textMuted,
           fontFamily: T.font, fontSize: 11, letterSpacing: "0.04em",
           backdropFilter: "blur(18px)", transition: "all 0.2s",
-          textAlign: "left", position: "relative", overflow: "hidden",
+          textAlign: "left", overflow: "hidden",
           ...glowStyle,
         }}
       >
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, flex: 1, position: "relative", zIndex: 1 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, flex: 1 }}>
           {loading ? (
-            <span style={{ color: T.dim, display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: currentTheme.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
               <RefreshCw size={10} style={{ animation: "spin 1s linear infinite" }} />
               Fetching groups…
             </span>
           ) : !hasSelected ? (
-            <span style={{ color: T.dim }}>Add from notification group (optional)</span>
+            <span style={{ color: currentTheme.textMuted }}>Add from notification group (optional)</span>
           ) : (
             selectedGroups.map((g) => (
               <motion.span
@@ -229,7 +223,7 @@ const NotificationGroupSelect = ({
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          style={{ color: open ? color : T.dim, flexShrink: 0, position: "relative", zIndex: 1 }}
+          style={{ color: open ? currentTheme.accent : currentTheme.textMuted, flexShrink: 0 }}
         >
           <ChevronDown size={14} />
         </motion.span>
@@ -251,20 +245,19 @@ const NotificationGroupSelect = ({
               style={{
                 position: "absolute", top: dropPos.top, left: dropPos.left,
                 width: dropPos.width, zIndex: 9999,
-                background: "rgba(8,10,18,0.98)",
-                border: `1px solid ${color}25`,
+                background: currentTheme.bgCard,
+                border: `1px solid ${currentTheme.borderAccent}`,
                 backdropFilter: "blur(40px)",
-                boxShadow: `0 16px 64px rgba(0,0,0,0.8), 0 0 0 1px ${color}12, inset 0 1px 0 ${color}08`,
+                boxShadow: currentTheme.shadow,
                 borderRadius: 14, overflow: "hidden",
               }}
             >
               {!showCreate ? (
                 <>
-                  {/* Search bar inside dropdown */}
+                  {/* Search bar */}
                   <div style={{
                     padding: "10px 12px 8px",
-                    borderBottom: `1px solid ${color}12`,
-                    position: "relative",
+                    borderBottom: `1px solid ${currentTheme.borderAccent}`,
                   }}>
                     <input
                       ref={searchRef}
@@ -274,8 +267,8 @@ const NotificationGroupSelect = ({
                       onChange={(e) => setSearch(e.target.value)}
                       style={{
                         width: "100%", padding: "6px 10px", borderRadius: 8,
-                        background: `${color}08`, border: `1px solid ${color}18`,
-                        color: T.bright, fontFamily: T.font, fontSize: 10,
+                        background: currentTheme.bgInput, border: `1px solid ${currentTheme.borderAccent}`,
+                        color: currentTheme.text, fontFamily: T.font, fontSize: 10,
                         letterSpacing: "0.04em", outline: "none",
                       }}
                     />
@@ -284,18 +277,18 @@ const NotificationGroupSelect = ({
                   {/* Items */}
                   <div style={{ maxHeight: 220, overflowY: "auto" }}>
                     {loading ? (
-                      <div style={{ padding: "24px", textAlign: "center", fontFamily: T.font, fontSize: 10, color: T.dim }}>
+                      <div style={{ padding: "24px", textAlign: "center", fontFamily: T.font, fontSize: 10, color: currentTheme.textMuted }}>
                         Loading…
                       </div>
                     ) : filtered.length === 0 ? (
-                      <div style={{ padding: "24px", textAlign: "center", fontFamily: T.font, fontSize: 10, color: T.dim }}>
+                      <div style={{ padding: "24px", textAlign: "center", fontFamily: T.font, fontSize: 10, color: currentTheme.textMuted }}>
                         {search ? "No groups match." : "No groups found."}
                       </div>
                     ) : (
                       filtered.map((g, idx) => {
                         const sel = value.includes(g._id);
-                        const contactCount = type === "email" 
-                          ? (g.emails?.length ?? 0) 
+                        const contactCount = type === "email"
+                          ? (g.emails?.length ?? 0)
                           : (g.phoneNumbers?.length ?? 0);
                         return (
                           <button
@@ -307,14 +300,14 @@ const NotificationGroupSelect = ({
                               textAlign: "left", display: "flex",
                               alignItems: "center", justifyContent: "space-between", gap: 12,
                               fontFamily: T.font, fontSize: 11, letterSpacing: "0.03em",
-                              color: sel ? color : T.mid,
-                              background: sel ? `${color}10` : "transparent",
+                              color: sel ? currentTheme.accent : currentTheme.text,
+                              background: sel ? `${currentTheme.accent}15` : "transparent",
                               border: "none",
-                              borderTop: idx === 0 ? "none" : `1px solid rgba(255,255,255,0.04)`,
-                              borderLeft: `2px solid ${sel ? color + "60" : "transparent"}`,
+                              borderTop: idx === 0 ? "none" : `1px solid ${currentTheme.borderAccent}`,
+                              borderLeft: `2px solid ${sel ? currentTheme.accent : "transparent"}`,
                               cursor: "pointer", transition: "all 0.12s",
                             }}
-                            onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = T.surfaceHover; }}
+                            onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = currentTheme.bgInput; }}
                             onMouseLeave={(e) => { if (!sel) e.currentTarget.style.background = "transparent"; }}
                           >
                             <div>
@@ -323,34 +316,33 @@ const NotificationGroupSelect = ({
                                 <span style={{ fontWeight: sel ? 600 : 400 }}>{g.groupName}</span>
                               </div>
                               {g.description && (
-                                <div style={{ fontSize: 9, color: T.dim, marginTop: 2, letterSpacing: "0.05em" }}>
+                                <div style={{ fontSize: 9, color: currentTheme.textMuted, marginTop: 2, letterSpacing: "0.05em" }}>
                                   {g.description}
                                 </div>
                               )}
-                              <div style={{ fontSize: 9, color: `${color}55`, marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>
+                              <div style={{ fontSize: 9, color: currentTheme.textSecondary, marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>
                                 <Users size={8} />
                                 {contactCount} {type === "email" ? "email" : "phone"}{contactCount !== 1 ? "s" : ""}
                               </div>
                               {g.owner && (
-                                <div style={{ 
-                                  fontSize: 9, 
-                                  color: `${color}70`, 
-                                  marginTop: 4, 
+                                <div style={{
+                                  fontSize: 9,
+                                  color: currentTheme.textSecondary,
+                                  marginTop: 4,
                                   letterSpacing: "0.06em",
                                   fontWeight: 500,
                                   display: "flex",
                                   alignItems: "center",
                                   gap: 4,
-                                  padding: "3px 0",
-                                  borderTop: `1px solid ${color}15`,
+                                  borderTop: `1px solid ${currentTheme.borderAccent}`,
                                   paddingTop: 6
                                 }}>
                                   <span style={{ opacity: 0.7 }}>Created by</span>
                                   <span style={{ fontWeight: 600 }}>{g.owner.name || g.owner.email}</span>
-                                  <span style={{ 
-                                    background: `${color}20`, 
-                                    padding: "1px 6px", 
-                                    borderRadius: 4, 
+                                  <span style={{
+                                    background: currentTheme.bgInput,
+                                    padding: "1px 6px",
+                                    borderRadius: 4,
                                     fontSize: 7,
                                     letterSpacing: "0.1em"
                                   }}>
@@ -384,21 +376,21 @@ const NotificationGroupSelect = ({
                   {/* Create new group button */}
                   <div style={{
                     padding: "8px 12px",
-                    borderTop: `1px solid ${color}12`,
+                    borderTop: `1px solid ${currentTheme.borderAccent}`,
                   }}>
                     <button
                       type="button"
                       onClick={() => setShowCreate(true)}
                       style={{
                         width: "100%", padding: "8px 12px", borderRadius: 8,
-                        background: `${color}10`, border: `1px solid ${color}25`,
-                        color: color, fontFamily: T.font, fontSize: 10,
+                        background: `rgba(255,255,255,0.04)`, border: `1px solid ${currentTheme.borderAccent}`,
+                        color: currentTheme.accent, fontFamily: T.font, fontSize: 10,
                         letterSpacing: "0.04em", cursor: "pointer",
                         display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                         transition: "all 0.15s",
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = `${color}15`}
-                      onMouseLeave={(e) => e.currentTarget.style.background = `${color}10`}
+                      onMouseEnter={(e) => e.currentTarget.style.background = `rgba(255,255,255,0.08)`}
+                      onMouseLeave={(e) => e.currentTarget.style.background = `rgba(255,255,255,0.04)`}
                     >
                       <Plus size={12} />
                       Create New Group
@@ -410,9 +402,9 @@ const NotificationGroupSelect = ({
                   {/* Create group form */}
                   <div style={{ padding: "12px" }}>
                     <div style={{ marginBottom: 10 }}>
-                      <label style={{ 
-                        display: "block", fontFamily: T.font, fontSize: 9, 
-                        color: T.mid, marginBottom: 4, letterSpacing: "0.05em" 
+                      <label style={{
+                        display: "block", fontFamily: T.font, fontSize: 9,
+                        color: currentTheme.textSecondary, marginBottom: 4, letterSpacing: "0.05em"
                       }}>
                         Group Name *
                       </label>
@@ -423,17 +415,17 @@ const NotificationGroupSelect = ({
                         onChange={(e) => setNewGroupName(e.target.value)}
                         style={{
                           width: "100%", padding: "8px 10px", borderRadius: 8,
-                          background: `${color}08`, border: `1px solid ${color}18`,
-                          color: T.bright, fontFamily: T.font, fontSize: 10,
+                          background: currentTheme.bgInput, border: `1px solid ${currentTheme.borderAccent}`,
+                          color: currentTheme.text, fontFamily: T.font, fontSize: 10,
                           letterSpacing: "0.04em", outline: "none",
                         }}
                       />
                     </div>
 
                     <div style={{ marginBottom: 10 }}>
-                      <label style={{ 
-                        display: "block", fontFamily: T.font, fontSize: 9, 
-                        color: T.mid, marginBottom: 4, letterSpacing: "0.05em" 
+                      <label style={{
+                        display: "block", fontFamily: T.font, fontSize: 9,
+                        color: currentTheme.textSecondary, marginBottom: 4, letterSpacing: "0.05em"
                       }}>
                         Emails (comma-separated)
                       </label>
@@ -444,17 +436,17 @@ const NotificationGroupSelect = ({
                         rows={2}
                         style={{
                           width: "100%", padding: "8px 10px", borderRadius: 8,
-                          background: `${color}08`, border: `1px solid ${color}18`,
-                          color: T.bright, fontFamily: T.font, fontSize: 10,
+                          background: currentTheme.bgInput, border: `1px solid ${currentTheme.borderAccent}`,
+                          color: currentTheme.text, fontFamily: T.font, fontSize: 10,
                           letterSpacing: "0.04em", outline: "none", resize: "none",
                         }}
                       />
                     </div>
 
                     <div style={{ marginBottom: 10 }}>
-                      <label style={{ 
-                        display: "block", fontFamily: T.font, fontSize: 9, 
-                        color: T.mid, marginBottom: 4, letterSpacing: "0.05em" 
+                      <label style={{
+                        display: "block", fontFamily: T.font, fontSize: 9,
+                        color: currentTheme.textSecondary, marginBottom: 4, letterSpacing: "0.05em"
                       }}>
                         Phone Numbers (comma-separated)
                       </label>
@@ -465,17 +457,17 @@ const NotificationGroupSelect = ({
                         rows={2}
                         style={{
                           width: "100%", padding: "8px 10px", borderRadius: 8,
-                          background: `${color}08`, border: `1px solid ${color}18`,
-                          color: T.bright, fontFamily: T.font, fontSize: 10,
+                          background: currentTheme.bgInput, border: `1px solid ${currentTheme.borderAccent}`,
+                          color: currentTheme.text, fontFamily: T.font, fontSize: 10,
                           letterSpacing: "0.04em", outline: "none", resize: "none",
                         }}
                       />
                     </div>
 
                     <div style={{ marginBottom: 10 }}>
-                      <label style={{ 
-                        display: "block", fontFamily: T.font, fontSize: 9, 
-                        color: T.mid, marginBottom: 4, letterSpacing: "0.05em" 
+                      <label style={{
+                        display: "block", fontFamily: T.font, fontSize: 9,
+                        color: currentTheme.textSecondary, marginBottom: 4, letterSpacing: "0.05em"
                       }}>
                         Description
                       </label>
@@ -486,8 +478,8 @@ const NotificationGroupSelect = ({
                         onChange={(e) => setNewGroupDescription(e.target.value)}
                         style={{
                           width: "100%", padding: "8px 10px", borderRadius: 8,
-                          background: `${color}08`, border: `1px solid ${color}18`,
-                          color: T.bright, fontFamily: T.font, fontSize: 10,
+                          background: currentTheme.bgInput, border: `1px solid ${currentTheme.borderAccent}`,
+                          color: currentTheme.text, fontFamily: T.font, fontSize: 10,
                           letterSpacing: "0.04em", outline: "none",
                         }}
                       />
@@ -496,8 +488,8 @@ const NotificationGroupSelect = ({
                     {createError && (
                       <div style={{
                         padding: "6px 10px", borderRadius: 6, marginBottom: 10,
-                        background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)",
-                        color: "#f87171", fontFamily: T.font, fontSize: 9,
+                        background: currentTheme.errorBg, border: `1px solid ${currentTheme.error}50`,
+                        color: currentTheme.error, fontFamily: T.font, fontSize: 9,
                       }}>
                         {createError}
                       </div>
@@ -510,8 +502,8 @@ const NotificationGroupSelect = ({
                         disabled={creating}
                         style={{
                           flex: 1, padding: "8px 12px", borderRadius: 8,
-                          background: "transparent", border: `1px solid ${color}25`,
-                          color: T.mid, fontFamily: T.font, fontSize: 10,
+                          background: "transparent", border: `1px solid ${currentTheme.borderAccent}`,
+                          color: currentTheme.textSecondary, fontFamily: T.font, fontSize: 10,
                           letterSpacing: "0.04em", cursor: creating ? "not-allowed" : "pointer",
                         }}
                       >
@@ -523,9 +515,9 @@ const NotificationGroupSelect = ({
                         disabled={creating}
                         style={{
                           flex: 1, padding: "8px 12px", borderRadius: 8,
-                          background: creating ? `${color}20` : `${color}15`,
-                          border: `1px solid ${color}35`,
-                          color: color, fontFamily: T.font, fontSize: 10,
+                          background: creating ? `rgba(255,255,255,0.04)` : currentTheme.accentGlow,
+                          border: `1px solid ${currentTheme.accent}`,
+                          color: currentTheme.accent, fontFamily: T.font, fontSize: 10,
                           letterSpacing: "0.04em", cursor: creating ? "not-allowed" : "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                         }}
